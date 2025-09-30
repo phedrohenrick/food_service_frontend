@@ -21,7 +21,7 @@ export function Header92() {
         <div className="grid auto-cols-fr grid-cols-1 lg:grid-cols-2 bg-white rounded-3xl shadow-lg overflow-hidden">
           <div className="flex items-center justify-center">
             <img
-              src="/assets/images/lp/1.png"
+              src="/assets/images/lp/restaurante.png"
               className="w-full object-cover"
               alt="Relume placeholder image"
             />
@@ -29,7 +29,7 @@ export function Header92() {
           <div className="bg-foreground flex flex-col justify-center p-8 md:p-12">
             <div>
               <h1 className="text-white mb-5 text-6xl font-bold md:mb-6 md:text-9xl lg:text-10xl">
-                Mais clientes, mais vendas, menos custos
+                O Sistema Completo para Seu Restaurante: Mais Lucro, Menos Caos.
               </h1>
               <p className="text-white md:text-md">
                 Gerencie seu restaurante em um só lugar, aumente suas vendas e expanda seu negócio com as melhores taxas do mercado.
@@ -48,7 +48,11 @@ export function Header92() {
                 Sou logista
               </Button>
 
-              <Button class="bg-white text-black font-bold py-2 px-4 rounded-full"  title="Cadastrar" variant="secondary" >
+              <Button class="bg-transparent text-white font-bold py-3 px-6 rounded-full border border-white/50 hover:bg-white/10 transition"
+                  title="Cadastrar"
+                  variant="secondary"
+                  onClick={() => scrollToForm("entregador")}
+                  data-cta="hero-entregador">
                 Sou entregador
               </Button>
             </div>

@@ -5,8 +5,20 @@ import React from "react";
 import { RxChevronRight } from "react-icons/rx";
 
 export function Layout395() {
+  const scrollToForm = (type) => {
+    const target = document.getElementById("pre-cadastro");
+
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (type) {
+        target.dispatchEvent(
+          new CustomEvent("lead:type", { detail: { type }, bubbles: true })
+        );
+      }
+    }
+  };
   return (
-    <section id="relume" className="mt-40 bg-background-primary px-[5%] py-16 md:py-24 lg:py-28">
+    <section id="relume" className=" bg-background-primary px-[5%] py-16 md:py-24 lg:py-28">
       <div className="container">
         <div className="mx-auto mb-12 w-full max-w-lg text-center md:mb-18 lg:mb-20">
           <p className="mb-3 font-semibold md:mb-4">Benefícios</p>
@@ -69,12 +81,14 @@ export function Layout395() {
               </div>
               <div className="mt-5 md:mt-6">
                 <Button
+                  className="border-none"
                   title="Cadastrar"
-                  variant="link"
-                  size="link"
+                  variant="secondary"
+                  onClick={() => scrollToForm("lojista")}
+                  data-cta="layout-lojista"
                   iconRight={<RxChevronRight />}
                 >
-                  Cadastrar
+                  Pré-cadastro
                 </Button>
               </div>
             </div>
@@ -100,11 +114,13 @@ export function Layout395() {
               <div className="mt-5 md:mt-6">
                 <Button
                   title="Inscrever-se"
-                  variant="link"
-                  size="link"
+                  className="border-none"
+                  variant="secondary"
+                  onClick={() => scrollToForm("entregador")}
+                  data-cta="layout-lojista"
                   iconRight={<RxChevronRight />}
                 >
-                  Inscrever-se
+                  Pré-inscrição
                 </Button>
               </div>
             </div>

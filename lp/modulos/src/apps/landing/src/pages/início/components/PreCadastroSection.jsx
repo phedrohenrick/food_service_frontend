@@ -67,6 +67,24 @@ const leadFields = {
   ],
 };
 
+const googleFields = {
+  lojista: {
+    responsavelNome: "entry.334939554",
+    restauranteNome: "entry.809978231",
+    whatsapp: "entry.1735168159",
+    cidade: "entry.374097029",
+    faturamento: "entry.236284459",
+    tipo: "entry.2139033098",
+  },
+  entregador: {
+    nomeCompleto: "entry.334939554",
+    whatsapp: "entry.1735168159",
+    cidade: "entry.374097029",
+    veiculo: "entry.1138865427",
+    tipo: "entry.2139033098",
+  },
+};
+
 const getInitialFormState = (type) => {
   return leadFields[type].reduce(
     (acc, field) => ({
@@ -84,6 +102,7 @@ export function PreCadastroSection() {
   const [isSubmitting, setSubmitting] = useState(false);
 
   const endpoint = process.env.REACT_APP_LEAD_ENDPOINT;
+  const googleFormAction = process.env.REACT_APP_GOOGLE_FORM_ACTION;
 
   useEffect(() => {
     const handleLeadType = (event) => {
@@ -108,30 +127,58 @@ export function PreCadastroSection() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const mapToGooglePayload = (type, data) => {
+    const mapping = googleFields[type];
+    if (!mapping) return null;
+
+    const pairs = Object.entries(data)
+      .filter(([key]) => Boolean(mapping[key]))
+      .map(([key, value]) => [mapping[key], value]);
+
+    if (mapping.tipo) {
+      pairs.push([mapping.tipo, type]);
+    }
+
+    if (!pairs.length) return null;
+
+    return new URLSearchParams(pairs).toString();
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setSubmitting(true);
     setStatus({ state: "loading", message: "" });
 
-    const payload = {
-      ...formData,
-      tipo: userType,
-      submittedAt: new Date().toISOString(),
-    };
-
     try {
+      const payload = {
+        ...formData,
+        tipo: userType,
+        submittedAt: new Date().toISOString(),
+      };
+
       if (endpoint) {
         const response = await fetch(endpoint, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
 
         if (!response.ok) {
           throw new Error("Não foi possível enviar seus dados agora.");
         }
+      } else if (googleFormAction) {
+        const googleBody = mapToGooglePayload(userType, formData);
+
+        if (!googleBody) {
+          throw new Error("Configuração do formulário temporário inválida.");
+        }
+
+        await fetch(googleFormAction, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: googleBody,
+          mode: "no-cors",
+        });
       } else if (typeof window !== "undefined") {
         const existing = window.localStorage.getItem("fs-pre-cadastros");
         const leads = existing ? JSON.parse(existing) : [];
@@ -163,19 +210,19 @@ export function PreCadastroSection() {
     >
       <div className="container grid gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
         <div className="max-w-2xl space-y-6 text-white">
-          <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-semibold uppercase tracking-wide">
+          <span className="inline-flex items-center gap-2 rounded-full bg-black/80 px-4 py-2 text-sm font-semibold uppercase tracking-wide">
             <HiOutlineSparkles className="text-lg" /> Pré-cadastro VIP
           </span>
           <h2 className="text-5xl font-bold md:text-6xl">
-            Taxas baixas, atendimento próximo e clientes fiéis no seu delivery.
+           A plataforma que gerencia o seu negócio, uma nova opção.<div className="text-shadow-outline text-background-hero/80"> Agora em Niquelândia</div>
           </h2>
-          <div className="rounded-3xl border border-white/10 bg-foreground/80 p-6 backdrop-blur">
+          {/* <div className="rounded-3xl border border-white/10 bg-black/80 p-6 backdrop-blur">
             <p className="text-white text-lg md:text-xl">
               Estamos abrindo uma lista exclusiva para restaurantes visionários e entregadores parceiros que querem sair na frente e testar o Food Service OS com condições comerciais imbatíveis.
             </p>
-          </div>
+          </div> */}
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
+            <div className="rounded-2xl border border-foreground/40 bg-foreground/80 p-5 backdrop-blur">
               <div className="flex items-start gap-3">
                 <BsShieldCheck className="mt-1 text-2xl text-white" />
                 <div>
@@ -186,7 +233,7 @@ export function PreCadastroSection() {
                 </div>
               </div>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
+            <div className="rounded-2xl border border-foreground/100 bg-foreground/80 p-5 backdrop-blur">
               <div className="flex items-start gap-3">
                 <HiOutlineChatBubbleLeftRight className="mt-1 text-2xl text-white" />
                 <div>
@@ -198,7 +245,7 @@ export function PreCadastroSection() {
               </div>
             </div>
           </div>
-          <div className="rounded-3xl border border-white/10 bg-black/40 p-6 backdrop-blur">
+          {/* <div className="rounded-3xl border border-white/100 bg-black/80 p-6 backdrop-blur">
             <p className="text-sm uppercase tracking-wide text-white/60">Números do beta</p>
             <div className="mt-3 flex flex-wrap gap-6 md:gap-10">
               <div>
@@ -214,11 +261,11 @@ export function PreCadastroSection() {
                 <p className="text-white/60 text-sm">para ativar sua operação</p>
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
 
         <div className="rounded-3xl bg-white p-8 shadow-2xl md:p-10">
-          <div className="flex items-center justify-between gap-2">
+          <div className=" flex items-center justify-between gap-2">
             <h3 className="text-2xl font-bold text-foreground">
               Quero ser avisado primeiro
             </h3>
@@ -230,7 +277,7 @@ export function PreCadastroSection() {
             Preencha 1 minuto de formulário e receba o contato do nosso time com as tarifas especiais de lançamento.
           </p>
 
-          <div className="mt-6 grid grid-cols-2 gap-3 rounded-full bg-foreground/5 p-2">
+          <div className="mt-6 grid grid-cols-2 gap-3 rounded-full bg-background-red2/5 p-2">
             {["lojista", "entregador"].map((type) => {
               const isActive = userType === type;
               const labels = {
@@ -305,4 +352,3 @@ export function PreCadastroSection() {
     </section>
   );
 }
-

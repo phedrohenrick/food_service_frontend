@@ -16,9 +16,9 @@ export function Testimonial17() {
           </p>
         </div>
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-          <div className=" border border-border-secondary rounded-lg bg-background-primary ...">
+          <div className=" border border-border-secondary rounded-lg bg-background-gray ...">
             <div className="rb-5 mb-5 md:mb-6">
-              <div className="ml-2 mb-5 flex md:mb-6">
+              <div className="ml-2 mb-5 flex md:mb-6 mt-4">
                 <BiSolidStar className="mr-1 size-6" />
                 <BiSolidStar className="mr-1 size-6" />
                 <BiSolidStar className="mr-1 size-6" />
@@ -31,7 +31,7 @@ export function Testimonial17() {
             </div>
             <div className="mt-5 flex w-full flex-col items-start md:mt-6 md:w-fit md:flex-row md:items-center">
               <img
-                src="https://d22po4pjz3o32e.cloudfront.net/placeholder-image.svg"
+                src="assets/images/lp/avatar/avatar1.jpg"
                 alt="Testimonial avatar"
                 className="ml-2 mb-4 size-12 min-h-12 min-w-12 rounded-full object-cover md:mr-4 md:mb-0"
               />
@@ -41,9 +41,9 @@ export function Testimonial17() {
               </div>
             </div>
           </div>
-         <div className="border border-border-secondary rounded-lg bg-background-primary ...">
+         <div className="border border-border-secondary rounded-lg bg-background-gray ...">
             <div className="rb-5 mb-5 md:mb-6">
-              <div className="ml-2 mb-5 flex md:mb-6">
+              <div className="ml-2 mb-5 flex md:mb-6 mt-4">
                 <BiSolidStar className="mr-1 size-6" />
                 <BiSolidStar className="mr-1 size-6" />
                 <BiSolidStar className="mr-1 size-6" />
@@ -56,7 +56,7 @@ export function Testimonial17() {
             </div>
             <div className="ml-2 mb-4 mt-5 flex w-full flex-col items-start md:mt-6 md:w-fit md:flex-row md:items-center">
               <img
-                src="https://d22po4pjz3o32e.cloudfront.net/placeholder-image.svg"
+                src="assets/images/lp/avatar/avatar 2.jpg"
                 alt="Testimonial avatar"
                 className="mb-4 size-12 min-h-12 min-w-12 rounded-full object-cover md:mr-4 md:mb-0"
               />
@@ -66,9 +66,9 @@ export function Testimonial17() {
               </div>
             </div>
           </div>
-          <div className="border border-border-secondary rounded-lg bg-background-primary ...">
+          <div className="border border-border-secondary rounded-lg bg-background-gray ...">
             <div className="ml-2 rb-5 mb-5 md:mb-6">
-              <div className="mb-5 flex md:mb-6">
+              <div className="mb-5 flex md:mb-6 mt-4">
                 <BiSolidStar className="mr-1 size-6" />
                 <BiSolidStar className="mr-1 size-6" />
                 <BiSolidStar className="mr-1 size-6" />
@@ -81,7 +81,7 @@ export function Testimonial17() {
             </div>
             <div className="ml-2 mt-5 flex w-full flex-col items-start md:mt-6 md:w-fit md:flex-row md:items-center">
               <img
-                src="https://d22po4pjz3o32e.cloudfront.net/placeholder-image.svg"
+                src="assets/images/lp/avatar/avatar3.jpg"
                 alt="Testimonial avatar"
                 className="mb-4 size-12 min-h-12 min-w-12 rounded-full object-cover md:mr-4 md:mb-0"
               />
