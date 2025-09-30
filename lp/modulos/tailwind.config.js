@@ -10,17 +10,21 @@ module.exports = {
     extend: {
       colors: {
         background: {
-          primary: '#C42C16',
-          secondary: '#ffD700',
+          primary: '#ffffff',
+          secondary: '#FFC300',
+          hero: '#EA1D2C',
+          orange: '#FF7F27',
+          red2:'#DD3F0C',
+          gray: '#F5F5F5',
         },
         border: {
           primary: '#aaaaaa',
         },
         // Mantendo suas cores existentes
         'background-primary': '#ffffff',
-        'background-hero': '#C42C16',
+        'background-hero': '#EA1D2C',
         'border-primary': '#C42C16',
-        'foreground': '#A72512',
+        'foreground': '#A52A2A',
       },
       fontSize: {
         'md': '1rem',
