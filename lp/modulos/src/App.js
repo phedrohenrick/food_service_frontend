@@ -12,7 +12,11 @@ const RestaurantDashboard = React.lazy(() => import('./apps/restaurant-dashboard
 const CustomerApp = React.lazy(() => import('./apps/customer-app/CustomerApp'));
 
 // Auth Pages
-const LoginPage = React.lazy(() => import('./pages/login'));
+const LoginPage = React.lazy(() => import('./features/auth'));
+const MerchantLoginPage = React.lazy(() => import('./features/auth/MerchantLogin'));
+const DeliveryLoginPage = React.lazy(() => import('./features/auth/DeliveryLogin'));
+const CustomerLoginPage = React.lazy(() => import('./features/auth/CustomerLogin'));
+const ForgotPasswordPage = React.lazy(() => import('./features/auth/ForgotPassword'));
 
 function App() {
   return (
@@ -25,6 +29,10 @@ function App() {
           
           {/* Auth Routes */}
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/login/lojista" element={<MerchantLoginPage />} />
+          <Route path="/login/entregador" element={<DeliveryLoginPage />} />
+          <Route path="/login/cliente" element={<CustomerLoginPage />} />
+          <Route path="/login/esqueci-senha" element={<ForgotPasswordPage />} />
           
           {/* Restaurant Dashboard Routes */}
           <Route path="/dashboard/*" element={<RestaurantDashboard />} />
