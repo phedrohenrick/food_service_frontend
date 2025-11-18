@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Button } from "@relume_io/relume-ui";
 import React from "react";
@@ -64,7 +64,7 @@ export function Header30() {
                 </h1>
                 
                 <p className="text-white/90 text-base sm:text-lg md:text-xl max-w-2xl mx-auto lg:mx-0 animate-fade-in delay-400">
-                  Dashboard completo, taxas competitivas e suporte dedicado. 
+                  Dashboard completo, sistema de delivery e suporte dedicado. 
                   Gerencie pedidos, acompanhe métricas e aumente suas vendas com nossa plataforma.
                 </p>
               </div>

@@ -5,7 +5,7 @@ import { Button } from "@relume_io/relume-ui";
 import { HiOutlineSparkles, HiOutlineChatBubbleLeftRight } from "react-icons/hi2";
 import { BsShieldCheck } from "react-icons/bs";
 
-const leadFields = {
+export const leadFields = {
   lojista: [
     {
       name: "responsavelNome",
@@ -67,7 +67,7 @@ const leadFields = {
   ],
 };
 
-const googleFields = {
+export const googleFields = {
   lojista: {
     responsavelNome: "entry.334939554",
     restauranteNome: "entry.809978231",
@@ -85,7 +85,7 @@ const googleFields = {
   },
 };
 
-const getInitialFormState = (type) => {
+export const getInitialFormState = (type) => {
   return leadFields[type].reduce(
     (acc, field) => ({
       ...acc,
@@ -206,15 +206,15 @@ export function PreCadastroSection() {
   return (
     <section
       id="pre-cadastro"
-      className="relative px-[5%] py-20 md:py-28 bg-gradient-to-b from-background-hero via-background-primary to-background-primary"
+      className="relative px-[5%] py-20 md:py-28 bg-gradient-to-b from-foreground via-background-primary to-background-primary"
     >
       <div className="container grid gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
         <div className="max-w-2xl space-y-6 text-white">
           <span className="inline-flex items-center gap-2 rounded-full bg-black/80 px-4 py-2 text-sm font-semibold uppercase tracking-wide">
             <HiOutlineSparkles className="text-lg" /> Pré-cadastro VIP
           </span>
-          <h2 className="text-5xl font-bold md:text-6xl">
-           A plataforma que gerencia o seu negócio, uma nova opção.<div className="text-shadow-outline text-background-hero/80"> Agora em Niquelândia</div>
+          <h2 className="text-foreground text-5xl font-bold md:text-6xl">
+           Recebe os pedidos, facilita para o cliente, conecta com o entregador.<div className="text-shadow-outline text-background-hero"> Agora em Niquelândia</div>
           </h2>
           {/* <div className="rounded-3xl border border-white/10 bg-black/80 p-6 backdrop-blur">
             <p className="text-white text-lg md:text-xl">
@@ -226,9 +226,9 @@ export function PreCadastroSection() {
               <div className="flex items-start gap-3">
                 <BsShieldCheck className="mt-1 text-2xl text-white" />
                 <div>
-                  <h3 className="font-semibold text-lg">Até 40% menos custos</h3>
+                  <h3 className="font-semibold text-lg">Não existe taxa sobre os pedidos</h3>
                   <p className="text-white/70 text-sm">
-                    Taxas claras, repasses rápidos e suporte dedicado para cada operação.
+                    Valor mensal fixo e justo, repasses rápidos e suporte dedicado para cada operação.
                   </p>
                 </div>
               </div>
@@ -266,7 +266,7 @@ export function PreCadastroSection() {
 
         <div className="rounded-3xl bg-white p-8 shadow-2xl md:p-10">
           <div className=" flex items-center justify-between gap-2">
-            <h3 className="text-2xl font-bold text-foreground">
+            <h3 className="text-2xl font-bold text-background-hero">
               Quero ser avisado primeiro
             </h3>
             <span className="rounded-full bg-foreground/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-foreground">
@@ -274,7 +274,7 @@ export function PreCadastroSection() {
             </span>
           </div>
           <p className="mt-3 text-foreground/70 text-sm">
-            Preencha 1 minuto de formulário e receba o contato do nosso time com as tarifas especiais de lançamento.
+            Preencha o formulário em 30 segundos e receba o contato do nosso time com as tarifas especiais de lançamento.
           </p>
 
           <div className="mt-6 grid grid-cols-2 gap-3 rounded-full bg-background-red2/5 p-2">
@@ -292,7 +292,7 @@ export function PreCadastroSection() {
                   onClick={() => setUserType(type)}
                   className={`rounded-full py-2 text-sm font-semibold transition ${
                     isActive
-                      ? "bg-foreground text-white shadow-lg"
+                      ? "bg-background-hero text-white shadow-lg"
                       : "text-foreground/60 hover:text-foreground"
                   }`}
                   data-segment={type}
@@ -325,7 +325,7 @@ export function PreCadastroSection() {
             <div className="space-y-3">
               <Button
                 type="submit"
-                class="bg-foreground text-white font-semibold w-full rounded-2xl py-3 text-base shadow-lg hover:shadow-xl transition"
+                class="bg-background-hero text-white font-semibold w-full rounded-2xl py-3 text-base shadow-lg hover:shadow-xl transition"
                 disabled={isSubmitting}
                 data-form-type={userType}
               >

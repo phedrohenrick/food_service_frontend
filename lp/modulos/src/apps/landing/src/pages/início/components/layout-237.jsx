@@ -1,14 +1,15 @@
-"use client";
+﻿"use client";
 
 import { Button } from "@relume_io/relume-ui";
 import React from "react";
+import { LeadPopup } from "./LeadPopup";
 import { RxChevronRight } from "react-icons/rx";
 import { BiRestaurant } from 'react-icons/bi';
 import { MdDeliveryDining } from 'react-icons/md';
 
 export function Layout237() {
   return (
-    <section id="relume" className="px-[5%] py-16 md:py-24 lg:py-28 bg-background-secondary">
+    <section id="relume" data-section-id="layout-237" className="px-[5%] py-16 md:py-24 lg:py-28 bg-background-secondary">
       <div className="container">
         <div className="flex flex-col items-center">
           <div className="rb-12 mb-12 w-full max-w-lg text-center md:mb-18 lg:mb-20">
@@ -17,7 +18,7 @@ export function Layout237() {
               Três passos simples para sua refeição
             </h2>
             <p className="md:text-md">
-              Peça, receba e saboreia. Simples assim.
+              O cliente pede, recebe e saboreia. Simples assim.
             </p>
           </div>
           <div className="grid grid-cols-1 items-start justify-center gap-y-12 md:grid-cols-3 md:gap-x-8 md:gap-y-16 lg:gap-x-12">
@@ -27,9 +28,9 @@ export function Layout237() {
                 <BiRestaurant className="size-12" />
               </div>
               <h3 className="mb-5 text-2xl font-bold md:mb-6 md:text-3xl md:leading-[1.3] lg:text-4xl">
-                Faça seu pedido
+                Eles pedem
               </h3>
-              <p>Escolha entre centenas de restaurantes na sua região.</p>
+              <p>O cliente escolhe entre centenas de restaurantes na sua região.</p>
             </div>
             <div className="flex w-full flex-col items-center text-center">
               <div className="rb-5 mb-5 md:mb-6">
@@ -40,18 +41,18 @@ export function Layout237() {
                 />
               </div>
               <h3 className="mb-5 text-2xl font-bold md:mb-6 md:text-3xl md:leading-[1.3] lg:text-4xl">
-                Restaurantes preparam
+                Vocês preparam
               </h3>
-              <p>Cozinheiros locais preparam sua refeição com carinho.</p>
+              <p>Cozinheiros locais preparam a refeição com carinho.</p>
             </div>
             <div className="flex w-full flex-col items-center text-center">
               <div className="rb-5 mb-5 md:mb-6">
                 <MdDeliveryDining className="size-12" />
               </div>
               <h3 className="mb-5 text-2xl font-bold md:mb-6 md:text-3xl md:leading-[1.3] lg:text-4xl">
-                Entregamos na sua porta
+                Os outros entregam
               </h3>
-              <p>Entregadores rápidos levam sua comida quentinha.</p>
+              <p>Entregadores rápidos levam a comida quentinha.</p>
             </div>
           </div>
           <div className="mt-10 flex items-center gap-4 md:mt-14 lg:mt-16">
@@ -62,6 +63,8 @@ export function Layout237() {
           </div>
         </div>
       </div>
+      <LeadPopup />
     </section>
   );
 }
+

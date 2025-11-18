@@ -38,6 +38,18 @@ const useRelume = () => {
 };
 
 export function Navbar1() {
+  const scrollToForm = (type) => {
+    const target = document.getElementById("pre-cadastro");
+
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (type) {
+        target.dispatchEvent(
+          new CustomEvent("lead:type", { detail: { type }, bubbles: true })
+        );
+      }
+    }
+  };
   const useActive = useRelume();
   return (
     <section
@@ -190,11 +202,16 @@ export function Navbar1() {
               title="Entrar"
               variant="secondary"
               size="sm"
+              onClick={() => scrollToForm("lojista")}
               className="text-black font-bold py-2 px-4 rounded-full"
             >
               Entrar
             </Button>
-            <Button title="Cadastrar" size="sm" class="bg-black text-white font-bold py-2 px-4 rounded-full">
+            <Button 
+            title="Cadastrar" 
+            size="sm" 
+            class="bg-black text-white font-bold py-2 px-4 rounded-full"
+            onClick={() => scrollToForm("lojista")}>
               Cadastrar
             </Button>
           </div>
