@@ -47,7 +47,7 @@ export function AuthLayout({
               {subtitle}
             </p>
           )}
-          <div className="grid gap-4 text-sm sm:grid-cols-2">
+          {/* <div className="grid gap-4 text-sm sm:grid-cols-2">
             <div className="rounded-2xl border border-white/20 bg-white/15 backdrop-blur-md p-5 shadow-lg">
               <p className="font-semibold text-white">Taxas acessíveis</p>
               <p className="text-white/90">Negocie direto com uma equipe que entende a realidade da sua operação.</p>
@@ -56,7 +56,7 @@ export function AuthLayout({
               <p className="font-semibold text-white">Suporte humano</p>
               <p className="text-white/90">Fale com especialistas que acompanham seu delivery do dia zero.</p>
             </div>
-          </div>
+          </div> */}
         </div>
 
         <div className="mt-10 w-full max-w-md flex-1 lg:mt-0">

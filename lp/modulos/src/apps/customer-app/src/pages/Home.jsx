@@ -1,150 +1,169 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Button } from '../../../../shared/components/ui';
+import { useStorefront } from '../context/StorefrontContext';
 
 const Home = () => {
-  const featuredRestaurants = [
-    {
-      id: 1,
-      name: 'Pizza Palace',
-      cuisine: 'Italiana',
-      rating: 4.8,
-      deliveryTime: '25-35 min',
-      deliveryFee: 'R$ 5,00',
-      image: '🍕',
-    },
-    {
-      id: 2,
-      name: 'Burger House',
-      cuisine: 'Americana',
-      rating: 4.6,
-      deliveryTime: '20-30 min',
-      deliveryFee: 'R$ 4,50',
-      image: '🍔',
-    },
-    {
-      id: 3,
-      name: 'Sushi Express',
-      cuisine: 'Japonesa',
-      rating: 4.9,
-      deliveryTime: '30-40 min',
-      deliveryFee: 'R$ 6,00',
-      image: '🍣',
-    },
-  ];
+  const { store } = useStorefront();
+  const [searchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('todos');
 
-  const categories = [
-    { name: 'Pizza', icon: '🍕', count: 12 },
-    { name: 'Hambúrguer', icon: '🍔', count: 8 },
-    { name: 'Sushi', icon: '🍣', count: 5 },
-    { name: 'Italiana', icon: '🍝', count: 15 },
-    { name: 'Brasileira', icon: '🍖', count: 20 },
-    { name: 'Sobremesas', icon: '🍰', count: 10 },
-  ];
+  const filteredCategories = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+    return store.categories
+      .filter((category) => categoryFilter === 'todos' || category.id === categoryFilter)
+      .map((category) => ({
+        ...category,
+        items: category.items.filter((item) => {
+          if (!item.available) return false;
+          if (!normalizedSearch) return true;
+          return (
+            item.name.toLowerCase().includes(normalizedSearch) ||
+            item.description.toLowerCase().includes(normalizedSearch)
+          );
+        }),
+      }))
+      .filter((category) => category.items.length > 0);
+  }, [store.categories, categoryFilter, searchTerm]);
 
   return (
-    <div className="space-y-8">
-      {/* Hero Section */}
-      <div className="bg-gradient-to-r from-background-primary to-background-primary/80 rounded-2xl p-8 text-white">
-        <div className="max-w-2xl">
-          <h1 className="text-3xl font-bold mb-4">
-            Comida deliciosa entregue na sua porta
-          </h1>
-          <p className="text-lg mb-6 opacity-90">
-            Descubra os melhores restaurantes da sua região e peça com facilidade
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <input
-                type="text"
-                placeholder="Digite seu endereço..."
-                className="w-full px-4 py-3 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-white"
-              />
-            </div>
-            <Button variant="secondary" size="lg">
-              Buscar Restaurantes
-            </Button>
-          </div>
-        </div>
-      </div>
+    <div className="space-y-10">
+      <div className="flex items-center gap-4">
+        <img
+          src={store.logoImage}
+          alt={store.name}
+          className="h-14 w-14 rounded-full border border-gray-100 object-cover"
+        />
 
-      {/* Categories */}
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Categorias</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          {categories.map((category) => (
-            <Link
-              key={category.name}
-              to={`/customer-app/restaurants?category=${category.name.toLowerCase()}`}
-              className="bg-white rounded-lg p-4 text-center hover:shadow-md transition-shadow border border-gray-200"
-            >
-              <div className="text-3xl mb-2">{category.icon}</div>
-              <h3 className="font-medium text-gray-900">{category.name}</h3>
-              <p className="text-sm text-gray-500">{category.count} restaurantes</p>
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      {/* Featured Restaurants */}
-      <div>
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Restaurantes em Destaque</h2>
-          <Link
-            to="/customer-app/restaurants"
-            className="text-background-primary hover:text-background-primary/80 font-medium"
-          >
-            Ver todos
-          </Link>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {featuredRestaurants.map((restaurant) => (
-            <Link
-              key={restaurant.id}
-              to={`/customer-app/restaurant/${restaurant.id}`}
-              className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden"
-            >
-              <div className="h-48 bg-gray-100 flex items-center justify-center text-6xl">
-                {restaurant.image}
-              </div>
-              
-              <div className="p-4">
-                <h3 className="font-bold text-lg text-gray-900 mb-1">
-                  {restaurant.name}
-                </h3>
-                <p className="text-gray-600 mb-2">{restaurant.cuisine}</p>
-                
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center space-x-1">
-                    <span className="text-yellow-500">⭐</span>
-                    <span className="font-medium">{restaurant.rating}</span>
-                  </div>
-                  <span className="text-gray-500">{restaurant.deliveryTime}</span>
-                  <span className="text-gray-500">{restaurant.deliveryFee}</span>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      {/* Promotional Banner */}
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center gap-3 text-sm">
           <div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">
-              🎉 Primeira entrega grátis!
-            </h3>
-            <p className="text-gray-600">
-              Cadastre-se agora e ganhe frete grátis no seu primeiro pedido
-            </p>
+            <Link to="/app" className="text-2xl font-semibold text-background-black">
+              {store.name}
+            </Link>
+
+            <span className="text-xs text-gray-600">
+              <br />
+              <span
+                className={`items-center gap-2 px-3 py-1 text-xs font-semibold ${
+                  store.isOpen
+                    ? 'rounded-full bg-green-100 text-green-700 mr-2'
+                    : 'rounded-full bg-red-100 text-red-700 mr-2'
+                }`}
+              >
+                {store.isOpen ? 'Aberto' : 'Fechado'}
+              </span>
+              Entrega em {store.deliveryEstimate.min}-{store.deliveryEstimate.max} min · Taxa R${' '}
+              {store.deliveryFee.toFixed(2)}
+            </span>
           </div>
-          <Button variant="primary">
-            Cadastrar
-          </Button>
         </div>
       </div>
+
+      <section
+        className={`grid gap-4 ${store.banners.length > 1 ? 'md:grid-cols-2' : 'md:grid-cols-1 md:max-w-4xl'} mx-auto`}
+      >
+        {store.banners.map((banner) => (
+          <Link
+            key={banner.id}
+            to={banner.productSlug ? `/app/produto/${banner.productSlug}` : '/app'}
+            className="relative overflow-hidden rounded-2xl border border-gray-100 bg-white shadow transition hover:-translate-y-1 hover:shadow-lg"
+          >
+            <div className="absolute inset-0">
+              <img src={banner.image} alt={banner.title} className="h-full w-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent" />
+            </div>
+            <div className="relative p-6 text-[var(--accent-contrast)] space-y-2">
+              <span className="inline-flex rounded-full bg-[var(--accent)] px-3 py-1 text-xs uppercase tracking-wide text-background-white">
+                {banner.badge}
+              </span>
+              <h3 className="text-2xl font-semibold">{banner.title}</h3>
+              <p className="text-sm text-white/80">{banner.subtitle}</p>
+              <p className="text-sm text-white/70">{banner.description}</p>
+              <span className="inline-flex items-center text-sm font-semibold">
+                Ver produto →
+              </span>
+            </div>
+          </Link>
+        ))}
+      </section>
+
+      <section className="space-y-6">
+        <div className="flex flex-wrap items-center gap-3 md:justify-center">
+          <button
+            type="button"
+            onClick={() => setCategoryFilter('todos')}
+            className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
+              categoryFilter === 'todos'
+                ? 'border-[var(--accent)] bg-[var(--accent)]/80 text-[var(--accent)]'
+                : 'border-gray-200 text-gray-500 hover:text-gray-900'
+            }`}
+          >
+            Tudo
+          </button>
+          {store.categories.map((category) => (
+            <button
+              key={category.id}
+              type="button"
+              onClick={() => setCategoryFilter(category.id)}
+              className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
+                categoryFilter === category.id
+                  ? 'border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]'
+                  : 'border-gray-200 text-gray-500 hover:text-gray-900'
+              }`}
+            >
+              {category.name}
+            </button>
+          ))}
+        </div>
+
+        <div className="space-y-10">
+          {filteredCategories.map((category) => (
+            <div key={category.id} className="space-y-4">
+              <div>
+                <h2 className="text-2xl font-semibold text-gray-900">{category.name}</h2>
+                {category.description && (
+                  <p className="text-sm text-gray-500">{category.description}</p>
+                )}
+              </div>
+              <div className="grid gap-5 md:grid-cols-2">
+                {category.items.map((item) => (
+                  <Link
+                    key={item.id}
+                    to={`/app/produto/${item.slug}`}
+                    className="group flex flex-col rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg sm:flex-row"
+                  >
+                    <div className="flex flex-1 flex-col gap-3 p-5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-lg font-semibold text-gray-900 group-hover:text-[var(--accent)]">
+                          {item.name}
+                        </span>
+                        {item.highlights?.map((highlight) => (
+                          <span
+                            key={highlight}
+                            className="rounded-full bg-[var(--accent)] px-2 py-1 text-xs font-semibold text-[var(--accent-contrast)]"
+                          >
+                            {highlight}
+                          </span>
+                        ))}
+                      </div>
+                      <p className="text-sm text-gray-600 flex-1">{item.description}</p>
+                      <p className="text-xl font-semibold text-gray-900">
+                        R$ {item.price.toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="h-48 w-full overflow-hidden rounded-2xl sm:h-auto sm:w-48">
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="h-full w-full object-cover transition duration-200 group-hover:scale-105"
+                      />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 };

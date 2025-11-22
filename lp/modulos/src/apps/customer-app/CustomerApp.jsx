@@ -1,20 +1,33 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import CustomerLayout from './src/components/layout/CustomerLayout';
-import { Home, Restaurants, Orders, Profile } from './src/pages';
+import {
+  Home,
+  Product,
+  Bag,
+  Addresses,
+  AddressForm,
+  Orders,
+  OrderDetails,
+} from './src/pages';
+import { StorefrontProvider } from './src/context/StorefrontContext';
 
-const CustomerApp = () => {
-  return (
+const CustomerApp = () => (
+  <StorefrontProvider>
     <CustomerLayout>
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/restaurants" element={<Restaurants />} />
-        <Route path="/orders" element={<Orders />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/restaurant/:id" element={<div>Restaurant Details Page</div>} />
+        <Route path="/produto/:productSlug" element={<Product />} />
+        <Route path="/sacola" element={<Bag />} />
+        <Route path="/enderecos" element={<Addresses />} />
+        <Route path="/enderecos/novo" element={<AddressForm />} />
+        <Route path="/enderecos/:addressId" element={<AddressForm />} />
+        <Route path="/pedidos" element={<Orders />} />
+        <Route path="/pedidos/:orderId" element={<OrderDetails />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </CustomerLayout>
-  );
-};
+  </StorefrontProvider>
+);
 
 export default CustomerApp;

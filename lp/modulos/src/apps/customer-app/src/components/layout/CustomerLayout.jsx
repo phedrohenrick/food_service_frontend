@@ -1,97 +1,129 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useStorefront } from '../../context/StorefrontContext';
+import { IoIosPin } from "react-icons/io";
+import { IoSearch } from "react-icons/io5";
+import { LiaShoppingBagSolid } from "react-icons/lia";
+import { IoRestaurant } from "react-icons/io5";
+import { GrRestaurant } from "react-icons/gr";
+import { IoFastFoodOutline } from "react-icons/io5";
+
+
 
 const CustomerLayout = ({ children }) => {
   const location = useLocation();
+  const { store, cart, cartTotals } = useStorefront();
+  const accent = store.mainColor || '#EA1D2C';
+  const accentHover = accent.length === 7 ? `${accent}e6` : accent;
+  
+  const getContrast = (hex) => {
+    const normalized = hex.replace('#', '');
+    const full = normalized.length === 3
+      ? normalized.split('').map((c) => c + c).join('')
+      : normalized.padEnd(6, '0');
+    const r = parseInt(full.substring(0, 2), 16) / 255;
+    const g = parseInt(full.substring(2, 4), 16) / 255;
+    const b = parseInt(full.substring(4, 6), 16) / 255;
+    const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    return luminance > 0.6 ? '#0f172a' : '#ffffff';
+  };
+  const accentContrast = getContrast(accent);
+  const showCardapioHeader = location.pathname === '/app';
 
   const navigation = [
-    { name: 'Início', href: '/customer-app', icon: '🏠' },
-    { name: 'Restaurantes', href: '/customer-app/restaurants', icon: '🍽️' },
-    { name: 'Pedidos', href: '/customer-app/orders', icon: '📋' },
-    { name: 'Perfil', href: '/customer-app/profile', icon: '👤' },
+    { label: 'Cardápio', to: '/app', exact: true, icon: <IoRestaurant /> },
+    { label: 'Sacola', to: '/app/sacola', icon:  <LiaShoppingBagSolid /> },
+    { label: 'Endereços', to: '/app/enderecos', icon: <IoIosPin /> },
+    { label: 'Pedidos', to: '/app/pedidos', icon: <GrRestaurant />},
   ];
 
-  const isActive = (href) => {
-    if (href === '/customer-app') {
-      return location.pathname === href;
-    }
-    return location.pathname.startsWith(href);
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Top Navigation */}
-      <nav className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <Link to="/customer-app" className="flex items-center">
-                <span className="text-2xl font-bold text-background-primary">
-                  FoodService
-                </span>
-              </Link>
-            </div>
-            
-            <div className="flex items-center space-x-8">
-              {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    isActive(item.href)
-                      ? 'text-background-primary bg-background-primary/10'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                  }`}
-                >
-                  <span>{item.icon}</span>
-                  <span>{item.name}</span>
-                </Link>
-              ))}
-            </div>
-
-            <div className="flex items-center space-x-4">
-              <button className="relative p-2 text-gray-600 hover:text-gray-900">
-                <span className="text-xl">🛒</span>
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  3
-                </span>
-              </button>
-              
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-background-primary rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">U</span>
+    <div
+      className="min-h-screen bg-gray-50 text-gray-1000 pb-32"
+      style={{
+        '--accent': accent,
+        '--accent-hover': accentHover,
+        '--accent-contrast': accentContrast,
+      }}
+    >
+      <header className="sticky top-0 z-40 border-b border-gray-100 bg-[var(--accent)]/80 backdrop-blur">
+        <div className="max-w-6xl mx-auto px-4 py-6 space-y-4">
+          {showCardapioHeader ? (
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-center gap-4">
+                <div>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <h1  className="text-2xl font-semibold text-[var(--accent)] flex items-center gap-2">
+                      Seja bem-vindo(a)<IoFastFoodOutline/>
+                    </h1>
+                  </div>
                 </div>
-                <span className="text-sm text-gray-700">Usuário</span>
+              </div>
+              <div className="w-full md:w-auto md:min-w-[320px] flex items-center gap-3 w-full">
+                <form
+                  className="flex flex-1 items-center rounded-2xl border border-gray-200 bg-white px-4 py-2 focus-within:border-[var(--accent)] focus-within:ring-2 focus-within:ring-[var(--accent)]/10"
+                  onSubmit={(event) => event.preventDefault()}
+                >
+                  <span className="text-gray-400 mr-3 text-lg"><IoSearch className='text-black' /></span>
+                  <input
+                    type="search"
+                    placeholder="Pesquisar no cardápio"
+                    className="flex-1 border-none bg-transparent text-sm text-gray-700 placeholder-gray-400 focus:outline-none"
+                  />
+                </form>
+                <Link
+                  to="/app/sacola"
+                  className="inline-flex shrink-0 items-center gap-2 rounded-2xl bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-[var(--accent-hover)] transition"
+                >
+                  <LiaShoppingBagSolid className="text-lg" />
+                  Sacola
+                  {cart.items.length > 0 && (
+                    <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-xs">
+                      {cart.items.reduce((sum, item) => sum + item.quantity, 0)} · R$ {cartTotals.total.toFixed(2)}
+                    </span>
+                  )}
+                </Link>
               </div>
             </div>
+          ) : (<div className="flex items-center gap-4">
+            <img
+              src={store.logoImage}
+              alt={store.name}
+              className="h-14 w-14 rounded-full border border-gray-100 object-cover"
+            />
+            <Link to="/app" className="text-2xl font-semibold text-background-black">
+              {store.name}
+            </Link>
           </div>
+          )}
+        </div>
+      </header>
+
+      <main className="max-w-6xl mx-auto px-4 py-8 pb-20">{children}</main>
+
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-[var(--accent)]/30 bg-[var(--accent)] text-[var(--accent-contrast)] shadow-[-10px_-10px_30px_rgba(0,0,0,0.15)]">
+        <div className="mx-auto grid max-w-4xl grid-cols-4 text-xs font-medium">
+          {navigation.map((item) => {
+            const active = item.exact
+              ? location.pathname === item.to
+              : location.pathname.startsWith(item.to);
+            return (
+              <Link
+                key={item.label}
+                to={item.to}
+                className={`flex flex-col items-center gap-1 py-3 transition ${
+                  active
+                    ? 'text-[var(--accent-contrast)] font-semibold'
+                    : 'text-[var(--accent-contrast)]/80 hover:text-[var(--accent-contrast)]'
+                }`}
+              >
+                <span className="text-lg">{item.icon}</span>
+                {item.label}
+              </Link>
+            );
+          })}
         </div>
       </nav>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {children}
-      </main>
-
-      {/* Mobile Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 md:hidden">
-        <div className="grid grid-cols-4 gap-1">
-          {navigation.map((item) => (
-            <Link
-              key={item.name}
-              to={item.href}
-              className={`flex flex-col items-center py-2 px-1 text-xs ${
-                isActive(item.href)
-                  ? 'text-background-primary'
-                  : 'text-gray-600'
-              }`}
-            >
-              <span className="text-lg mb-1">{item.icon}</span>
-              <span>{item.name}</span>
-            </Link>
-          ))}
-        </div>
-      </div>
     </div>
   );
 };
