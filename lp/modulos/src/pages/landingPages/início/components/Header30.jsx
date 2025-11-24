@@ -17,10 +17,10 @@ export function Header30() {
                 Gerencie seu restaurante em um só lugar, aumente suas vendas e expanda seu negócio com as melhores taxas do mercado.
               </p>
               <div className="mt-6 flex items-center justify-center gap-x-4 md:mt-8">
-                <Button class="bg-white text-black font-bold py-2 px-4 rounded-full" title="Cadastrar" variant="secondary">
+                <Button className="bg-white text-black font-bold py-2 px-4 rounded-full" title="Cadastrar" variant="secondary">
                   Sou logista
                 </Button>
-                <Button class="bg-white text-black font-bold py-2 px-4 rounded-full" title="Cadastrar" variant="secondary">
+                <Button className="bg-white text-black font-bold py-2 px-4 rounded-full" title="Cadastrar" variant="secondary">
                   Sou entregador
                 </Button>
               </div>

@@ -194,7 +194,7 @@ export function Navbar1() {
             >
               Entrar
             </Button>
-            <Button title="Cadastrar" size="sm" class="bg-black text-white font-bold py-2 px-4 rounded-full">
+            <Button title="Cadastrar" size="sm" className="bg-black text-white font-bold py-2 px-4 rounded-full">
               Cadastrar
             </Button>
           </div>

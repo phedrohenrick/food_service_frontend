@@ -27,11 +27,11 @@ export function Header92() {
               {/* <Button class="" title="Baixar app" variant="secondary">
                 Baixar app
               </Button> */}
-              <Button class="bg-white text-black font-bold py-2 px-4 rounded-full"  title="Cadastrar" variant="secondary" >
+              <Button className="bg-white text-black font-bold py-2 px-4 rounded-full"  title="Cadastrar" variant="secondary" >
                 Sou logista
               </Button>
 
-              <Button class="bg-white text-black font-bold py-2 px-4 rounded-full"  title="Cadastrar" variant="secondary" >
+              <Button className="bg-white text-black font-bold py-2 px-4 rounded-full"  title="Cadastrar" variant="secondary" >
                 Sou entregador
               </Button>
             </div>
