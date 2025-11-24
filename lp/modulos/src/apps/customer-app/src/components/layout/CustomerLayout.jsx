@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useStorefront } from '../../../../../features/context/generalContext.jsx';
+import { useStorefront } from '../../../../../shared/generalContext.jsx';
 import { IoIosPin } from "react-icons/io";
 import { IoSearch } from "react-icons/io5";
 import { LiaShoppingBagSolid } from "react-icons/lia";

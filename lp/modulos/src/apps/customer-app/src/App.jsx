@@ -1,6 +1,6 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { StorefrontProvider } from '../../../features/context/generalContext.jsx';
+import { StorefrontProvider } from '../../../shared/generalContext.jsx';
 import CustomerLayout from './components/layout/CustomerLayout.jsx';
 import { Home, Product, Bag, Addresses, AddressForm, Orders, OrderDetails } from './pages';
 

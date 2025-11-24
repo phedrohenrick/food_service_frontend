@@ -1,10 +1,10 @@
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { useTenant } from '../context/TenantContext';
+import { useStorefront } from '../../../shared/generalContext.jsx';
 
 const ProductEdit = () => {
   const { productId } = useParams();
-  const { tenant } = useTenant();
+  const { tenant } = useStorefront();
 
   return (
     <div className="space-y-6">

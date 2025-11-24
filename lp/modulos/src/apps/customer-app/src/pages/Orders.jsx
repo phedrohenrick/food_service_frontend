@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../../../../shared/components/ui';
-import { useStorefront } from '../../../../features/context/generalContext.jsx';
+import { useStorefront } from '../../../../shared/generalContext.jsx';
 
 const statusPills = {
   CREATED: 'bg-gray-100 text-gray-700',

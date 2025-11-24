@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useStorefront } from '../../../../../features/context/generalContext.jsx';
+import { useStorefront } from '../../../../../shared/generalContext.jsx';
 import { RiDashboardHorizontalFill } from "react-icons/ri";
 import { GrRestaurant } from "react-icons/gr";
 import { MdMenuBook } from "react-icons/md";

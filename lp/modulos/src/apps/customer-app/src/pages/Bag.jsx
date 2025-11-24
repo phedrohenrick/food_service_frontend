@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../../../../shared/components/ui';
-import { useStorefront } from '../../../../features/context/generalContext.jsx';
+import { useStorefront } from '../../../../shared/generalContext.jsx';
 
 const Bag = () => {
   const navigate = useNavigate();

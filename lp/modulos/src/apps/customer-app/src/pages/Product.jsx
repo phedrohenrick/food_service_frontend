@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../../../../shared/components/ui';
-import { useStorefront } from '../../../../features/context/generalContext.jsx';
+import { useStorefront } from '../../../../shared/generalContext.jsx';
 
 const Product = () => {
   const { productSlug } = useParams();

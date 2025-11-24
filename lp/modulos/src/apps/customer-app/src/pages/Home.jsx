@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useStorefront } from '../../../../features/context/generalContext.jsx';
+import { useStorefront } from '../../../../shared/generalContext.jsx';
 
 const Home = () => {
   const { tenant, banners, menuCategories, getMenuItemsByCategory } = useStorefront();

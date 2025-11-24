@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Button } from '../../../../shared/components/ui';
-import { useStorefront } from '../../../../features/context/generalContext.jsx';
+import { useStorefront } from '../../../../shared/generalContext.jsx';
 
 const statusLabel = {
   CREATED: 'Pedido criado',

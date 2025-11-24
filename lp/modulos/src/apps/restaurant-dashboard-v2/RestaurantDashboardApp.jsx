@@ -5,7 +5,7 @@ import { Dashboard } from './src/pages';
 import Orders from './src/pages/Orders';
 import Menu from './src/pages/Menu';
 import Settings from './src/pages/Settings';
-import { StorefrontProvider } from '../../features/context/generalContext.jsx';
+import { StorefrontProvider } from '../../shared/generalContext.jsx';
 
 const RestaurantDashboard = () => {
   return (

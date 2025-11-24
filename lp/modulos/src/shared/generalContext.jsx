@@ -396,6 +396,8 @@ const actionMap = {
   CLEAR_CART: 'CLEAR_CART',
   SAVE_ADDRESS: 'SAVE_ADDRESS',
   PLACE_ORDER: 'PLACE_ORDER',
+  UPDATE_TENANT: 'UPDATE_TENANT',
+  ADD_ORDER_STATUS: 'ADD_ORDER_STATUS',
 };
 
 const reducer = (state, action) => {
@@ -558,6 +560,35 @@ const reducer = (state, action) => {
           notes: '',
           change: '',
         },
+      };
+    }
+
+    case actionMap.UPDATE_TENANT: {
+      const partial = action.payload || {};
+      return {
+        ...state,
+        tenant: { ...state.tenant, ...partial },
+      };
+    }
+
+    case actionMap.ADD_ORDER_STATUS: {
+      const { orderId, status } = action.payload;
+      if (!orderId || !status) return state;
+      const id = `st-${Date.now()}`;
+      const created_at = new Date().toISOString();
+      const last = state.statuses
+        .filter((s) => s.order_id === orderId)
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+      // Evitar adicionar após COMPLETED ou CANCELED
+      if (last && (last.status === 'COMPLETED' || last.status === 'CANCELED')) {
+        return state;
+      }
+      return {
+        ...state,
+        statuses: [
+          ...state.statuses,
+          { id, order_id: orderId, status, created_at },
+        ],
       };
     }
 
@@ -838,6 +869,10 @@ export const StorefrontProvider = ({ children }) => {
       setCartNotes,
       saveAddress,
       placeOrder,
+      updateTenant: (partial) =>
+        dispatch({ type: actionMap.UPDATE_TENANT, payload: partial }),
+      addOrderStatus: (orderId, status) =>
+        dispatch({ type: actionMap.ADD_ORDER_STATUS, payload: { orderId, status } }),
     }),
     [
       state,
