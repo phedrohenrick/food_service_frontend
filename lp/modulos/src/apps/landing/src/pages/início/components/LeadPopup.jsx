@@ -173,7 +173,7 @@ export function LeadPopup() {
             </div>
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
               <Button
-                class="w-full sm:w-auto bg-white text-background-hero font-semibold rounded-2xl px-5 py-3 text-sm sm:text-base shadow-lg hover:shadow-xl transition"
+                className="w-full sm:w-auto bg-white text-background-hero font-semibold rounded-2xl px-5 py-3 text-sm sm:text-base shadow-lg hover:shadow-xl transition"
                 onClick={handleOpen}
               >
                 Falar com especialista
@@ -265,7 +265,7 @@ export function LeadPopup() {
                 <div className="space-y-3">
                   <Button
                     type="submit"
-                    class="bg-background-hero text-white font-semibold w-full rounded-2xl py-3 text-base shadow-lg hover:shadow-xl transition"
+                    className="bg-background-hero text-white font-semibold w-full rounded-2xl py-3 text-base shadow-lg hover:shadow-xl transition"
                     disabled={isSubmitting}
                     data-form-type={`${userType}-popup`}
                   >

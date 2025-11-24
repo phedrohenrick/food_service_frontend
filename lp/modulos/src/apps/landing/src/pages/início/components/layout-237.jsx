@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { Button } from "@relume_io/relume-ui";
 import React from "react";
@@ -56,7 +56,7 @@ export function Layout237() {
             </div>
           </div>
           <div className="mt-10 flex items-center gap-4 md:mt-14 lg:mt-16">
-            <Button class="bg-white text-black font-bold py-2 px-4 rounded" variant="secondary">Baixar</Button>
+            <Button className="bg-white text-black font-bold py-2 px-4 rounded" variant="secondary">Baixar</Button>
             <Button iconRight={<RxChevronRight />} variant="link" size="link">
               Saiba mais
             </Button>

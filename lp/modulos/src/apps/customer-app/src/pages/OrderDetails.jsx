@@ -1,22 +1,23 @@
 import React from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Button } from '../../../../shared/components/ui';
-import { useStorefront } from '../context/StorefrontContext';
+import { useStorefront } from '../../../../features/context/generalContext.jsx';
 
 const statusLabel = {
-  CRIADO: 'Pedido criado',
-  PAGAMENTO_AUTORIZADO: 'Pagamento autorizado',
-  EM_PREPARO: 'Em preparo',
-  PRONTO: 'Pronto para coleta',
-  EM_ROTA: 'Em rota',
-  ENTREGUE: 'Entregue',
+  CREATED: 'Pedido criado',
+  PAYMENT_AUTHORIZED: 'Pagamento autorizado',
+  IN_PREPARATION: 'Em preparo',
+  READY: 'Pronto para coleta',
+  IN_ROUTE: 'Em rota',
+  DELIVERED: 'Entregue',
 };
 
 const OrderDetails = () => {
   const { orderId } = useParams();
-  const { orders, user, store } = useStorefront();
-  const order = orders.find((item) => item.id === orderId);
-  const address = user.addresses.find((item) => item.id === order?.addressId);
+  const { orders, addresses, tenant, getOrderDetailed } = useStorefront();
+  const detailed = getOrderDetailed(orderId);
+  const order = detailed?.order || null;
+  const address = order ? (addresses || []).find((item) => item.id === order.address_id) : null;
 
   if (!order) {
     return (
@@ -39,12 +40,12 @@ const OrderDetails = () => {
           <p className="text-sm uppercase tracking-[0.3em] text-gray-400">
             Pedido #{order.id}
           </p>
-          <h1 className="text-3xl font-semibold text-gray-900">{store.name}</h1>
+          <h1 className="text-3xl font-semibold text-gray-900">{tenant.name}</h1>
           <p className="text-sm text-gray-500">
             {new Intl.DateTimeFormat('pt-BR', {
               dateStyle: 'medium',
               timeStyle: 'short',
-            }).format(new Date(order.createdAt))}
+            }).format(new Date(order.created_at))}
           </p>
         </div>
         <Link to="/app/pedidos">
@@ -63,7 +64,7 @@ const OrderDetails = () => {
             </p>
           </header>
           <div className="space-y-4">
-            {order.timeline.map((step, index) => (
+            {detailed.timeline.map((step, index) => (
               <div key={step.status} className="flex gap-4">
                 <div className="flex flex-col items-center">
                   <span
@@ -71,7 +72,7 @@ const OrderDetails = () => {
                       step.completed ? 'border-[var(--accent)]' : 'border-gray-200'
                     }`}
                   />
-                  {index < order.timeline.length - 1 && (
+                  {index < detailed.timeline.length - 1 && (
                     <span className="h-12 w-px bg-gradient-to-b from-gray-300 to-transparent" />
                   )}
                 </div>
@@ -101,11 +102,11 @@ const OrderDetails = () => {
             </div>
             <div className="flex justify-between">
               <span>Serviço</span>
-              <span>R$ {order.serviceFee.toFixed(2)}</span>
+              <span>R$ {order.service_fee.toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
               <span>Entrega</span>
-              <span>R$ {order.deliveryFee.toFixed(2)}</span>
+              <span>R$ {order.delivery_fee.toFixed(2)}</span>
             </div>
           </div>
           <div className="flex items-center justify-between border-t border-gray-100 pt-4">
@@ -115,9 +116,9 @@ const OrderDetails = () => {
             </span>
           </div>
           <p className="text-sm text-gray-500">
-            Pagamento via {order.paymentChannel}
-            {order.paymentChannel === 'dinheiro' && order.changeFor
-              ? ` · Troco para ${order.changeFor}`
+            Pagamento via {order.payment_channel}
+            {order.payment_channel === 'dinheiro' && order.change
+              ? ` · Troco para ${order.change}`
               : ''}
           </p>
         </article>
@@ -127,21 +128,21 @@ const OrderDetails = () => {
         <article className="rounded-3xl bg-white p-6 shadow space-y-4">
           <h2 className="text-xl font-semibold text-gray-900">Itens do pedido</h2>
           <div className="space-y-3 text-sm text-gray-600">
-            {order.items.map((item) => (
+            {detailed.items.map((item) => (
               <div
                 key={item.id}
                 className="flex items-center justify-between rounded-2xl border border-gray-100 p-4"
               >
                 <div>
                   <p className="font-semibold text-gray-900">
-                    {item.quantity}x {item.name}
+                    {item.quantity}x {item.item_name_snapshot}
                   </p>
                   <p className="text-xs text-gray-500">
-                    Preço unitário R$ {item.unitPrice.toFixed(2)}
+                    Preço unitário R$ {item.unit_price.toFixed(2)}
                   </p>
                 </div>
                 <span className="text-sm font-semibold text-gray-900">
-                  R$ {(item.unitPrice * item.quantity).toFixed(2)}
+                  R$ {(item.unit_price * item.quantity).toFixed(2)}
                 </span>
               </div>
             ))}
@@ -150,14 +151,14 @@ const OrderDetails = () => {
         <article className="rounded-3xl bg-white p-6 shadow space-y-4">
           <h2 className="text-xl font-semibold text-gray-900">Endereço de entrega</h2>
           <div className="rounded-2xl border border-gray-100 p-4 text-sm text-gray-600">
-            <p className="font-semibold text-gray-900">{address?.label}</p>
+            <p className="font-semibold text-gray-900">{address?.label || 'Endereço'}</p>
             <p>
-              {address?.street}, {address?.streetNumber}
+              {address?.street}, {address?.streetNumber || address?.street_number}
             </p>
             <p>
-              {address?.neighborhood} · {address?.city} - {address?.state}
+              {address?.city}
             </p>
-            <p>CEP {address?.zipCode}</p>
+            <p>CEP {address?.zipCode || address?.zip_code}</p>
             {address?.complement && <p>Complemento: {address.complement}</p>}
           </div>
           <p className="text-xs text-gray-500">

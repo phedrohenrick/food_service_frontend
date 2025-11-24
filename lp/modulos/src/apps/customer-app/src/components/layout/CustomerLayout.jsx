@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useStorefront } from '../../context/StorefrontContext';
+import { useStorefront } from '../../../../../features/context/generalContext.jsx';
 import { IoIosPin } from "react-icons/io";
 import { IoSearch } from "react-icons/io5";
 import { LiaShoppingBagSolid } from "react-icons/lia";
@@ -12,8 +12,8 @@ import { IoFastFoodOutline } from "react-icons/io5";
 
 const CustomerLayout = ({ children }) => {
   const location = useLocation();
-  const { store, cart, cartTotals } = useStorefront();
-  const accent = store.mainColor || '#EA1D2C';
+  const { tenant, cart, cartItems, cartTotals } = useStorefront();
+  const accent = tenant.main_color || '#EA1D2C';
   const accentHover = accent.length === 7 ? `${accent}e6` : accent;
   
   const getContrast = (hex) => {
@@ -53,7 +53,7 @@ const CustomerLayout = ({ children }) => {
               <div className="flex items-center gap-4">
                 <div>
                   <div className="flex items-center gap-3 flex-wrap">
-                    <h1  className="text-2xl font-semibold text-[var(--accent)] flex items-center gap-2">
+                    <h1  className="text-2xl font-semibold text-black flex items-center gap-2">
                       Seja bem-vindo(a)<IoFastFoodOutline/>
                     </h1>
                   </div>
@@ -77,9 +77,9 @@ const CustomerLayout = ({ children }) => {
                 >
                   <LiaShoppingBagSolid className="text-lg" />
                   Sacola
-                  {cart.items.length > 0 && (
+                  {cartItems.length > 0 && (
                     <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-xs">
-                      {cart.items.reduce((sum, item) => sum + item.quantity, 0)} · R$ {cartTotals.total.toFixed(2)}
+                      {cartItems.reduce((sum, item) => sum + item.quantity, 0)} · R$ {cartTotals.total.toFixed(2)}
                     </span>
                   )}
                 </Link>
@@ -87,12 +87,12 @@ const CustomerLayout = ({ children }) => {
             </div>
           ) : (<div className="flex items-center gap-4">
             <img
-              src={store.logoImage}
-              alt={store.name}
+              src={tenant.photo_url}
+              alt={tenant.name}
               className="h-14 w-14 rounded-full border border-gray-100 object-cover"
             />
             <Link to="/app" className="text-2xl font-semibold text-background-black">
-              {store.name}
+              {tenant.name}
             </Link>
           </div>
           )}

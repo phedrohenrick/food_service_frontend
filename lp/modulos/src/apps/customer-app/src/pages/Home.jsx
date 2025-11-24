@@ -1,74 +1,75 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useStorefront } from '../context/StorefrontContext';
+import { useStorefront } from '../../../../features/context/generalContext.jsx';
 
 const Home = () => {
-  const { store } = useStorefront();
+  const { tenant, banners, menuCategories, getMenuItemsByCategory } = useStorefront();
   const [searchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('todos');
 
   const filteredCategories = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
-    return store.categories
+    return menuCategories
       .filter((category) => categoryFilter === 'todos' || category.id === categoryFilter)
-      .map((category) => ({
-        ...category,
-        items: category.items.filter((item) => {
-          if (!item.available) return false;
-          if (!normalizedSearch) return true;
-          return (
-            item.name.toLowerCase().includes(normalizedSearch) ||
-            item.description.toLowerCase().includes(normalizedSearch)
-          );
-        }),
-      }))
+      .map((category) => {
+        const items = getMenuItemsByCategory(category.id)
+          .filter((item) => {
+            if (!item.is_available) return false;
+            if (!normalizedSearch) return true;
+            return (
+              item.name.toLowerCase().includes(normalizedSearch) ||
+              item.description.toLowerCase().includes(normalizedSearch)
+            );
+          });
+        return { ...category, items };
+      })
       .filter((category) => category.items.length > 0);
-  }, [store.categories, categoryFilter, searchTerm]);
+  }, [menuCategories, categoryFilter, searchTerm, getMenuItemsByCategory]);
 
   return (
     <div className="space-y-10">
       <div className="flex items-center gap-4">
         <img
-          src={store.logoImage}
-          alt={store.name}
+          src={tenant.photo_url}
+          alt={tenant.name}
           className="h-14 w-14 rounded-full border border-gray-100 object-cover"
         />
 
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <div>
             <Link to="/app" className="text-2xl font-semibold text-background-black">
-              {store.name}
+              {tenant.name}
             </Link>
 
             <span className="text-xs text-gray-600">
               <br />
               <span
                 className={`items-center gap-2 px-3 py-1 text-xs font-semibold ${
-                  store.isOpen
+                  tenant.is_open
                     ? 'rounded-full bg-green-100 text-green-700 mr-2'
                     : 'rounded-full bg-red-100 text-red-700 mr-2'
                 }`}
               >
-                {store.isOpen ? 'Aberto' : 'Fechado'}
+                {tenant.is_open ? 'Aberto' : 'Fechado'}
               </span>
-              Entrega em {store.deliveryEstimate.min}-{store.deliveryEstimate.max} min · Taxa R${' '}
-              {store.deliveryFee.toFixed(2)}
+              Entrega em {tenant.delivery_estimate_min}-{tenant.delivery_estimate_max} min · Taxa R${' '}
+              {tenant.delivery_fee.toFixed(2)}
             </span>
           </div>
         </div>
       </div>
 
       <section
-        className={`grid gap-4 ${store.banners.length > 1 ? 'md:grid-cols-2' : 'md:grid-cols-1 md:max-w-4xl'} mx-auto`}
+        className={`grid gap-4 ${banners.length > 1 ? 'md:grid-cols-2' : 'md:grid-cols-1 md:max-w-4xl'} mx-auto`}
       >
-        {store.banners.map((banner) => (
+        {banners.map((banner) => (
           <Link
             key={banner.id}
-            to={banner.productSlug ? `/app/produto/${banner.productSlug}` : '/app'}
+            to={banner.product_link ? `/app/produto/${banner.product_link}` : '/app'}
             className="relative overflow-hidden rounded-2xl border border-gray-100 bg-white shadow transition hover:-translate-y-1 hover:shadow-lg"
           >
             <div className="absolute inset-0">
-              <img src={banner.image} alt={banner.title} className="h-full w-full object-cover" />
+              <img src={banner.banner_image} alt={banner.title} className="h-full w-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent" />
             </div>
             <div className="relative p-6 text-[var(--accent-contrast)] space-y-2">
@@ -99,7 +100,7 @@ const Home = () => {
           >
             Tudo
           </button>
-          {store.categories.map((category) => (
+          {menuCategories.map((category) => (
             <button
               key={category.id}
               type="button"
@@ -128,7 +129,7 @@ const Home = () => {
                 {category.items.map((item) => (
                   <Link
                     key={item.id}
-                    to={`/app/produto/${item.slug}`}
+                    to={`/app/produto/${item.id}`}
                     className="group flex flex-col rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg sm:flex-row"
                   >
                     <div className="flex flex-1 flex-col gap-3 p-5">
@@ -152,7 +153,7 @@ const Home = () => {
                     </div>
                     <div className="h-48 w-full overflow-hidden rounded-2xl sm:h-auto sm:w-48">
                       <img
-                        src={item.image}
+                        src={item.photo_url}
                         alt={item.name}
                         className="h-full w-full object-cover transition duration-200 group-hover:scale-105"
                       />

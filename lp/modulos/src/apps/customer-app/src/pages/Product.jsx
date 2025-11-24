@@ -1,24 +1,21 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../../../../shared/components/ui';
-import { useStorefront } from '../context/StorefrontContext';
+import { useStorefront } from '../../../../features/context/generalContext.jsx';
 
 const Product = () => {
   const { productSlug } = useParams();
   const navigate = useNavigate();
-  const { productMaps, addToCart, store } = useStorefront();
-  const product = productMaps.slugMap.get(productSlug);
+  const { maps, addToCart, menuItems } = useStorefront();
+  const product = maps.menuItemMap[productSlug] || menuItems.find((mi) => mi.slug === productSlug);
   const [quantity, setQuantity] = useState(1);
   const [feedback, setFeedback] = useState('');
   const [added, setAdded] = useState(false);
 
   const relatedItems = useMemo(() => {
     if (!product) return [];
-    return store.categories
-      .flatMap((category) => category.items)
-      .filter((item) => item.id !== product.id)
-      .slice(0, 3);
-  }, [store.categories, product]);
+    return menuItems.filter((item) => item.id !== product.id).slice(0, 3);
+  }, [menuItems, product]);
 
   if (!product) {
     return (
@@ -49,14 +46,14 @@ const Product = () => {
       <section className="rounded-3xl bg-white p-6 shadow space-y-6">
         <div className="overflow-hidden rounded-2xl">
           <img
-            src={product.image}
+            src={product.photo_url}
             alt={product.name}
             className="h-80 w-full object-cover"
           />
         </div>
         <div className="space-y-4">
           <p className="text-sm text-gray-400 uppercase tracking-[0.3em]">
-            {product.categoryName}
+            {maps.categoryMap[product.category_id]?.name}
           </p>
           <h1 className="text-3xl font-semibold text-gray-900">{product.name}</h1>
           <p className="text-gray-600 text-lg">{product.description}</p>
@@ -122,14 +119,14 @@ const Product = () => {
             >
               <div className="h-20 w-20 overflow-hidden rounded-xl">
                 <img
-                  src={item.image}
+                  src={item.photo_url}
                   alt={item.name}
                   className="h-full w-full object-cover"
                 />
               </div>
               <div className="flex-1">
                 <Link
-                  to={`/app/produto/${item.slug}`}
+                  to={`/app/produto/${item.slug || item.id}`}
                   className="text-base font-semibold text-gray-900 hover:text-[var(--accent-contrast)]"
                 >
                   {item.name}

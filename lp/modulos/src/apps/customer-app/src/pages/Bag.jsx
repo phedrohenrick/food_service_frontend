@@ -1,15 +1,17 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../../../../shared/components/ui';
-import { useStorefront } from '../context/StorefrontContext';
+import { useStorefront } from '../../../../features/context/generalContext.jsx';
 
 const Bag = () => {
   const navigate = useNavigate();
   const {
-    store,
-    user,
+    tenant,
+    addresses,
+    maps,
     cart,
     cartTotals,
+    getCartDetailedItems,
     updateCartItem,
     removeCartItem,
     setCartAddress,
@@ -19,8 +21,7 @@ const Bag = () => {
     placeOrder,
   } = useStorefront();
 
-  const selectedAddress =
-    user.addresses.find((address) => address.id === cart.selectedAddressId) || user.addresses[0];
+  const selectedAddress = maps.addressMap[cart.address_id] || addresses[0];
 
   const handleCheckout = () => {
     const orderId = placeOrder();
@@ -29,7 +30,9 @@ const Bag = () => {
     }
   };
 
-  if (!cart.items.length) {
+  const detailedItems = getCartDetailedItems();
+
+  if (!detailedItems.length) {
     return (
       <div className="rounded-3xl bg-white p-10 text-center shadow">
         <p className="text-4xl mb-3">🛍️</p>
@@ -61,26 +64,28 @@ const Bag = () => {
           </header>
           <div className="mt-3 rounded-2xl border border-gray-100 p-4 text-sm text-gray-600">
             <p>
-              {selectedAddress?.street}, {selectedAddress?.streetNumber} ·{' '}
-              {selectedAddress?.neighborhood}
+              {selectedAddress?.street}, {selectedAddress?.street_number} ·{' '}
+              {maps.neighborhoodMap[selectedAddress?.neighborhood_id]?.name}
             </p>
-            <p>
-              {selectedAddress?.city} - {selectedAddress?.state}
-            </p>
+            {selectedAddress?.city && (
+              <p>
+                {selectedAddress.city}
+              </p>
+            )}
             {selectedAddress?.complement && <p>Complemento: {selectedAddress.complement}</p>}
             <div className="mt-3 flex flex-wrap gap-3">
-              {user.addresses.map((address) => (
+              {addresses.map((address) => (
                 <button
                   key={address.id}
                   type="button"
                   className={`rounded-full border px-3 py-1 text-xs ${
-                    cart.selectedAddressId === address.id
+                    cart.address_id === address.id
                       ? 'border-[var(--accent)] text-[var(--accent)]'
                       : 'border-gray-200 text-gray-500'
                   }`}
                   onClick={() => setCartAddress(address.id)}
                 >
-                  {address.label}
+                  {address.street}, {address.street_number}
                 </button>
               ))}
             </div>
@@ -93,13 +98,13 @@ const Bag = () => {
             <h2 className="text-xl font-semibold text-gray-900">Escolha a forma de pagamento</h2>
           </header>
           <div className="grid gap-4 md:grid-cols-3">
-            {store.paymentChannels.map((channel) => (
+            {tenant.payment_channels.map((channel) => (
               <button
                 key={channel}
                 type="button"
                 onClick={() => setCartPaymentChannel(channel)}
                 className={`rounded-2xl border p-4 text-sm font-semibold capitalize transition ${
-                  cart.paymentChannel === channel
+                  cart.payment_channel === channel
                     ? 'border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-contrast)]'
                     : 'border-gray-200 text-gray-500 hover:text-gray-900'
                 }`}
@@ -108,14 +113,14 @@ const Bag = () => {
               </button>
             ))}
           </div>
-          {cart.paymentChannel === 'dinheiro' && (
+          {cart.payment_channel === 'cash' && (
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">
                 Troco para quanto?
               </label>
               <input
                 type="text"
-                value={cart.changeFor}
+                value={cart.change}
                 onChange={(event) => setCartChangeFor(event.target.value)}
                 placeholder="Ex: R$ 100,00"
                 className="w-full rounded-2xl border border-gray-200 px-4 py-3 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
@@ -131,22 +136,22 @@ const Bag = () => {
           </header>
 
           <div className="space-y-4">
-            {cart.items.map((item) => (
+            {detailedItems.map((item) => (
               <div
                 key={item.id}
                 className="flex gap-4 rounded-2xl border border-gray-100 p-4"
               >
                 <div className="h-24 w-24 overflow-hidden rounded-xl">
-                  <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
+                  <img src={item.item?.photo_url} alt={item.item?.name} className="h-full w-full object-cover" />
                 </div>
                 <div className="flex flex-1 flex-col gap-2">
                   <div className="flex justify-between">
-                    <p className="text-lg font-semibold text-gray-900">{item.name}</p>
+                    <p className="text-lg font-semibold text-gray-900">{item.item?.name}</p>
                     <span className="text-lg font-semibold text-gray-900">
-                      R$ {(item.price * item.quantity).toFixed(2)}
+                      R$ {Number(item.line_total).toFixed(2)}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-500 line-clamp-2">{item.description}</p>
+                  <p className="text-sm text-gray-500 line-clamp-2">{item.item?.description}</p>
                   <div className="flex items-center gap-3">
                     <div className="flex items-center rounded-full border border-gray-200">
                       <button

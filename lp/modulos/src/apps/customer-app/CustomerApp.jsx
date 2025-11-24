@@ -10,7 +10,7 @@ import {
   Orders,
   OrderDetails,
 } from './src/pages';
-import { StorefrontProvider } from './src/context/StorefrontContext';
+import { StorefrontProvider } from '../../features/context/generalContext.jsx';
 
 const CustomerApp = () => (
   <StorefrontProvider>

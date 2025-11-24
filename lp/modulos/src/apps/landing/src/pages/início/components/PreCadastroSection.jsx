@@ -325,7 +325,7 @@ export function PreCadastroSection() {
             <div className="space-y-3">
               <Button
                 type="submit"
-                class="bg-background-hero text-white font-semibold w-full rounded-2xl py-3 text-base shadow-lg hover:shadow-xl transition"
+                className="bg-background-hero text-white font-semibold w-full rounded-2xl py-3 text-base shadow-lg hover:shadow-xl transition"
                 disabled={isSubmitting}
                 data-form-type={userType}
               >

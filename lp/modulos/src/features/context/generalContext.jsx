@@ -62,7 +62,7 @@ const initialTenant = {
   id: 'tenant-aurora',
   owner_user_id: initialUser.id,
   name: 'Aurora Burger & Co.',
-  main_color: '#ff5e00ff',
+  main_color: '#fd2c08ff',
   cnpj_cpf: '00.000.000/0001-00',
   address: 'Rua das Palmeiras, 123, SP',
   geo_lat: -23.561,

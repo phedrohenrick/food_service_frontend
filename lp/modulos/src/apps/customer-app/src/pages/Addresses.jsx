@@ -1,10 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../../../../shared/components/ui';
-import { useStorefront } from '../context/StorefrontContext';
+import { useStorefront } from '../../../../features/context/generalContext.jsx';
 
 const Addresses = () => {
-  const { user, cart, setCartAddress } = useStorefront();
+  const { addresses, cart, setCartAddress, maps } = useStorefront();
 
   return (
     <div className="space-y-8">
@@ -22,7 +22,7 @@ const Addresses = () => {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        {user.addresses.map((address) => (
+        {(addresses || []).map((address) => (
           <article
             key={address.id}
             onClick={() => setCartAddress(address.id)}
@@ -34,13 +34,13 @@ const Addresses = () => {
             }}
             tabIndex={0}
             className={`rounded-3xl border p-6 shadow-sm transition cursor-pointer focus:outline-none ${
-              cart.selectedAddressId === address.id
+              cart.address_id === address.id
                 ? 'border-[var(--accent)] bg-[var(--accent)]/5'
                 : 'border-gray-100 bg-white hover:border-[var(--accent)]/50'
             }`}
           >
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-900">{address.label}</h2>
+              <h2 className="text-xl font-semibold text-gray-900">{address.label || 'Endereço'}</h2>
               <div className="flex gap-2">
                 
                 <Link
@@ -52,7 +52,7 @@ const Addresses = () => {
                  
                 </Link>
                 
-                {address.isDefault && (
+                {(address.isDefault || address.is_default) && (
                   <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
                      Endereço Principal
                   </span>
@@ -61,12 +61,15 @@ const Addresses = () => {
             </div>
             <div className="mt-3 space-y-1 text-sm text-gray-600">
               <p>
-                {address.street}, {address.streetNumber}
+                {address.street}, {address.streetNumber || address.street_number}
               </p>
               <p>
-                {address.neighborhood} · {address.city} - {address.state}
+                {(
+                  (maps && maps.neighborhoodMap && maps.neighborhoodMap[address.neighborhood_id]?.name) ||
+                  address.neighborhood || 'Bairro'
+                )} · {address.city}{address.state ? ` - ${address.state}` : ''}
               </p>
-              <p>CEP {address.zipCode}</p>
+              <p>CEP {(address.zipCode || address.zip_code || '')}</p>
               {address.complement && <p>Complemento: {address.complement}</p>}
             </div>
             <div className="mt-4 flex items-center justify-between">
@@ -78,14 +81,14 @@ const Addresses = () => {
                     setCartAddress(address.id);
                   }}
                   className={`text-sm font-bold ${
-                    cart.selectedAddressId === address.id
+                    cart.address_id === address.id
                       ? 'text-[var(--accent-contrast)]'
                       : 'text-[var(--accent-contrast)] hover:text-gray-700'
                   }`}
                 >
-                  {cart.selectedAddressId === address.id ? "": 'Entregar aqui'}
+                  {cart.address_id === address.id ? "" : 'Entregar aqui'}
                 </button>
-                {cart.selectedAddressId === address.id && (
+                {cart.address_id === address.id && (
                   <Link
                     to="/app/sacola"
                     onClick={(e) => e.stopPropagation()}

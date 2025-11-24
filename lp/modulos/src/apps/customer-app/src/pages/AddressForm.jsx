@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../../../../shared/components/ui';
-import { useStorefront } from '../context/StorefrontContext';
+import { useStorefront } from '../../../../features/context/generalContext.jsx';
 
 const defaultForm = {
   id: '',
@@ -19,7 +19,7 @@ const defaultForm = {
 const AddressForm = () => {
   const navigate = useNavigate();
   const { addressId } = useParams();
-  const { user, saveAddress, setCartAddress } = useStorefront();
+  const { addresses, saveAddress, setCartAddress } = useStorefront();
   const [formData, setFormData] = useState(defaultForm);
 
   useEffect(() => {
@@ -27,11 +27,11 @@ const AddressForm = () => {
       setFormData(defaultForm);
       return;
     }
-    const current = user.addresses.find((address) => address.id === addressId);
+    const current = (addresses || []).find((address) => address.id === addressId);
     if (current) {
       setFormData(current);
     }
-  }, [addressId, user.addresses]);
+  }, [addressId, addresses]);
 
   const handleChange = (event) => {
     const { name, value, type, checked } = event.target;

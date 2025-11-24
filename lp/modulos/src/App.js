@@ -6,7 +6,7 @@ import LandingPage from './apps/landing/src/pages/HomePage';
 import AboutPage from './apps/landing/src/pages/sobre-nós';
 
 // Restaurant Dashboard (lazy loading)
-const RestaurantDashboard = React.lazy(() => import('./apps/restaurant-dashboard/RestaurantDashboardApp'));
+const RestaurantDashboard = React.lazy(() => import('./apps/restaurant-dashboard-v2/RestaurantDashboardApp'));
 
 // Customer App (lazy loading)
 const CustomerApp = React.lazy(() => import('./apps/customer-app/CustomerApp'));
