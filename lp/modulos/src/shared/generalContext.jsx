@@ -62,7 +62,7 @@ const initialTenant = {
   id: 'tenant-aurora',
   owner_user_id: initialUser.id,
   name: 'Aurora Burger & Co.',
-  main_color: '#fd2c08ff',
+  main_color: '#9b9324ff',
   cnpj_cpf: '00.000.000/0001-00',
   address: 'Rua das Palmeiras, 123, SP',
   geo_lat: -23.561,
@@ -271,7 +271,7 @@ const initialOrders = [
     discount: 0,
     total: 118.2 + initialTenant.delivery_fee + 118.2 * initialTenant.service_fee_percentage,
     payment_channel: 'card',
-    created_at: '2024-02-04T18:20:00Z',
+    created_at: '2025-11-24T18:20:00Z',
     change: '',
   },
 ];
@@ -384,21 +384,36 @@ const calcCartTotals = ({
    ACTIONS + REDUCER
    ========================================================= */
 
-const actionMap = {
-  ADD_TO_CART: 'ADD_TO_CART',
-  UPDATE_CART_ITEM: 'UPDATE_CART_ITEM',
-  REMOVE_CART_ITEM: 'REMOVE_CART_ITEM',
-  TOGGLE_CART_ITEM_OPTION: 'TOGGLE_CART_ITEM_OPTION',
-  SET_CART_ADDRESS: 'SET_CART_ADDRESS',
-  SET_CART_PAYMENT: 'SET_CART_PAYMENT',
-  SET_CART_CHANGE: 'SET_CART_CHANGE',
-  SET_CART_NOTES: 'SET_CART_NOTES',
-  CLEAR_CART: 'CLEAR_CART',
-  SAVE_ADDRESS: 'SAVE_ADDRESS',
-  PLACE_ORDER: 'PLACE_ORDER',
-  UPDATE_TENANT: 'UPDATE_TENANT',
-  ADD_ORDER_STATUS: 'ADD_ORDER_STATUS',
-};
+  const actionMap = {
+    ADD_TO_CART: 'ADD_TO_CART',
+    UPDATE_CART_ITEM: 'UPDATE_CART_ITEM',
+    REMOVE_CART_ITEM: 'REMOVE_CART_ITEM',
+    TOGGLE_CART_ITEM_OPTION: 'TOGGLE_CART_ITEM_OPTION',
+    SET_CART_ADDRESS: 'SET_CART_ADDRESS',
+    SET_CART_PAYMENT: 'SET_CART_PAYMENT',
+    SET_CART_CHANGE: 'SET_CART_CHANGE',
+    SET_CART_NOTES: 'SET_CART_NOTES',
+    CLEAR_CART: 'CLEAR_CART',
+    SAVE_ADDRESS: 'SAVE_ADDRESS',
+    PLACE_ORDER: 'PLACE_ORDER',
+    UPDATE_TENANT: 'UPDATE_TENANT',
+    ADD_ORDER_STATUS: 'ADD_ORDER_STATUS',
+    // Menu CRUD
+    UPSERT_MENU_CATEGORY: 'UPSERT_MENU_CATEGORY',
+    REORDER_MENU_CATEGORIES: 'REORDER_MENU_CATEGORIES',
+    UPSERT_MENU_ITEM: 'UPSERT_MENU_ITEM',
+    DELETE_MENU_ITEM: 'DELETE_MENU_ITEM',
+    TOGGLE_MENU_ITEM_AVAILABILITY: 'TOGGLE_MENU_ITEM_AVAILABILITY',
+    UPSERT_OPTION_GROUP: 'UPSERT_OPTION_GROUP',
+    DELETE_OPTION_GROUP: 'DELETE_OPTION_GROUP',
+    UPSERT_OPTION: 'UPSERT_OPTION',
+    DELETE_OPTION: 'DELETE_OPTION',
+    UPSERT_BANNER: 'UPSERT_BANNER',
+    DELETE_BANNER: 'DELETE_BANNER',
+    // Neighborhoods
+    UPSERT_NEIGHBORHOOD: 'UPSERT_NEIGHBORHOOD',
+    DELETE_NEIGHBORHOOD: 'DELETE_NEIGHBORHOOD',
+  };
 
 const reducer = (state, action) => {
   switch (action.type) {
@@ -590,6 +605,139 @@ const reducer = (state, action) => {
           { id, order_id: orderId, status, created_at },
         ],
       };
+    }
+
+    // ---------------------- MENU: Categorias ----------------------
+    case actionMap.UPSERT_MENU_CATEGORY: {
+      const cat = action.payload;
+      const id = cat.id || `cat-${Date.now()}`;
+      const idx = state.menuCategories.findIndex((c) => c.id === id);
+      const next = { ...cat, id, tenant_id: cat.tenant_id || state.tenant.id };
+      let menuCategories;
+      if (idx >= 0) {
+        menuCategories = state.menuCategories.map((c) => (c.id === id ? { ...c, ...next } : c));
+      } else {
+        const maxOrder = Math.max(0, ...state.menuCategories.map((c) => c.order || 0));
+        menuCategories = [...state.menuCategories, { ...next, order: next.order ?? maxOrder + 1 }];
+      }
+      return { ...state, menuCategories };
+    }
+    case actionMap.REORDER_MENU_CATEGORIES: {
+      const ids = action.payload; // array de ids na nova ordem
+      const orderMap = new Map(ids.map((id, i) => [id, i + 1]));
+      const menuCategories = state.menuCategories.map((c) => ({
+        ...c,
+        order: orderMap.get(c.id) ?? c.order,
+      }));
+      return { ...state, menuCategories };
+    }
+
+    // ---------------------- MENU: Itens ----------------------
+    case actionMap.UPSERT_MENU_ITEM: {
+      const item = action.payload;
+      const id = item.id || `item-${Date.now()}`;
+      const idx = state.menuItems.findIndex((mi) => mi.id === id);
+      const next = {
+        ...item,
+        id,
+        tenant_id: item.tenant_id || state.tenant.id,
+        is_available: item.is_available ?? true,
+      };
+      const menuItems = idx >= 0
+        ? state.menuItems.map((mi) => (mi.id === id ? { ...mi, ...next } : mi))
+        : [...state.menuItems, next];
+      return { ...state, menuItems };
+    }
+    case actionMap.DELETE_MENU_ITEM: {
+      const itemId = action.payload;
+      const menuItems = state.menuItems.filter((mi) => mi.id !== itemId);
+      // Remover grupos e opções ligados ao item
+      const optionGroups = state.optionGroups.filter((g) => g.item_id !== itemId);
+      const removedGroupIds = new Set(state.optionGroups.filter((g) => g.item_id === itemId).map((g) => g.id));
+      const options = state.options.filter((o) => !removedGroupIds.has(o.group_id));
+      return { ...state, menuItems, optionGroups, options };
+    }
+    case actionMap.TOGGLE_MENU_ITEM_AVAILABILITY: {
+      const itemId = action.payload;
+      const menuItems = state.menuItems.map((mi) =>
+        mi.id === itemId ? { ...mi, is_available: !mi.is_available } : mi
+      );
+      return { ...state, menuItems };
+    }
+
+    // ---------------------- MENU: Grupos de opção ----------------------
+    case actionMap.UPSERT_OPTION_GROUP: {
+      const grp = action.payload;
+      const id = grp.id || `grp-${Date.now()}`;
+      const idx = state.optionGroups.findIndex((g) => g.id === id);
+      const next = {
+        ...grp,
+        id,
+        is_required: grp.is_required ?? false,
+        min: grp.min ?? 0,
+        max: grp.max ?? 1,
+      };
+      const optionGroups = idx >= 0
+        ? state.optionGroups.map((g) => (g.id === id ? { ...g, ...next } : g))
+        : [...state.optionGroups, next];
+      return { ...state, optionGroups };
+    }
+    case actionMap.DELETE_OPTION_GROUP: {
+      const groupId = action.payload;
+      const optionGroups = state.optionGroups.filter((g) => g.id !== groupId);
+      const options = state.options.filter((o) => o.group_id !== groupId);
+      return { ...state, optionGroups, options };
+    }
+
+    // ---------------------- MENU: Opções ----------------------
+    case actionMap.UPSERT_OPTION: {
+      const opt = action.payload;
+      const id = opt.id || `opt-${Date.now()}`;
+      const idx = state.options.findIndex((o) => o.id === id);
+      const next = { ...opt, id, additional_charge: opt.additional_charge ?? 0 };
+      const options = idx >= 0
+        ? state.options.map((o) => (o.id === id ? { ...o, ...next } : o))
+        : [...state.options, next];
+      return { ...state, options };
+    }
+    case actionMap.DELETE_OPTION: {
+      const optionId = action.payload;
+      const options = state.options.filter((o) => o.id !== optionId);
+      return { ...state, options };
+    }
+
+    // ---------------------- Banners ----------------------
+    case actionMap.UPSERT_BANNER: {
+      const b = action.payload;
+      const id = b.id || `bnr-${Date.now()}`;
+      const idx = state.banners.findIndex((x) => x.id === id);
+      const next = { ...b, id, tenant_id: b.tenant_id || state.tenant.id };
+      const banners = idx >= 0
+        ? state.banners.map((x) => (x.id === id ? { ...x, ...next } : x))
+        : [...state.banners, next];
+      return { ...state, banners };
+    }
+    case actionMap.DELETE_BANNER: {
+      const id = action.payload;
+      const banners = state.banners.filter((b) => b.id !== id);
+      return { ...state, banners };
+    }
+
+    // ---------------------- Neighborhoods ----------------------
+    case actionMap.UPSERT_NEIGHBORHOOD: {
+      const n = action.payload;
+      const id = n.id || `nh-${Date.now()}`;
+      const idx = state.neighborhoods.findIndex((x) => x.id === id);
+      const next = { ...n, id, tenant_id: n.tenant_id || state.tenant.id };
+      const neighborhoods = idx >= 0
+        ? state.neighborhoods.map((x) => (x.id === id ? { ...x, ...next } : x))
+        : [...state.neighborhoods, next];
+      return { ...state, neighborhoods };
+    }
+    case actionMap.DELETE_NEIGHBORHOOD: {
+      const id = action.payload;
+      const neighborhoods = state.neighborhoods.filter((n) => n.id !== id);
+      return { ...state, neighborhoods };
     }
 
     default:
@@ -873,6 +1021,38 @@ export const StorefrontProvider = ({ children }) => {
         dispatch({ type: actionMap.UPDATE_TENANT, payload: partial }),
       addOrderStatus: (orderId, status) =>
         dispatch({ type: actionMap.ADD_ORDER_STATUS, payload: { orderId, status } }),
+      // menu: categorias
+      saveMenuCategory: (category) =>
+        dispatch({ type: actionMap.UPSERT_MENU_CATEGORY, payload: category }),
+      reorderMenuCategories: (ids) =>
+        dispatch({ type: actionMap.REORDER_MENU_CATEGORIES, payload: ids }),
+      // menu: itens
+      saveMenuItem: (item) =>
+        dispatch({ type: actionMap.UPSERT_MENU_ITEM, payload: item }),
+      deleteMenuItem: (itemId) =>
+        dispatch({ type: actionMap.DELETE_MENU_ITEM, payload: itemId }),
+      toggleItemAvailability: (itemId) =>
+        dispatch({ type: actionMap.TOGGLE_MENU_ITEM_AVAILABILITY, payload: itemId }),
+      // menu: grupos de opção
+      saveOptionGroup: (group) =>
+        dispatch({ type: actionMap.UPSERT_OPTION_GROUP, payload: group }),
+      deleteOptionGroup: (groupId) =>
+        dispatch({ type: actionMap.DELETE_OPTION_GROUP, payload: groupId }),
+      // menu: opções
+      saveOption: (option) =>
+        dispatch({ type: actionMap.UPSERT_OPTION, payload: option }),
+      deleteOption: (optionId) =>
+        dispatch({ type: actionMap.DELETE_OPTION, payload: optionId }),
+      // banners
+      saveBanner: (banner) =>
+        dispatch({ type: actionMap.UPSERT_BANNER, payload: banner }),
+      deleteBanner: (bannerId) =>
+        dispatch({ type: actionMap.DELETE_BANNER, payload: bannerId }),
+      // neighborhoods
+      saveNeighborhood: (neighborhood) =>
+        dispatch({ type: actionMap.UPSERT_NEIGHBORHOOD, payload: neighborhood }),
+      deleteNeighborhood: (neighborhoodId) =>
+        dispatch({ type: actionMap.DELETE_NEIGHBORHOOD, payload: neighborhoodId }),
     }),
     [
       state,

@@ -17,8 +17,53 @@ const navItems = [
 
 const DashboardLayoutv2 = ({ children }) => {
   const { tenant } = useStorefront();
-  const accent = tenant?.main_color || '#EA1D2C';
-  const accentHover = accent.length === 7 ? `${accent}e6` : accent;
+  // normaliza cor para formato hex #RRGGBB
+  // aceita: #RGB, #RRGGBB, #RRGGBBAA, RGB/RGBA
+  function normalizeHex(input) {
+    const s = String(input || '').trim();
+    if (!s) return '#EA1D2C';
+
+    // Se já for hex sem #, adiciona
+    const maybeHash = s.startsWith('#') ? s : (/^[0-9a-fA-F]{3,8}$/.test(s) ? `#${s}` : s);
+    const short3 = /^#([0-9a-fA-F]{3})$/;
+    const long6 = /^#([0-9a-fA-F]{6})$/;
+    const long8 = /^#([0-9a-fA-F]{8})$/;
+
+    if (short3.test(maybeHash)) {
+      const m = maybeHash.slice(1);
+      const full = m.split('').map((c) => c + c).join('');
+      return `#${full}`;
+    }
+    if (long6.test(maybeHash)) return maybeHash;
+    if (long8.test(maybeHash)) {
+      // Ignora alpha (#RRGGBBAA → #RRGGBB)
+      return `#${maybeHash.slice(1, 7)}`;
+    }
+
+    // rgb/rgba(r,g,b[,a]) → #RRGGBB
+    const rgbaMatch = /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(\d*(?:\.\d+)?))?\s*\)$/i.exec(s);
+    if (rgbaMatch) {
+      const toHex2 = (n) => {
+        const v = Math.max(0, Math.min(255, parseInt(n, 10) || 0));
+        return v.toString(16).padStart(2, '0');
+      };
+      const r = toHex2(rgbaMatch[1]);
+      const g = toHex2(rgbaMatch[2]);
+      const b = toHex2(rgbaMatch[3]);
+      return `#${r}${g}${b}`;
+    }
+
+    return '#EA1D2C';
+  }
+  function toRgba(hex, alpha = 0.9) {
+    const h = normalizeHex(hex).slice(1);
+    const r = parseInt(h.slice(0, 2), 16);
+    const g = parseInt(h.slice(2, 4), 16);
+    const b = parseInt(h.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+  const accent = normalizeHex(tenant?.main_color || '#EA1D2C');
+  const accentHover = toRgba(accent, 0.90);
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -39,8 +84,11 @@ const DashboardLayoutv2 = ({ children }) => {
 
 
 
-  const isActive = (path) =>
-    location.pathname === path || (path !== '/' && location.pathname.startsWith(path));
+  const isActive = (path) => {
+    // Evita marcar "Visão geral" ("/dashboard") em todas as subrotas
+    if (path === '/dashboard') return location.pathname === '/dashboard';
+    return location.pathname.startsWith(path);
+  };
 
   return (
     
@@ -76,7 +124,7 @@ const DashboardLayoutv2 = ({ children }) => {
                 to={item.path}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
                   isActive(item.path)
-                    ? 'bg-[var(--accent)] text-white shadow-lg shadow-[var(--accent)]/20'
+                    ? 'bg-[var(--accent)] text-[var(--accent-contrast)] shadow-lg shadow-[var(--accent)]/20'
                     : 'text-gray-700 hover:bg-gray-100'
                 }`}
                 onClick={() => setIsOpen(false)}
@@ -88,7 +136,7 @@ const DashboardLayoutv2 = ({ children }) => {
           </nav>
 
           <div className="mt-auto px-6 py-6 border-t border-gray-100">
-            <div className="bg-gradient-to-br from-[var(--accent)] to-[var(--accent-hover)] text-white rounded-2xl p-4 shadow-lg">
+            <div className="bg-gradient-to-br from-[var(--accent)] to-[var(--accent-hover)] text-[var(--accent-contrast)] rounded-2xl p-4 shadow-lg">
               <p className="text-xs uppercase tracking-wide opacity-80">status</p>
               <p className="text-lg font-semibold">Loja aberta</p>
               <p className="text-sm opacity-90 mt-1">Recebendo pedidos em tempo real</p>
@@ -127,7 +175,7 @@ const DashboardLayoutv2 = ({ children }) => {
                   <span className="text-sm text-gray-500">Tempo médio</span>
                   <span className="text-sm font-semibold text-gray-900">32 min</span>
                 </div>
-                <div className="w-11 h-11 rounded-2xl bg-[var(--accent)] text-white flex items-center justify-center font-bold shadow-lg">
+                <div className="w-11 h-11 rounded-2xl bg-[var(--accent)] text-[var(--accent-contrast)] flex items-center justify-center font-bold shadow-lg">
                   RS
                 </div>
               </div>

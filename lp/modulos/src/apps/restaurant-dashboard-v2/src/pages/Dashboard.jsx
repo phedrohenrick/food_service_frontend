@@ -117,7 +117,7 @@ const Dashboard = () => {
       label: 'Pedidos hoje',
       value: `${ordersToday.length}`,
       helper: 'Últimas 24h',
-      accent: 'bg-gradient-to-br from-[var(--accent)] to-[var(--accent-hover)] text-white',
+      accent: 'bg-white text-gray-900',
     },
     {
       label: 'Faturamento hoje',
@@ -145,14 +145,14 @@ const Dashboard = () => {
   return (
     // CHANGE 1: removi mx-auto e max-w-screen-2xl para não limitar largura em telas grandes
     <div className="w-full space-y-6 px-4 sm:px-6 lg:px-8">
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[var(--accent)] to-[var(--accent-hover)] text-white shadow-xl">
+      <div className="relative overflow-hidden rounded-3xl bg-[var(--accent)] text-[var(--accent-contrast)] shadow-xl">
         <div className="p-8 sm:p-9 md:p-10">
           <div className="flex items-center gap-4">
             {tenant.photo_url && (
               <img src={tenant.photo_url} alt={tenant.name} className="w-14 h-14 rounded-2xl object-cover shadow-md" />
             )}
             <div>
-              <p className="text-sm uppercase tracking-widest text-white/80">{tenant.id}</p>
+              <p className="text-sm uppercase tracking-widest text-[var(--accent-contrast)]/80">{tenant.id}</p>
               <h1 className="text-3xl md:text-4xl font-bold mt-1">{tenant.name}</h1>
             </div>
           </div>
@@ -161,23 +161,23 @@ const Dashboard = () => {
               {openText}
             </span>
             {tenant.working_hours && (
-              <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/10">
-                Horário: {tenant.working_hours}
-              </span>
+            <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/10">
+              Horário: {tenant.working_hours}
+            </span>
             )}
             {tenant.delivery_method && (
-              <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/10 capitalize">
-                Entrega: {tenant.delivery_method}
-              </span>
+            <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/10 capitalize">
+              Entrega: {tenant.delivery_method}
+            </span>
             )}
             {typeof tenant.service_fee_percentage === 'number' && (
-              <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/10">
-                Taxa de serviço: {(tenant.service_fee_percentage * 100).toFixed(0)}%
-              </span>
+            <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/10">
+              Taxa de serviço: {(tenant.service_fee_percentage * 100).toFixed(0)}%
+            </span>
             )}
           </div>
           <div className="mt-6 flex flex-wrap gap-3">
-            <Button variant="ghost" className="bg-white/10 text-white hover:bg-white/20 border-white/20" onClick={toggleOpen}>
+            <Button variant="ghost" className="bg-white/10 text-[var(--accent-contrast)] hover:bg-white/20 border-white/20" onClick={toggleOpen}>
               {tenant.is_open ? 'Fechar loja' : 'Abrir loja agora'}
             </Button>
             <Link to="/dashboard/orders">
@@ -194,7 +194,7 @@ const Dashboard = () => {
         {stats.map((stat) => (
           <div
             key={stat.label}
-            className={`${stat.accent} rounded-2xl p-4 shadow-lg border border-gray-100/60`}
+            className={`${stat.accent} rounded-2xl p-4 shadow-lg border border-gray-300`}
           >
             <p className="text-sm text-gray-500/90 capitalize">
               {stat.label}
@@ -208,7 +208,7 @@ const Dashboard = () => {
       {/* CHANGE 2: reajustei grid para o "menu lateral" não ficar estreito e o conteúdo principal ganhar mais largura */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* CHANGE 3: col-span novo para combinar com lg:grid-cols-4 */}
-        <div className="lg:col-span-3 bg-white rounded-3xl border border-gray-100 shadow-lg p-6">
+        <div className="lg:col-span-3 bg-white rounded-3xl border border-gray-300 shadow-lg p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
               <p className="text-sm text-gray-500">Status das entregas</p>
@@ -227,7 +227,7 @@ const Dashboard = () => {
               { title: 'Preparando', value: openOrders.filter((p) => p.status?.status === 'IN_PREPARATION').length },
               { title: 'Prontos', value: openOrders.filter((p) => p.status?.status === 'READY').length },
             ].map((col) => (
-              <div key={col.title} className="rounded-2xl bg-gray-50 p-4 border border-gray-100">
+              <div key={col.title} className="rounded-2xl bg-gray-50 p-4 border border-gray-300">
                 <p className="text-sm text-gray-500">{col.title}</p>
                 <p className="text-3xl font-bold text-gray-900">{col.value}</p>
                 <div className="mt-2 h-2 rounded-full bg-gray-200">
@@ -241,7 +241,7 @@ const Dashboard = () => {
             {openOrders.slice(0, 6).map(({ order, status }) => (
               <div
                 key={order.id}
-                className="flex items-center justify-between rounded-2xl border border-gray-100 p-4 sm:p-5 bg-gray-50/50"
+                 className="flex items-center justify-between rounded-2xl shadow-2xl hover:shadow-2xl transition-shadow border border-gray-300 p-4 sm:p-5 bg-gray-50/50"
               >
                 <div>
                   <p className="text-sm text-gray-500">Pedido #{order.id}</p>
@@ -264,10 +264,10 @@ const Dashboard = () => {
         <div className="lg:col-span-1 space-y-4">
           {/* Próximos pedidos */}
           <div className="bg-white rounded-3xl border border-gray-100 shadow-lg p-5 sm:p-6">
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-3 sm:mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Próximos pedidos</h3>
                 <Link to="/dashboard/orders">
-                  <Button size="sm" variant="ghost" className="text-[var(--accent)] border border-gray-200">
+                  <Button size="sm" variant="ghost" className="w-full sm:w-auto text-[var(--accent)] border border-gray-200">
                     Ver todos
                   </Button>
                 </Link>
@@ -275,13 +275,13 @@ const Dashboard = () => {
               <div className="space-y-3">
                 {openOrders.slice(0, 3).map(({ order, status }) => (
                   <div key={order.id} className="border border-gray-100 rounded-2xl p-3 hover:shadow-sm transition">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                       <div>
                         <p className="text-sm text-gray-500">#{order.id}</p>
                         <p className="font-semibold text-gray-900">{formatCurrency(order.total)}</p>
                         <p className="text-sm text-gray-500">{formatTimeAgo(order.created_at)}</p>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right w-full sm:w-auto mt-2 sm:mt-0">
                         <p className="text-sm font-semibold text-gray-900">{order.payment_channel?.toUpperCase()}</p>
                         <span className="text-xs px-3 py-1 rounded-full bg-[var(--accent)]/10 text-[var(--accent)]">
                           {status?.status || '—'}
@@ -295,13 +295,13 @@ const Dashboard = () => {
 
           {/* Itens mais vendidos */}
           <div className="bg-white rounded-3xl border border-gray-100 shadow-lg p-5 sm:p-6">
-            <div className="flex items-center justify-between mb-3 sm:mb-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3 sm:mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Itens mais vendidos</h3>
             </div>
-            <div className="space-y-3">
+             <div className="space-y-3">
               {rankingItens.map((it) => (
                 <div key={it.itemId} className="border border-gray-100 rounded-2xl p-3 hover:shadow-sm transition">
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
                       {it.photo_url && (
                         <img src={it.photo_url} alt={it.name} className="w-12 h-12 rounded-xl object-cover" />
@@ -311,7 +311,7 @@ const Dashboard = () => {
                         <p className="text-sm text-gray-500">{formatCurrency(it.price)}</p>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right w-full sm:w-auto mt-2 sm:mt-0">
                       <span className="text-xs px-3 py-1 rounded-full bg-[var(--accent)]/10 text-[var(--accent)]">
                         {it.qty} vendidos
                       </span>
@@ -324,23 +324,23 @@ const Dashboard = () => {
 
           {/* Pedidos recentes */}
           <div className="bg-white rounded-3xl border border-gray-100 shadow-lg p-5 sm:p-6">
-            <div className="flex items-center justify-between mb-3 sm:mb-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3 sm:mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Pedidos recentes</h3>
               <Link to="/dashboard/orders">
-                <Button size="sm" variant="ghost" className="text-[var(--accent)] border border-gray-200">
+                <Button size="sm" variant="ghost" className="w-full sm:w-auto text-[var(--accent)] border border-gray-200">
                   Ver todos
                 </Button>
               </Link>
             </div>
-            <div className="space-y-3">
+             <div className="space-y-3">
               {recentes.map((o) => (
                 <div key={o.id} className="border border-gray-100 rounded-2xl p-3 hover:shadow-sm transition">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <p className="text-sm text-gray-500">#{o.id} • {formatTimeAgo(o.created_at)}</p>
                       <p className="font-semibold text-gray-900">{o.resumo}{o.count > 2 ? '…' : ''}</p>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right w-full sm:w-auto mt-2 sm:mt-0">
                       <p className="text-sm font-semibold text-gray-900">{formatCurrency(o.total)}</p>
                       <span className="text-xs px-3 py-1 rounded-full bg-[var(--accent)]/10 text-[var(--accent)]">
                         {o.status?.status || '—'}
