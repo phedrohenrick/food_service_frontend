@@ -1,9 +1,4 @@
-import React, {
-  createContext,
-  useContext,
-  useMemo,
-  useReducer,
-} from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useReducer } from 'react';
 
 /*
   Context alinhado ao modelo de banco
@@ -62,7 +57,7 @@ const initialTenant = {
   id: 'tenant-aurora',
   owner_user_id: initialUser.id,
   name: 'Aurora Burger & Co.',
-  main_color: '#9b9324ff',
+  main_color: '#e94600ff',
   cnpj_cpf: '00.000.000/0001-00',
   address: 'Rua das Palmeiras, 123, SP',
   geo_lat: -23.561,
@@ -384,36 +379,35 @@ const calcCartTotals = ({
    ACTIONS + REDUCER
    ========================================================= */
 
-  const actionMap = {
-    ADD_TO_CART: 'ADD_TO_CART',
-    UPDATE_CART_ITEM: 'UPDATE_CART_ITEM',
-    REMOVE_CART_ITEM: 'REMOVE_CART_ITEM',
-    TOGGLE_CART_ITEM_OPTION: 'TOGGLE_CART_ITEM_OPTION',
-    SET_CART_ADDRESS: 'SET_CART_ADDRESS',
-    SET_CART_PAYMENT: 'SET_CART_PAYMENT',
-    SET_CART_CHANGE: 'SET_CART_CHANGE',
-    SET_CART_NOTES: 'SET_CART_NOTES',
-    CLEAR_CART: 'CLEAR_CART',
-    SAVE_ADDRESS: 'SAVE_ADDRESS',
-    PLACE_ORDER: 'PLACE_ORDER',
-    UPDATE_TENANT: 'UPDATE_TENANT',
-    ADD_ORDER_STATUS: 'ADD_ORDER_STATUS',
-    // Menu CRUD
-    UPSERT_MENU_CATEGORY: 'UPSERT_MENU_CATEGORY',
-    REORDER_MENU_CATEGORIES: 'REORDER_MENU_CATEGORIES',
-    UPSERT_MENU_ITEM: 'UPSERT_MENU_ITEM',
-    DELETE_MENU_ITEM: 'DELETE_MENU_ITEM',
-    TOGGLE_MENU_ITEM_AVAILABILITY: 'TOGGLE_MENU_ITEM_AVAILABILITY',
-    UPSERT_OPTION_GROUP: 'UPSERT_OPTION_GROUP',
-    DELETE_OPTION_GROUP: 'DELETE_OPTION_GROUP',
-    UPSERT_OPTION: 'UPSERT_OPTION',
-    DELETE_OPTION: 'DELETE_OPTION',
-    UPSERT_BANNER: 'UPSERT_BANNER',
-    DELETE_BANNER: 'DELETE_BANNER',
-    // Neighborhoods
-    UPSERT_NEIGHBORHOOD: 'UPSERT_NEIGHBORHOOD',
-    DELETE_NEIGHBORHOOD: 'DELETE_NEIGHBORHOOD',
-  };
+const actionMap = {
+  ADD_TO_CART: 'ADD_TO_CART',
+  UPDATE_CART_ITEM: 'UPDATE_CART_ITEM',
+  REMOVE_CART_ITEM: 'REMOVE_CART_ITEM',
+  TOGGLE_CART_ITEM_OPTION: 'TOGGLE_CART_ITEM_OPTION',
+  SET_CART_ADDRESS: 'SET_CART_ADDRESS',
+  SET_CART_PAYMENT: 'SET_CART_PAYMENT',
+  SET_CART_CHANGE: 'SET_CART_CHANGE',
+  SET_CART_NOTES: 'SET_CART_NOTES',
+  CLEAR_CART: 'CLEAR_CART',
+  SAVE_ADDRESS: 'SAVE_ADDRESS',
+  SET_ADDRESSES: 'SET_ADDRESSES',
+  PLACE_ORDER: 'PLACE_ORDER',
+  UPDATE_TENANT: 'UPDATE_TENANT',
+  ADD_ORDER_STATUS: 'ADD_ORDER_STATUS',
+  UPSERT_MENU_CATEGORY: 'UPSERT_MENU_CATEGORY',
+  REORDER_MENU_CATEGORIES: 'REORDER_MENU_CATEGORIES',
+  UPSERT_MENU_ITEM: 'UPSERT_MENU_ITEM',
+  DELETE_MENU_ITEM: 'DELETE_MENU_ITEM',
+  TOGGLE_MENU_ITEM_AVAILABILITY: 'TOGGLE_MENU_ITEM_AVAILABILITY',
+  UPSERT_OPTION_GROUP: 'UPSERT_OPTION_GROUP',
+  DELETE_OPTION_GROUP: 'DELETE_OPTION_GROUP',
+  UPSERT_OPTION: 'UPSERT_OPTION',
+  DELETE_OPTION: 'DELETE_OPTION',
+  UPSERT_BANNER: 'UPSERT_BANNER',
+  DELETE_BANNER: 'DELETE_BANNER',
+  UPSERT_NEIGHBORHOOD: 'UPSERT_NEIGHBORHOOD',
+  DELETE_NEIGHBORHOOD: 'DELETE_NEIGHBORHOOD',
+};
 
 const reducer = (state, action) => {
   switch (action.type) {
@@ -552,6 +546,21 @@ const reducer = (state, action) => {
           ...state.cart,
           address_id: address.is_default ? id : state.cart.address_id || id,
         },
+      };
+    }
+
+    case actionMap.SET_ADDRESSES: {
+      const { addresses } = action.payload || {};
+      const list = Array.isArray(addresses) ? addresses : [];
+      const defaultAddress =
+        list.find((a) => a.is_default) || list[0] || null;
+
+      return {
+        ...state,
+        addresses: list,
+        cart: defaultAddress
+          ? { ...state.cart, address_id: defaultAddress.id }
+          : state.cart,
       };
     }
 
@@ -768,6 +777,56 @@ export const StorefrontProvider = ({ children }) => {
     orderItems: initialOrderItems,
     orderItemOptions: initialOrderItemOptions,
   });
+
+  useEffect(() => {
+    const fetchAddressesFromBackend = async () => {
+      try {
+        const response = await fetch('http://localhost/user-addresses/by-user/1');
+        if (!response.ok) {
+          console.error('Erro ao buscar endereços do backend', response.status);
+          return;
+        }
+        const data = await response.json();
+        const normalized = Array.isArray(data)
+          ? data.map((item, index) => ({
+              id: String(item.id),
+              user_id:
+                item.userId !== undefined && item.userId !== null
+                  ? String(item.userId)
+                  : state.user.id,
+              street: item.street,
+              streetNumber: item.streetNumber,
+              street_number: item.streetNumber,
+              neighborhood_id:
+                item.neighborhoodId !== undefined && item.neighborhoodId !== null
+                  ? String(item.neighborhoodId)
+                  : '',
+              city: item.city,
+              state: item.state,
+              zipCode: item.zipCode,
+              zip_code: item.zipCode,
+              complement: item.complement,
+              geo_lat: item.geoLat,
+              geo_lng: item.geoLng,
+              is_default: index === 0,
+            }))
+          : [];
+
+        if (!normalized.length) {
+          return;
+        }
+
+        dispatch({
+          type: actionMap.SET_ADDRESSES,
+          payload: { addresses: normalized },
+        });
+      } catch (error) {
+        console.error('Erro ao buscar endereços do backend', error);
+      }
+    };
+
+    fetchAddressesFromBackend();
+  }, [state.user.id]);
 
   const maps = useMemo(() => {
     return {
