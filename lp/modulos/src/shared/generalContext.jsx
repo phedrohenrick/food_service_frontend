@@ -23,34 +23,7 @@ const initialUser = {
 };
 
 // user_address
-const initialAddresses = [
-  {
-    id: 'addr-home',
-    user_id: initialUser.id,
-    street: 'Rua Frei Caneca',
-    street_number: '1010',
-    neighborhood_id: 'nbh-consolacao',
-    city: 'São Paulo',
-    zip_code: '01307-003',
-    complement: 'Apto 53B',
-    geo_lat: -23.5578,
-    geo_lng: -46.6561,
-    is_default: true, // campo extra de front para facilitar
-  },
-  {
-    id: 'addr-work',
-    user_id: initialUser.id,
-    street: 'Av. Paulista',
-    street_number: '1374',
-    neighborhood_id: 'nbh-bela-vista',
-    city: 'São Paulo',
-    zip_code: '01310-100',
-    complement: '12º andar',
-    geo_lat: -23.5615,
-    geo_lng: -46.6559,
-    is_default: false,
-  },
-];
+const initialAddresses = [];
 
 // tenant
 const initialTenant = {
@@ -243,8 +216,7 @@ const initialCart = {
   discount: 0,
   payment_channel: initialTenant.payment_channels[0],
   change: '',
-  address_id:
-    initialAddresses.find((a) => a.is_default)?.id || initialAddresses[0].id,
+  address_id: null,
 };
 
 // cart_item
@@ -779,53 +751,7 @@ export const StorefrontProvider = ({ children }) => {
   });
 
   useEffect(() => {
-    const fetchAddressesFromBackend = async () => {
-      try {
-        const response = await fetch('http://localhost/user-addresses/by-user/1');
-        if (!response.ok) {
-          console.error('Erro ao buscar endereços do backend', response.status);
-          return;
-        }
-        const data = await response.json();
-        const normalized = Array.isArray(data)
-          ? data.map((item, index) => ({
-              id: String(item.id),
-              user_id:
-                item.userId !== undefined && item.userId !== null
-                  ? String(item.userId)
-                  : state.user.id,
-              street: item.street,
-              streetNumber: item.streetNumber,
-              street_number: item.streetNumber,
-              neighborhood_id:
-                item.neighborhoodId !== undefined && item.neighborhoodId !== null
-                  ? String(item.neighborhoodId)
-                  : '',
-              city: item.city,
-              state: item.state,
-              zipCode: item.zipCode,
-              zip_code: item.zipCode,
-              complement: item.complement,
-              geo_lat: item.geoLat,
-              geo_lng: item.geoLng,
-              is_default: index === 0,
-            }))
-          : [];
-
-        if (!normalized.length) {
-          return;
-        }
-
-        dispatch({
-          type: actionMap.SET_ADDRESSES,
-          payload: { addresses: normalized },
-        });
-      } catch (error) {
-        console.error('Erro ao buscar endereços do backend', error);
-      }
-    };
-
-    fetchAddressesFromBackend();
+    // Endereços agora são carregados pelas telas ou por um init global apropriado
   }, [state.user.id]);
 
   const maps = useMemo(() => {
@@ -1074,6 +1000,8 @@ export const StorefrontProvider = ({ children }) => {
       setCartPaymentChannel,
       setCartChangeFor,
       setCartNotes,
+      setAddresses: (addresses) =>
+        dispatch({ type: actionMap.SET_ADDRESSES, payload: { addresses } }),
       saveAddress,
       placeOrder,
       updateTenant: (partial) =>

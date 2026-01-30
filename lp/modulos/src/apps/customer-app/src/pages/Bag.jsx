@@ -64,8 +64,8 @@ const Bag = () => {
           </header>
           <div className="mt-3 rounded-2xl border border-gray-100 p-4 text-sm text-gray-600">
             <p>
-              {selectedAddress?.street}, {selectedAddress?.street_number} ·{' '}
-              {maps.neighborhoodMap[selectedAddress?.neighborhood_id]?.name}
+              {selectedAddress?.street}, {selectedAddress?.streetNumber || selectedAddress?.street_number} ·{' '}
+              {selectedAddress?.neighborhoodName || 'Bairro'}
             </p>
             {selectedAddress?.city && (
               <p>
@@ -85,7 +85,7 @@ const Bag = () => {
                   }`}
                   onClick={() => setCartAddress(address.id)}
                 >
-                  {address.street}, {address.street_number}
+                  {address.street}, {address.streetNumber || address.street_number}
                 </button>
               ))}
             </div>

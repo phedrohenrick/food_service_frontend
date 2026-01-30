@@ -1,10 +1,63 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../../../../shared/components/ui';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
+import api from '../../../../shared/services/api';
 
 const Addresses = () => {
-  const { addresses, cart, setCartAddress, maps } = useStorefront();
+  const { addresses, cart, setCartAddress, setAddresses } = useStorefront();
+
+  useEffect(() => {
+    const loadAddresses = async () => {
+      try {
+        // TODO: Obter userId real da autenticação. Por enquanto fixo em 1.
+        const userId = 1;
+
+        const [addressesData, neighborhoodsData] = await Promise.all([
+          api.get(`/user-addresses/by-user/${userId}`),
+        ]);
+
+        const neighborhoodIndex = Array.isArray(neighborhoodsData)
+          ? neighborhoodsData.reduce((acc, neighborhood) => {
+              acc[String(neighborhood.id)] = neighborhood;
+              return acc;
+            }, {})
+          : {};
+
+        const normalized = Array.isArray(addressesData)
+          ? addressesData.map((item, index) => {
+              const neighborhoodId = item.neighborhoodId ? String(item.neighborhoodId) : '';
+              const neighborhood = neighborhoodIndex[neighborhoodId];
+
+              return {
+                id: String(item.id),
+                user_id: String(item.userId || userId),
+                street: item.street,
+                streetNumber: item.streetNumber,
+                street_number: item.streetNumber,
+                neighborhood_id: neighborhoodId,
+                neighborhoodName: neighborhood?.name || '',
+                city: item.city,
+                state: item.state,
+                zipCode: item.zipCode,
+                zip_code: item.zipCode,
+                complement: item.complement,
+                geo_lat: item.geoLat,
+                geo_lng: item.geoLng,
+                is_default: index === 0, // Assumindo o primeiro como default se não houver flag
+              };
+            })
+          : [];
+
+        setAddresses(normalized);
+      } catch (error) {
+        console.error('Erro ao carregar endereços:', error);
+      }
+    };
+
+    loadAddresses();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="space-y-8">
@@ -64,10 +117,8 @@ const Addresses = () => {
                 {address.street}, {address.streetNumber || address.street_number}
               </p>
               <p>
-                {(
-                  (maps && maps.neighborhoodMap && maps.neighborhoodMap[address.neighborhood_id]?.name) ||
-                  address.neighborhood || 'Bairro'
-                )} · {address.city}{address.state ? ` - ${address.state}` : ''}
+                {address.neighborhoodName || address.neighborhood || 'Bairro'} · {address.city}
+                {address.state ? ` - ${address.state}` : ''}
               </p>
               <p>CEP {(address.zipCode || address.zip_code || '')}</p>
               {address.complement && <p>Complemento: {address.complement}</p>}

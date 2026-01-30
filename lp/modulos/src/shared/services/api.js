@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost';
 
 class ApiService {
   constructor() {
@@ -7,13 +7,16 @@ class ApiService {
 
   async request(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
-    const config = {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-      ...options,
+    const config = { ...options };
+    config.headers = {
+      ...(options.headers || {}),
     };
+
+    if (config.method && config.method !== 'GET') {
+      if (!config.headers['Content-Type']) {
+        config.headers['Content-Type'] = 'application/json';
+      }
+    }
 
     // Add auth token if available
     const token = localStorage.getItem('authToken');
@@ -25,7 +28,10 @@ class ApiService {
       const response = await fetch(url, config);
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // Tenta ler o corpo da resposta para dar mais detalhes do erro
+        const errorBody = await response.text();
+        console.error('API Error Body:', errorBody);
+        throw new Error(`HTTP error! status: ${response.status} - ${errorBody}`);
       }
 
       return await response.json();

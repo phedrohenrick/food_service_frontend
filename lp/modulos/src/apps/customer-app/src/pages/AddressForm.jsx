@@ -2,13 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../../../../shared/components/ui';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
+import api from '../../../../shared/services/api';
 
 const defaultForm = {
   id: '',
   label: '',
   street: '',
   streetNumber: '',
-  neighborhood: '',
+  neighborhoodName: '',
   city: '',
   state: 'SP',
   zipCode: '',
@@ -19,8 +20,22 @@ const defaultForm = {
 const AddressForm = () => {
   const navigate = useNavigate();
   const { addressId } = useParams();
-  const { addresses, saveAddress, setCartAddress } = useStorefront();
+  const { addresses, saveAddress, setCartAddress, user } = useStorefront();
   const [formData, setFormData] = useState(defaultForm);
+  const [neighborhoods, setNeighborhoods] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // Carregar bairros do tenant (assumindo tenant 1 para demo)
+    api.get('/neighborhoods/by-tenant/1')
+      .then(response => {
+        const data = response?.data;
+        setNeighborhoods(Array.isArray(data) ? data : []);
+      })
+      .catch(error => {
+        console.error('Erro ao carregar bairros:', error);
+      });
+  }, []);
 
   useEffect(() => {
     if (!addressId) {
@@ -29,7 +44,10 @@ const AddressForm = () => {
     }
     const current = (addresses || []).find((address) => address.id === addressId);
     if (current) {
-      setFormData(current);
+      setFormData({
+        ...current,
+        neighborhoodName: current.neighborhoodName || current.neighborhood?.name || ''
+      });
     }
   }, [addressId, addresses]);
 
@@ -41,11 +59,51 @@ const AddressForm = () => {
     }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    const newId = saveAddress(formData);
-    setCartAddress(newId);
-    navigate('/app/enderecos');
+    setLoading(true);
+
+    try {
+      // Verifica se o bairro digitado corresponde a um existente
+      const existingNeighborhood = neighborhoods.find(
+        (nb) => nb.name.toLowerCase() === formData.neighborhoodName.trim().toLowerCase()
+      );
+
+      // Payload compatível com a entidade UserAddress do backend
+      // Garante que userId seja numérico (fallback para 1 se for string não numérica do mock)
+      const userIdNum = (user?.id && !isNaN(user.id)) ? Number(user.id) : 1;
+      
+      const payload = {
+        userId: userIdNum,
+        label: formData.label,
+        street: formData.street,
+        streetNumber: formData.streetNumber,
+        neighborhoodId: existingNeighborhood ? existingNeighborhood.id : null,
+        neighborhoodName: formData.neighborhoodName,
+        city: formData.city,
+        state: formData.state,
+        zipCode: formData.zipCode,
+        complement: formData.complement,
+        geoLat: 0.0,
+        geoLng: 0.0
+      };
+
+      if (addressId) {
+        await api.put(`/user-addresses/${addressId}`, payload);
+      } else {
+        await api.post('/user-addresses/create', payload);
+      }
+      
+      // Atualiza o contexto local se necessário ou apenas navega
+      // Como o contexto é mockado, ele não vai refletir o backend automaticamente
+      // Mas o fluxo de UI deve prosseguir
+      navigate('/app/enderecos');
+    } catch (error) {
+      console.error('Erro ao salvar endereço:', error);
+      alert('Erro ao salvar endereço. Verifique o console.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -121,12 +179,20 @@ const AddressForm = () => {
             Bairro
             <input
               type="text"
-              name="neighborhood"
-              value={formData.neighborhood}
+              name="neighborhoodName"
+              value={formData.neighborhoodName}
               onChange={handleChange}
+              list="neighborhoods-list"
               className="mt-1 w-full rounded-2xl border border-gray-200 px-4 py-3 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
               required
+              placeholder="Digite ou selecione o bairro"
             />
+            <datalist id="neighborhoods-list">
+              {Array.isArray(neighborhoods) &&
+                neighborhoods.map((nb) => (
+                  <option key={nb.id} value={nb.name} />
+                ))}
+            </datalist>
           </label>
           <label className="text-sm font-medium text-gray-700">
             Complemento
@@ -179,8 +245,8 @@ const AddressForm = () => {
         </label>
 
         <div className="flex flex-col gap-3 sm:flex-row">
-          <Button type="submit" className="flex-1">
-            {addressId ? 'Atualizar' : 'Salvar endereço'}
+          <Button type="submit" className="flex-1" disabled={loading}>
+            {loading ? 'Salvando...' : (addressId ? 'Atualizar' : 'Salvar endereço')}
           </Button>
           <Button
             type="button"
