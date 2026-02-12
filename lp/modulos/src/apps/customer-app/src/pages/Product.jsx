@@ -89,7 +89,7 @@ const Product = () => {
               </button>
             </div>
             <Button className="flex-1" onClick={handleAddToCart}>
-              Adicionar à sacola · R$ {(product.price * quantity).toFixed(2)}
+              Adicionar à sacola · R$ {((product.price ?? 0) * quantity).toFixed(2)}
             </Button>
             <Button variant="ghost" onClick={() => navigate('/app/sacola')}>
               {added ? 'Finalizar compra' : 'Ir para a sacola'}
@@ -134,7 +134,7 @@ const Product = () => {
                 <p className="text-sm text-gray-500 line-clamp-2">{item.description}</p>
                 <div className="mt-2 flex items-center justify-between">
                   <span className="font-semibold text-gray-900 ">
-                    R$ {item.price.toFixed(2)}
+                    R$ {(item.price ?? 0).toFixed(2)}
                   </span>
                   <button
                     type="button"

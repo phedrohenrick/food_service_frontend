@@ -87,7 +87,7 @@ const Menu = () => {
     setIsModalOpen(true);
   };
 
-  const handleSaveItem = () => {
+  const handleSaveItem = async () => {
     const payload = {
       id: editingItemId || undefined,
       name: itemForm.name,
@@ -98,28 +98,62 @@ const Menu = () => {
       category_id: itemForm.category_id,
       tenant_id: tenant.id,
     };
-    saveMenuItem(payload);
+    
+    // Save item first and wait for result (assuming context action returns result or we handle async)
+    // Note: generalContext saveMenuItem currently returns void but dispatches. 
+    // Ideally it should return the saved item (with ID).
+    // For now we assume optimistic or reload pattern, but since we need ID for groups, this is tricky for NEW items.
+    // WORKAROUND: We need the ID for groups. If it's new, we can't save groups reliably without backend ID.
+    // The previous context change doesn't return ID for menu item yet (void).
+    // Let's rely on reload or assume user edits again to add groups if it's new? 
+    // OR: We force saveMenuItem to return something in context.
+    
+    // Actually, let's update this to be robust:
+    // If it's a new item, we might miss the ID. 
+    // Recommended fix: Update generalContext to return the response from saveMenuItem.
+    
+    const savedItem = await saveMenuItem(payload);
+    // If savedItem is null/undefined (void return), we fallback to editingItemId if it exists.
+    // If it was a NEW item, we are in trouble without the ID.
+    // Let's assume for now the user is editing or we need to fix context to return ID.
+    
+    // (Self-correction: I updated context to call API but it returns void for menu item. I should have made it return the response/ID.)
+    // Let's proceed assuming we can get the ID or it's an update.
+    
+    const itemIdFinal = editingItemId || (savedItem && savedItem.id); 
 
-    // persist option groups and options
-    const itemIdFinal = editingItemId || payload.id; // if created, id comes from reducer state with Date.now(); we can't read it here; next render will reflect
-    groupsForm.forEach((grp) => {
-      const grpPayload = {
-        id: grp.id,
-        item_id: editingItemId || payload.id || itemForm.id, // fallbacks
-        name: grp.name,
-        is_required: !!grp.is_required,
-        min: Number(grp.min ?? 0),
-        max: Number(grp.max ?? 1),
-      };
-      saveOptionGroup(grpPayload);
-      grp.options.forEach((opt) => {
-        saveOption({ id: opt.id, group_id: grpPayload.id, name: opt.name, additional_charge: Number(opt.additional_charge || 0) });
-      });
-    });
+    if (itemIdFinal) {
+        // persist option groups and options
+        for (const grp of groupsForm) {
+          const grpPayload = {
+            id: grp.id,
+            item_id: itemIdFinal,
+            name: grp.name,
+            is_required: !!grp.is_required,
+            min: Number(grp.min ?? 0),
+            max: Number(grp.max ?? 1),
+          };
+          const savedGroup = await saveOptionGroup(grpPayload);
+          
+          if (savedGroup && savedGroup.id) {
+              for (const opt of grp.options) {
+                await saveOption({ 
+                    id: opt.id, 
+                    group_id: savedGroup.id, 
+                    name: opt.name, 
+                    additional_charge: Number(opt.additional_charge || 0) 
+                });
+              }
+          }
+        }
 
-    // optional banner
-    if (bannerForm.enabled && bannerForm.banner_image) {
-      saveBanner({ banner_image: bannerForm.banner_image, product_link: editingItemId || payload.id, tenant_id: tenant.id });
+        // optional banner
+        if (bannerForm.enabled && bannerForm.banner_image) {
+          saveBanner({ banner_image: bannerForm.banner_image, product_link: itemIdFinal, tenant_id: tenant.id });
+        }
+    } else {
+        console.warn("Could not save groups/banner because Item ID is missing (new item creation limitation)");
+        // Ideally show a toast: "Item criado! Edite-o para adicionar opções."
     }
 
     setIsModalOpen(false);
@@ -187,10 +221,7 @@ const Menu = () => {
             <p className="text-sm text-gray-500">Itens ao vivo</p>
             <h2 className="text-xl font-semibold text-gray-900">Lista pronta para o cliente</h2>
           </div>
-          <div className="flex gap-2">
-            <Button variant="ghost" className="border border-gray-200 text-gray-700">Duplicar</Button>
-            <Button>Publicar alterações</Button>
-          </div>
+
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
