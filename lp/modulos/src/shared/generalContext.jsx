@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useReducer } from 'react';
+import api from './services/api';
 
 /*
   Context alinhado ao modelo de banco
@@ -13,7 +14,7 @@ const StorefrontContext = createContext(null);
 
 // user
 const initialUser = {
-  id: 'user-001',
+  id: 1,
   name: 'Ana Luiza',
   phone: '(11) 98888-7777',
   email: 'ana.luiza@email.com',
@@ -27,7 +28,7 @@ const initialAddresses = [];
 
 // tenant
 const initialTenant = {
-  id: 'tenant-aurora',
+  id: 1,
   owner_user_id: initialUser.id,
   name: 'Aurora Burger & Co.',
   main_color: '#e94600ff',
@@ -616,11 +617,12 @@ const reducer = (state, action) => {
     // ---------------------- MENU: Itens ----------------------
     case actionMap.UPSERT_MENU_ITEM: {
       const item = action.payload;
-      const id = item.id || `item-${Date.now()}`;
+      // Backend integration is handled in the action creator (middleware pattern simulation)
+      // but here we update the store optimistically or with the result
+      const id = item.id; 
       const idx = state.menuItems.findIndex((mi) => mi.id === id);
       const next = {
         ...item,
-        id,
         tenant_id: item.tenant_id || state.tenant.id,
         is_available: item.is_available ?? true,
       };
@@ -721,6 +723,13 @@ const reducer = (state, action) => {
       return { ...state, neighborhoods };
     }
 
+    case actionMap.SET_DATA: {
+      return {
+        ...state,
+        ...action.payload,
+      };
+    }
+
     default:
       return state;
   }
@@ -750,9 +759,273 @@ export const StorefrontProvider = ({ children }) => {
     orderItemOptions: initialOrderItemOptions,
   });
 
+  const loadData = async () => {
+    try {
+      // ID fixo para demo ou pegar de configuração
+      const tenantId = 1;
+      const userId = 1; // Mock user ID for now
+
+      // Carregamento paralelo de dados
+      const [
+        rawTenant,
+        rawMenuCategories,
+        rawMenuItems,
+        rawOptionGroups,
+        rawOptions,
+        rawBanners,
+        rawNeighborhoods,
+        rawAddresses,
+        rawUser,
+        rawOrdersList,
+      ] = await Promise.all([
+        api.get(`/tenants/${tenantId}`).catch(() => initialTenant),
+        api.get(`/menu-categories?tenantId=${tenantId}`).catch(() => []),
+        api.get(`/menu-items?tenantId=${tenantId}`).catch(() => []),
+        api.get(`/option-groups?tenantId=${tenantId}`).catch(() => []),
+        api.get(`/options?tenantId=${tenantId}`).catch(() => []),
+        api.get(`/banners?tenantId=${tenantId}`).catch(() => []),
+        api.get(`/neighborhoods?tenantId=${tenantId}`).catch(() => []),
+        api.get(`/user-addresses/by-user/${userId}`).catch(() => []),
+        api.get(`/users/${userId}`).catch(() => initialUser),
+        api.get(`/orders/by-user/${userId}`).catch(() => []),
+      ]);
+
+      // Fetch details for orders (items + timeline)
+      const detailedOrders = await Promise.all(
+        (Array.isArray(rawOrdersList) ? rawOrdersList : []).map(async (o) => {
+             try {
+                 const res = await api.get(`/orders/${o.id}`);
+                 return res;
+             } catch (e) {
+                 return null;
+             }
+        })
+      );
+      
+      const validDetailedOrders = detailedOrders.filter(Boolean);
+
+      // Normalize User
+      const user = rawUser ? {
+          ...rawUser,
+          created_at: rawUser.createdAt || rawUser.created_at,
+      } : initialUser;
+
+      // Normalize Orders, Items, Statuses
+      const orders = [];
+      const statuses = [];
+      const orderItems = [];
+      const orderItemOptions = [];
+
+      validDetailedOrders.forEach(detailed => {
+          const o = detailed.order;
+          if(!o) return;
+
+          // Order
+          orders.push({
+              ...o,
+              user_id: o.userId || o.user_id,
+              tenant_id: o.tenantId || o.tenant_id,
+              address_id: o.addressId || o.address_id,
+              payment_channel: o.paymentChannel || o.payment_channel,
+              service_fee: o.serviceFee || o.service_fee,
+              delivery_fee: o.deliveryFee || o.delivery_fee,
+              created_at: o.createdAt || o.created_at,
+              // Ensure numbers for calculations
+              subtotal: Number(o.subtotal),
+              service_fee: Number(o.serviceFee || o.service_fee),
+              delivery_fee: Number(o.deliveryFee || o.delivery_fee),
+              discount: Number(o.discount || 0),
+              total: Number(o.total),
+              change: o.change ? String(o.change) : '',
+          });
+
+          // Statuses
+          if (detailed.timeline && Array.isArray(detailed.timeline)) {
+              detailed.timeline.forEach(t => {
+                  statuses.push({
+                      id: t.id || `st-${Date.now()}-${Math.random()}`,
+                      order_id: o.id,
+                      status: t.status,
+                      label: t.label, 
+                      created_at: t.timestamp || t.created_at, // Critical for sort
+                      timestamp: t.timestamp || t.created_at, // For OrderDetails.jsx
+                      completed: t.completed
+                  });
+              });
+          }
+
+          // Items
+          if (detailed.items && Array.isArray(detailed.items)) {
+              detailed.items.forEach(i => {
+                  orderItems.push({
+                      id: i.id,
+                      order_id: i.orderId || i.order_id,
+                      item_id: i.itemId || i.item_id,
+                      item_name_snapshot: i.itemNameSnapshot || i.item_name_snapshot,
+                      unit_price: Number(i.unitPrice || i.unit_price),
+                      quantity: i.quantity,
+                      notes: i.notes,
+                      highlights: i.highlights ? [i.highlights] : [],
+                  });
+
+                  if (i.options && Array.isArray(i.options)) {
+                      i.options.forEach(opt => {
+                           orderItemOptions.push({
+                               id: `oio-${i.id}-${opt.optionId}`,
+                               order_item_id: i.id,
+                               option_id: opt.optionId,
+                               // Map option details if needed by getOrderDetailed selectors
+                           });
+                      });
+                  }
+              });
+          }
+      });
+
+      // Normalize Tenant
+      const tenant = rawTenant ? {
+          ...rawTenant,
+          main_color: rawTenant.mainColor || rawTenant.main_color,
+          delivery_fee: rawTenant.deliveryFee || rawTenant.delivery_fee,
+          service_fee_percentage: rawTenant.serviceFeePercentage || rawTenant.service_fee_percentage,
+          delivery_method: rawTenant.deliveryMethod || rawTenant.delivery_method,
+          working_hours: rawTenant.workingHours || rawTenant.working_hours,
+          accepts_cash: rawTenant.acceptsCash || rawTenant.accepts_cash,
+          photo_url: rawTenant.photoUrl || rawTenant.photo_url,
+          payment_channels: rawTenant.paymentChannels || rawTenant.payment_channels || (rawTenant.paymentChannel ? [rawTenant.paymentChannel] : []),
+          is_open: rawTenant.isOpen !== undefined ? rawTenant.isOpen : rawTenant.is_open,
+          delivery_estimate_min: rawTenant.deliveryEstimateMin || rawTenant.delivery_estimate_min,
+          delivery_estimate_max: rawTenant.deliveryEstimateMax || rawTenant.delivery_estimate_max,
+      } : initialTenant;
+
+      // Normalize Menu Items
+      const menuItems = Array.isArray(rawMenuItems) ? rawMenuItems.map(m => ({
+          ...m,
+          category_id: (m.categoryId && typeof m.categoryId === 'object') ? m.categoryId.id : (m.categoryId || m.category_id),
+          photo_url: m.photoUrl || m.photo_url,
+          is_available: m.isAvailable !== undefined ? m.isAvailable : m.is_available,
+          tenant_id: (m.tenant && typeof m.tenant === 'object') ? m.tenant.id : (m.tenantId || m.tenant_id),
+      })) : [];
+
+      // Normalize Categories
+      const menuCategories = Array.isArray(rawMenuCategories) ? rawMenuCategories.map(c => ({
+          ...c,
+          tenant_id: (c.tenant && typeof c.tenant === 'object') ? c.tenant.id : (c.tenantId || c.tenant_id),
+          display_order: c.displayOrder || c.display_order || c.order,
+          order: c.displayOrder || c.order,
+      })) : [];
+
+      // Normalize Option Groups
+      const optionGroups = Array.isArray(rawOptionGroups) ? rawOptionGroups.map(g => ({
+          ...g,
+          item_id: g.itemId || g.item_id,
+          is_required: g.isRequired !== undefined ? g.isRequired : g.is_required,
+      })) : [];
+
+       // Normalize Options
+      const options = Array.isArray(rawOptions) ? rawOptions.map(o => ({
+          ...o,
+          group_id: o.groupId || o.group_id,
+          additional_charge: o.additionalPrice !== undefined ? o.additionalPrice : (o.additional_charge || 0),
+      })) : [];
+
+      // Normalize Neighborhoods
+       const neighborhoods = Array.isArray(rawNeighborhoods) ? rawNeighborhoods.map(n => ({
+          ...n,
+          tenant_id: n.tenantId || n.tenant_id,
+      })) : [];
+
+      // Normalize Addresses
+      const addresses = Array.isArray(rawAddresses) ? rawAddresses.map(a => ({
+          ...a,
+          user_id: a.userId || a.user_id,
+          zip_code: a.zipCode || a.zip_code,
+          street_number: a.streetNumber || a.street_number,
+          neighborhood_id: a.neighborhoodId || a.neighborhood_id,
+          geo_lat: a.geoLat || a.geo_lat,
+          geo_lng: a.geoLng || a.geo_lng,
+          is_default: a.isDefault || a.is_default,
+      })) : [];
+      
+      // Banners
+       const banners = Array.isArray(rawBanners) ? rawBanners.map(b => ({
+          ...b,
+          tenant_id: b.tenantId || b.tenant_id,
+          banner_image: b.bannerImage || b.banner_image,
+      })) : [];
+
+      // Carregar Carrinho Ativo
+      let cart = initialCart;
+      let cartItems = [];
+      let cartItemOptions = [];
+
+      try {
+        const rawCart = await api.get(`/cart?userId=${userId}&tenantId=${tenantId}`);
+        if (rawCart) {
+           cart = {
+               ...rawCart,
+               user_id: rawCart.userId || rawCart.user_id,
+               tenant_id: rawCart.tenantId || rawCart.tenant_id,
+               address_id: rawCart.addressId || rawCart.address_id,
+               payment_channel: rawCart.paymentChannel || rawCart.payment_channel,
+               change: rawCart.changeFor || rawCart.change,
+               delivery_fee: rawCart.deliveryFee || rawCart.delivery_fee,
+               notes: rawCart.notes,
+               discount: rawCart.discount || 0,
+           };
+
+           if (rawCart.items && Array.isArray(rawCart.items)) {
+              cartItems = rawCart.items.map(ci => ({
+                  ...ci,
+                  cart_id: ci.cartId || ci.cart_id,
+                  item_id: ci.itemId || ci.item_id,
+              }));
+              
+              cartItemOptions = rawCart.items.flatMap(ci => {
+                  if (ci.selectedOptions && Array.isArray(ci.selectedOptions)) {
+                      return ci.selectedOptions.map(opt => ({
+                          id: opt.id,
+                          cart_item_id: ci.id,
+                          option_id: opt.optionId,
+                      }));
+                  }
+                  return [];
+              });
+           }
+        }
+      } catch (err) {
+        console.log('Nenhum carrinho ativo encontrado ou erro ao buscar.');
+      }
+
+      dispatch({
+        type: actionMap.SET_DATA,
+        payload: {
+          user,
+          tenant,
+          menuCategories,
+          menuItems,
+          optionGroups,
+          options,
+          banners,
+          neighborhoods,
+          addresses,
+          cart: cart || initialCart,
+          cartItems,
+          cartItemOptions,
+          orders,
+          statuses,
+          orderItems,
+          orderItemOptions,
+        },
+      });
+    } catch (error) {
+      console.error('Erro ao carregar dados iniciais:', error);
+    }
+  };
+
   useEffect(() => {
-    // Endereços agora são carregados pelas telas ou por um init global apropriado
-  }, [state.user.id]);
+    loadData();
+  }, []);
 
   const maps = useMemo(() => {
     return {
@@ -831,14 +1104,16 @@ export const StorefrontProvider = ({ children }) => {
   };
 
   const getOrderDetailed = (orderId) => {
-    const order = state.orders.find((o) => o.id === orderId);
+    // Garantir que orderId seja string para comparação, pois na URL vem string
+    // e no banco vem number.
+    const order = state.orders.find((o) => String(o.id) === String(orderId));
     if (!order) return null;
 
     const items = state.orderItems
-      .filter((oi) => oi.order_id === orderId)
+      .filter((oi) => String(oi.order_id) === String(order.id))
       .map((oi) => {
         const opts = state.orderItemOptions
-          .filter((oio) => oio.order_item_id === oi.id)
+          .filter((oio) => String(oio.order_item_id) === String(oi.id))
           .map((oio) => ({
             ...oio,
             option: maps.optionMap[oio.option_id],
@@ -848,134 +1123,218 @@ export const StorefrontProvider = ({ children }) => {
       });
 
     const timeline = state.statuses
-      .filter((s) => s.order_id === orderId)
+      .filter((s) => String(s.order_id) === String(order.id))
       .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
     return { order, items, timeline };
   };
 
-  /* ------------ Actions para você testar no front ------------ */
+  /* ------------ Actions Integradas com Backend ------------ */
 
-  const addToCart = (itemId, quantity = 1, notes = '') =>
+  const addToCart = async (itemId, quantity = 1, notes = '') => {
+    // Optimistic
     dispatch({
       type: actionMap.ADD_TO_CART,
       payload: { itemId, quantity, notes },
     });
 
-  const updateCartItem = (cartItemId, quantity) =>
+    try {
+      await api.post(`/cart/items`, {
+        cartId: state.cart.id,
+        itemId,
+        quantity,
+        notes,
+      });
+    } catch (error) {
+      console.error('Erro ao adicionar ao carrinho:', error);
+      // TODO: Reverter em caso de erro crítico
+    }
+  };
+
+  const updateCartItem = async (cartItemId, quantity) => {
     dispatch({
       type: actionMap.UPDATE_CART_ITEM,
       payload: { cartItemId, quantity },
     });
 
-  const removeCartItem = (cartItemId) =>
+    try {
+      await api.put(`/cart/items/${cartItemId}?cartId=${state.cart.id}`, { quantity });
+    } catch (error) {
+      console.error('Erro ao atualizar item do carrinho:', error);
+    }
+  };
+
+  const removeCartItem = async (cartItemId) => {
     dispatch({
       type: actionMap.REMOVE_CART_ITEM,
       payload: cartItemId,
     });
 
-  const toggleOptionInCartItem = (cartItemId, optionId) =>
+    try {
+      await api.delete(`/cart/items/${cartItemId}?cartId=${state.cart.id}`);
+    } catch (error) {
+      console.error('Erro ao remover item do carrinho:', error);
+    }
+  };
+
+  const toggleOptionInCartItem = async (cartItemId, optionId) => {
     dispatch({
       type: actionMap.TOGGLE_CART_ITEM_OPTION,
       payload: { cartItemId, optionId },
     });
 
-  const setCartAddress = (addressId) =>
+    try {
+      await api.post(`/carts/${state.cart.id}/items/${cartItemId}/toggle-option`, {
+        option_id: optionId,
+      });
+    } catch (error) {
+      console.error('Erro ao alternar opção:', error);
+    }
+  };
+
+  const setCartAddress = async (addressId) => {
     dispatch({
       type: actionMap.SET_CART_ADDRESS,
       payload: addressId,
     });
+    try {
+      await api.put(`/cart/${state.cart.id}/details`, { addressId });
+    } catch (error) {
+      console.error('Erro ao definir endereço do carrinho:', error);
+    }
+  };
 
-  const setCartPaymentChannel = (channel) =>
+  const setCartPaymentChannel = async (channel) => {
     dispatch({
       type: actionMap.SET_CART_PAYMENT,
       payload: channel,
     });
+    try {
+      await api.put(`/cart/${state.cart.id}/details`, { paymentChannel: channel });
+    } catch (error) {
+      console.error('Erro ao definir pagamento:', error);
+    }
+  };
 
-  const setCartChangeFor = (value) =>
+  const setCartChangeFor = async (value) => {
     dispatch({
       type: actionMap.SET_CART_CHANGE,
       payload: value,
     });
+    // Debounce idealmente, mas direto por enquanto
+    try {
+      await api.put(`/cart/${state.cart.id}/details`, { changeFor: value });
+    } catch (error) {
+      console.error('Erro ao definir troco:', error);
+    }
+  };
 
-  const setCartNotes = (notes) =>
+  const setCartNotes = async (notes) => {
     dispatch({
       type: actionMap.SET_CART_NOTES,
       payload: notes,
     });
-
-  const saveAddress = (address) => {
-    const id = address.id || `addr-${Date.now()}`;
-    dispatch({
-      type: actionMap.SAVE_ADDRESS,
-      payload: { address: { ...address, id } },
-    });
-    return id;
+    try {
+      await api.put(`/cart/${state.cart.id}/details`, { notes });
+    } catch (error) {
+      console.error('Erro ao definir observações:', error);
+    }
   };
 
-  const placeOrder = () => {
+  const saveAddress = async (address) => {
+    try {
+      // Se tiver ID, é update, senão create
+      const method = address.id && !address.id.startsWith('addr-') ? 'put' : 'post';
+      const url = method === 'put' ? `/user-addresses/${address.id}` : '/user-addresses';
+      
+      const payload = { ...address, user_id: state.user.id };
+      const saved = await api[method](url, payload);
+
+      dispatch({
+        type: actionMap.SAVE_ADDRESS,
+        payload: { address: saved },
+      });
+      return saved.id;
+    } catch (error) {
+      console.error('Erro ao salvar endereço:', error);
+      // Fallback para mock local se falhar, para não travar a UI na demo
+      const id = address.id || `addr-${Date.now()}`;
+      dispatch({
+        type: actionMap.SAVE_ADDRESS,
+        payload: { address: { ...address, id } },
+      });
+      return id;
+    }
+  };
+
+  const placeOrder = async () => {
     if (!state.cartItems.length) return null;
 
-    const now = new Date();
-    const orderId = `ord-${now.getTime()}`;
+    try {
+      // Construct OrderDTO compatible payload (camelCase)
+      const orderItems = state.cartItems.map((ci) => {
+        const item = maps.menuItemMap[ci.item_id];
+        const selectedOptions = state.cartItemOptions
+          .filter((cio) => cio.cart_item_id === ci.id)
+          .map((cio) => {
+            const opt = maps.optionMap[cio.option_id];
+            return {
+              optionId: cio.option_id,
+              optionNameSnapshot: opt?.name,
+              additionalCharge: opt?.additional_charge || 0,
+            };
+          });
 
-    const order = {
-      id: orderId,
-      user_id: state.user.id,
-      tenant_id: state.tenant.id,
-      address_id: state.cart.address_id,
-      subtotal: cartTotals.subtotal,
-      service_fee: cartTotals.serviceFee,
-      delivery_fee: cartTotals.deliveryFee,
-      discount: cartTotals.discount,
-      total: cartTotals.total,
-      payment_channel: state.cart.payment_channel,
-      created_at: now.toISOString(),
-      change: state.cart.change,
-    };
+        return {
+          itemId: ci.item_id,
+          itemNameSnapshot: item?.name,
+          quantity: ci.quantity,
+          unitPrice: item?.price || 0,
+          notes: ci.notes,
+          highlights: null,
+          options: selectedOptions,
+        };
+      });
 
-    const statuses = [
-      {
-        id: `st-${now.getTime()}-1`,
-        order_id: orderId,
+      const payload = {
+        tenantId: state.tenant?.id ? Number(state.tenant.id) : value.tenantId,
+        userId: state.user?.id ? Number(state.user.id) : value.userId,
+        addressId: state.cart.address_id ? Number(state.cart.address_id) : null,
+        subtotal: cartTotals.subtotal,
+        serviceFee: cartTotals.serviceFee,
+        deliveryFee: cartTotals.deliveryFee,
+        discount: cartTotals.discount,
+        total: cartTotals.total,
+        paymentChannel: state.cart.payment_channel ? state.cart.payment_channel.toUpperCase() : null,
+        change: state.cart.change ? parseFloat(state.cart.change.replace(',', '.')) : 0,
         status: 'CREATED',
-        created_at: now.toISOString(),
-      },
-    ];
-
-    const optionMap = maps.optionMap;
-
-    const orderItems = state.cartItems.map((ci) => {
-      const item = maps.menuItemMap[ci.item_id];
-      return {
-        id: `oit-${ci.id}`,
-        order_id: orderId,
-        item_id: ci.item_id,
-        item_name_snapshot: item?.name || '',
-        unit_price: item?.price || 0,
-        quantity: ci.quantity,
-        notes: ci.notes || '',
-        highlights: item?.highlights || [],
+        orderItem: orderItems,
       };
-    });
 
-    const orderItemOptions = state.cartItemOptions.map((cio) => {
-      const opt = optionMap[cio.option_id];
-      return {
-        id: `oio-${cio.id}`,
-        order_item_id: `oit-${cio.cart_item_id}`,
-        option_id: cio.option_id,
-        option_name_snapshot: opt?.name || '',
-        additional_charge: opt?.additional_charge || 0,
-      };
-    });
+      console.log('Place Order Payload:', payload);
 
-    dispatch({
-      type: actionMap.PLACE_ORDER,
-      payload: { order, statuses, orderItems, orderItemOptions },
-    });
+      const order = await api.post('/orders', payload);
 
-    return orderId;
+      // O backend deve retornar a order completa
+      // Se retornar, usamos. Se não, fallback para mock visual ou reload.
+      
+      // Assumindo que retorna estrutura compatível ou precisamos recarregar pedidos
+      if (order && order.id) {
+         // Mock conversion ou uso direto
+         // Simplificação: reload orders via loadData ou apenas limpar carrinho
+         dispatch({
+             type: actionMap.CLEAR_CART
+         });
+         // Adicionar order na lista
+         // dispatch({ type: actionMap.ADD_ORDER, payload: order }); // Se existir action
+         
+         // Por enquanto, vamos manter o comportamento de limpar o carrinho e retornar o ID
+         return order.id;
+      }
+    } catch (error) {
+      console.error('Erro ao realizar pedido:', error);
+    }
+    return null;
   };
 
   const value = useMemo(
@@ -1009,25 +1368,132 @@ export const StorefrontProvider = ({ children }) => {
       addOrderStatus: (orderId, status) =>
         dispatch({ type: actionMap.ADD_ORDER_STATUS, payload: { orderId, status } }),
       // menu: categorias
-      saveMenuCategory: (category) =>
-        dispatch({ type: actionMap.UPSERT_MENU_CATEGORY, payload: category }),
+      saveMenuCategory: async (category) => {
+        try {
+          // Normalize payload for backend (camelCase)
+          const payload = {
+              id: category.id,
+              name: category.name,
+              tenantId: { id: category.tenant_id || state.tenant.id },
+              displayOrder: category.order || category.display_order
+          };
+          
+          // Determine if create or update
+          // Currently backend only shows /create, assuming upsert or create only for now
+          await api.post('/menu-categories/create', payload);
+          
+          // Reload data or optimistic update (simplified: reload for consistency)
+          // For now, dispatch optimistic
+          dispatch({ type: actionMap.UPSERT_MENU_CATEGORY, payload: category });
+        } catch (e) {
+          console.error("Error saving category", e);
+        }
+      },
       reorderMenuCategories: (ids) =>
         dispatch({ type: actionMap.REORDER_MENU_CATEGORIES, payload: ids }),
       // menu: itens
-      saveMenuItem: (item) =>
-        dispatch({ type: actionMap.UPSERT_MENU_ITEM, payload: item }),
-      deleteMenuItem: (itemId) =>
-        dispatch({ type: actionMap.DELETE_MENU_ITEM, payload: itemId }),
-      toggleItemAvailability: (itemId) =>
-        dispatch({ type: actionMap.TOGGLE_MENU_ITEM_AVAILABILITY, payload: itemId }),
+      saveMenuItem: async (item) => {
+          try {
+              const payload = {
+                  id: item.id,
+                  name: item.name,
+                  description: item.description,
+                  price: item.price,
+                  isAvailable: item.is_available,
+                  photoUrl: item.photo_url,
+                  categoryId: { id: item.category_id },
+                  tenantId: { id: item.tenant_id || state.tenant.id }
+              };
+              
+              const savedDto = await api.post('/menu-items', payload);
+              
+              // Normalize returned DTO to match frontend state
+              const savedItem = {
+                  ...item,
+                  id: savedDto.id,
+                  category_id: savedDto.categoryId?.id || savedDto.categoryId, // Ensure we extract ID if object
+                  tenant_id: savedDto.tenant?.id || savedDto.tenantId,
+              };
+
+              dispatch({ type: actionMap.UPSERT_MENU_ITEM, payload: savedItem });
+              return savedItem;
+          } catch(e) {
+              console.error("Error saving menu item", e);
+              return null;
+          }
+      },
+      deleteMenuItem: async (itemId) => {
+          try {
+              await api.delete(`/menu-items/${itemId}`);
+              dispatch({ type: actionMap.DELETE_MENU_ITEM, payload: itemId });
+          } catch (e) {
+              console.error("Error deleting menu item", e);
+          }
+      },
+      toggleItemAvailability: async (itemId) => {
+          const item = state.menuItems.find(i => i.id === itemId);
+          if (!item) return;
+          
+          try {
+             const payload = {
+                  id: item.id,
+                  name: item.name,
+                  description: item.description,
+                  price: item.price,
+                  isAvailable: !item.is_available,
+                  photoUrl: item.photo_url,
+                  categoryId: { id: item.category_id },
+                  tenantId: { id: item.tenant_id }
+             };
+             await api.post('/menu-items', payload);
+             dispatch({ type: actionMap.TOGGLE_MENU_ITEM_AVAILABILITY, payload: itemId });
+          } catch (e) {
+             console.error("Error toggling item availability", e);
+          }
+      },
       // menu: grupos de opção
-      saveOptionGroup: (group) =>
-        dispatch({ type: actionMap.UPSERT_OPTION_GROUP, payload: group }),
+      saveOptionGroup: async (group) => {
+          try {
+             const payload = {
+                 id: group.id,
+                 itemId: { id: group.item_id },
+                 name: group.name,
+                 isRequired: group.is_required,
+                 min: group.min,
+                 max: group.max
+             };
+             const res = await api.post('/option-groups/create', payload);
+             // res is OptionGroupDTO
+             
+             dispatch({ 
+                 type: actionMap.UPSERT_OPTION_GROUP, 
+                 payload: {
+                     ...group,
+                     id: res.id // Ensure we have the real ID
+                 } 
+             });
+             return res;
+          } catch(e) {
+              console.error("Error saving option group", e);
+          }
+      },
       deleteOptionGroup: (groupId) =>
         dispatch({ type: actionMap.DELETE_OPTION_GROUP, payload: groupId }),
       // menu: opções
-      saveOption: (option) =>
-        dispatch({ type: actionMap.UPSERT_OPTION, payload: option }),
+      saveOption: async (option) => {
+          try {
+              const payload = {
+                  id: option.id,
+                  groupId: { id: option.group_id },
+                  name: option.name,
+                  additionalPrice: option.additional_charge
+              };
+              await api.post('/options/create', payload);
+              dispatch({ type: actionMap.UPSERT_OPTION, payload: option });
+          } catch(e) {
+              console.error("Error saving option", e);
+          }
+      },
       deleteOption: (optionId) =>
         dispatch({ type: actionMap.DELETE_OPTION, payload: optionId }),
       // banners
