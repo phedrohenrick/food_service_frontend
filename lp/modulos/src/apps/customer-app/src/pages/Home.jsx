@@ -52,8 +52,13 @@ const Home = () => {
               >
                 {tenant.is_open ? 'Aberto' : 'Fechado'}
               </span>
+              {tenant.working_hours && (
+                <span className="mr-2 text-gray-500 font-medium">
+                  {tenant.working_hours}
+                </span>
+              )}
               Entrega em {tenant.delivery_estimate_min}-{tenant.delivery_estimate_max} min · Taxa R${' '}
-              {tenant.delivery_fee.toFixed(2)}
+              {(tenant.delivery_fee ?? 0).toFixed(2)}
             </span>
           </div>
         </div>
@@ -148,7 +153,7 @@ const Home = () => {
                       </div>
                       <p className="text-sm text-gray-600 flex-1">{item.description}</p>
                       <p className="text-xl font-semibold text-gray-900">
-                        R$ {item.price.toFixed(2)}
+                        R$ {(item.price ?? 0).toFixed(2)}
                       </p>
                     </div>
                     <div className="h-48 w-full overflow-hidden rounded-2xl sm:h-auto sm:w-48">
