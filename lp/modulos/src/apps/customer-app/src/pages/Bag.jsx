@@ -113,7 +113,7 @@ const Bag = () => {
               </button>
             ))}
           </div>
-          {cart.payment_channel === 'cash' && (
+          {(cart.payment_channel === 'cash' || cart.payment_channel === 'CASH') && (
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">
                 Troco para quanto?
@@ -148,7 +148,7 @@ const Bag = () => {
                   <div className="flex justify-between">
                     <p className="text-lg font-semibold text-gray-900">{item.item?.name}</p>
                     <span className="text-lg font-semibold text-gray-900">
-                      R$ {Number(item.line_total).toFixed(2)}
+                      R$ {Number(item.line_total ?? 0).toFixed(2)}
                     </span>
                   </div>
                   <p className="text-sm text-gray-500 line-clamp-2">{item.item?.description}</p>
@@ -203,27 +203,27 @@ const Bag = () => {
         <div className="space-y-2 text-sm text-gray-600">
           <div className="flex justify-between">
             <span>Subtotal</span>
-            <span>R$ {cartTotals.subtotal.toFixed(2)}</span>
+            <span>R$ {(cartTotals.subtotal ?? 0).toFixed(2)}</span>
           </div>
           <div className="flex justify-between">
             <span>Serviço</span>
-            <span>R$ {cartTotals.serviceFee.toFixed(2)}</span>
+            <span>R$ {(cartTotals.serviceFee ?? 0).toFixed(2)}</span>
           </div>
           <div className="flex justify-between">
             <span>Entrega</span>
-            <span>R$ {cartTotals.deliveryFee.toFixed(2)}</span>
+            <span>R$ {(cartTotals.deliveryFee ?? 0).toFixed(2)}</span>
           </div>
           {cartTotals.discount > 0 && (
             <div className="flex justify-between text-green-600">
               <span>Descontos</span>
-              <span>- R$ {cartTotals.discount.toFixed(2)}</span>
+              <span>- R$ {(cartTotals.discount ?? 0).toFixed(2)}</span>
             </div>
           )}
         </div>
         <div className="flex items-center justify-between border-t border-gray-100 pt-4">
           <span className="text-base font-semibold text-gray-900">Total</span>
           <span className="text-3xl font-bold text-black">
-            R$ {cartTotals.total.toFixed(2)}
+            R$ {(cartTotals.total ?? 0).toFixed(2)}
           </span>
         </div>
         <Button className="w-full" onClick={handleCheckout}>
