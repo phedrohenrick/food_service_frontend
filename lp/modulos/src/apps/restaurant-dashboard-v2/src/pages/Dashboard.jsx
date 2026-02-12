@@ -172,7 +172,7 @@ const Dashboard = () => {
             )}
             {typeof tenant.service_fee_percentage === 'number' && (
             <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/10">
-              Taxa de serviço: {(tenant.service_fee_percentage * 100).toFixed(0)}%
+              Taxa de serviço: {((tenant.service_fee_percentage ?? 0) * 100).toFixed(0)}%
             </span>
             )}
           </div>
