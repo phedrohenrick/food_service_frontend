@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:81';
 
 class ApiService {
   constructor() {
@@ -34,7 +34,9 @@ class ApiService {
         throw new Error(`HTTP error! status: ${response.status} - ${errorBody}`);
       }
 
-      return await response.json();
+      // Handle empty responses (like 204 No Content or empty 200 OK)
+      const text = await response.text();
+      return text ? JSON.parse(text) : null;
     } catch (error) {
       console.error('API request failed:', error);
       throw error;
@@ -60,6 +62,14 @@ class ApiService {
   put(endpoint, data) {
     return this.request(endpoint, {
       method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // PATCH request
+  patch(endpoint, data) {
+    return this.request(endpoint, {
+      method: 'PATCH',
       body: JSON.stringify(data),
     });
   }

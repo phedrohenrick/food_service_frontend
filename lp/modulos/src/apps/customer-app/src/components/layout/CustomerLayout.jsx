@@ -29,6 +29,7 @@ const CustomerLayout = ({ children }) => {
   };
   const accentContrast = getContrast(accent);
   const showCardapioHeader = location.pathname === '/app';
+  const isProductPage = location.pathname.includes('/produto/');
 
   const navigation = [
     { label: 'Cardápio', to: '/app', exact: true, icon: <IoRestaurant /> },
@@ -46,7 +47,8 @@ const CustomerLayout = ({ children }) => {
         '--accent-contrast': accentContrast,
       }}
     >
-      <header className="sticky top-0 z-40 border-b border-gray-100 bg-[var(--accent)]/80 backdrop-blur">
+      {!isProductPage && (
+        <header className="sticky top-0 z-40 border-b border-gray-100 bg-[var(--accent)]/80 backdrop-blur">
         <div className="max-w-6xl mx-auto px-4 py-6 space-y-4">
           {showCardapioHeader ? (
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -79,7 +81,7 @@ const CustomerLayout = ({ children }) => {
                   Sacola
                   {cartItems.length > 0 && (
                     <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-xs">
-                      {cartItems.reduce((sum, item) => sum + item.quantity, 0)} · R$ {cartTotals.total.toFixed(2)}
+                      {cartItems.reduce((sum, item) => sum + item.quantity, 0)} · R$ {(cartTotals.total ?? 0).toFixed(2)}
                     </span>
                   )}
                 </Link>
@@ -97,7 +99,8 @@ const CustomerLayout = ({ children }) => {
           </div>
           )}
         </div>
-      </header>
+        </header>
+      )}
 
       <main className="max-w-6xl mx-auto px-4 py-8 pb-20">{children}</main>
 
