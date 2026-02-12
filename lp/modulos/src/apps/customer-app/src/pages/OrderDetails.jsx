@@ -6,10 +6,14 @@ import { useStorefront } from '../../../../shared/generalContext.jsx';
 const statusLabel = {
   CREATED: 'Pedido criado',
   PAYMENT_AUTHORIZED: 'Pagamento autorizado',
+  ACCEPTED: 'Pedido aceito',
   IN_PREPARATION: 'Em preparo',
   READY: 'Pronto para coleta',
-  IN_ROUTE: 'Em rota',
+  WAITING_FOR_COLLECTION: 'Aguardando coleta',
+  ON_ROUTE: 'Em rota de entrega',
   DELIVERED: 'Entregue',
+  COMPLETED: 'Concluído',
+  CANCELED: 'Cancelado',
 };
 
 const OrderDetails = () => {
@@ -117,7 +121,7 @@ const OrderDetails = () => {
           </div>
           <p className="text-sm text-gray-500">
             Pagamento via {order.payment_channel}
-            {order.payment_channel === 'dinheiro' && order.change
+            {(order.payment_channel === 'dinheiro' || order.payment_channel === 'CASH') && order.change
               ? ` · Troco para ${order.change}`
               : ''}
           </p>
@@ -138,11 +142,11 @@ const OrderDetails = () => {
                     {item.quantity}x {item.item_name_snapshot}
                   </p>
                   <p className="text-xs text-gray-500">
-                    Preço unitário R$ {item.unit_price.toFixed(2)}
+                    Preço unitário R$ {(item.unit_price ?? 0).toFixed(2)}
                   </p>
                 </div>
                 <span className="text-sm font-semibold text-gray-900">
-                  R$ {(item.unit_price * item.quantity).toFixed(2)}
+                  R$ {((item.unit_price ?? 0) * item.quantity).toFixed(2)}
                 </span>
               </div>
             ))}

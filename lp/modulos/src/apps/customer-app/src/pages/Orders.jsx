@@ -6,9 +6,14 @@ import { useStorefront } from '../../../../shared/generalContext.jsx';
 const statusPills = {
   CREATED: 'bg-gray-100 text-gray-700',
   PAYMENT_AUTHORIZED: 'bg-blue-100 text-blue-700',
+  ACCEPTED: 'bg-blue-100 text-blue-700',
   IN_PREPARATION: 'bg-yellow-100 text-yellow-800',
-  IN_ROUTE: 'bg-purple-100 text-purple-700',
+  READY: 'bg-green-100 text-green-700',
+  WAITING_FOR_COLLECTION: 'bg-green-100 text-green-700',
+  ON_ROUTE: 'bg-purple-100 text-purple-700',
   DELIVERED: 'bg-green-100 text-green-700',
+  COMPLETED: 'bg-green-100 text-green-700',
+  CANCELED: 'bg-red-100 text-red-700',
 };
 
 const Orders = () => {
@@ -87,7 +92,7 @@ const Orders = () => {
                     <p className="text-sm text-gray-400 uppercase tracking-[0.3em]">Pagamento</p>
                     <p className="text-sm text-gray-600">Canal: {order.payment_channel}</p>
                     <p className="text-sm text-gray-600">
-                      Total: R$ {order.total.toFixed(2)}
+                      Total: R$ {(order.total ?? 0).toFixed(2)}
                     </p>
                   </div>
                   <div className="flex items-center justify-end">
