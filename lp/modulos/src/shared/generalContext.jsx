@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useReducer } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useReducer, useCallback } from 'react';
 import api from './services/api';
 
 /*
@@ -759,7 +759,7 @@ export const StorefrontProvider = ({ children }) => {
     orderItemOptions: initialOrderItemOptions,
   });
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       // ID fixo para demo ou pegar de configuração
       const tenantId = 1;
@@ -883,12 +883,18 @@ export const StorefrontProvider = ({ children }) => {
       });
 
       // Normalize Tenant
+      const mapDeliveryMethodFromBackend = (dm) => {
+          if (dm === 'OWN_DELIVERY') return 'own';
+          if (dm === 'POOL') return 'pool';
+          return dm || 'own';
+      };
+
       const tenant = rawTenant ? {
           ...rawTenant,
           main_color: rawTenant.mainColor || rawTenant.main_color,
           delivery_fee: rawTenant.deliveryFee || rawTenant.delivery_fee,
           service_fee_percentage: rawTenant.serviceFeePercentage || rawTenant.service_fee_percentage,
-          delivery_method: rawTenant.deliveryMethod || rawTenant.delivery_method,
+          delivery_method: mapDeliveryMethodFromBackend(rawTenant.deliveryMethod || rawTenant.delivery_method),
           working_hours: rawTenant.workingHours || rawTenant.working_hours,
           accepts_cash: rawTenant.acceptsCash || rawTenant.accepts_cash,
           photo_url: rawTenant.photoUrl || rawTenant.photo_url,
@@ -896,6 +902,7 @@ export const StorefrontProvider = ({ children }) => {
           is_open: rawTenant.isOpen !== undefined ? rawTenant.isOpen : rawTenant.is_open,
           delivery_estimate_min: rawTenant.deliveryEstimateMin || rawTenant.delivery_estimate_min,
           delivery_estimate_max: rawTenant.deliveryEstimateMax || rawTenant.delivery_estimate_max,
+          owner_user_id: rawTenant.ownerUserId || rawTenant.owner_user_id,
       } : initialTenant;
 
       // Normalize Menu Items
@@ -1021,11 +1028,11 @@ export const StorefrontProvider = ({ children }) => {
     } catch (error) {
       console.error('Erro ao carregar dados iniciais:', error);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   const maps = useMemo(() => {
     return {
@@ -1131,11 +1138,18 @@ export const StorefrontProvider = ({ children }) => {
 
   /* ------------ Actions Integradas com Backend ------------ */
 
-  const addToCart = async (itemId, quantity = 1, notes = '') => {
+  const addToCart = async (itemId, quantity = 1, notes = '', selectedOptions = []) => {
     // Optimistic
+    const optimisticOptions = selectedOptions.map(optId => ({
+         optionId: optId,
+         // We might not have price/name here easily without looking up maps, 
+         // but let's try to look them up for better optimistic UI
+         ...maps.optionMap[optId]
+    }));
+
     dispatch({
       type: actionMap.ADD_TO_CART,
-      payload: { itemId, quantity, notes },
+      payload: { itemId, quantity, notes, selectedOptions: optimisticOptions },
     });
 
     try {
@@ -1144,6 +1158,7 @@ export const StorefrontProvider = ({ children }) => {
         itemId,
         quantity,
         notes,
+        selectedOptions: selectedOptions.map(id => ({ optionId: id }))
       });
     } catch (error) {
       console.error('Erro ao adicionar ao carrinho:', error);
@@ -1351,6 +1366,7 @@ export const StorefrontProvider = ({ children }) => {
       getOrderDetailed,
 
       // actions
+      loadData,
       addToCart,
       updateCartItem,
       removeCartItem,
@@ -1363,8 +1379,54 @@ export const StorefrontProvider = ({ children }) => {
         dispatch({ type: actionMap.SET_ADDRESSES, payload: { addresses } }),
       saveAddress,
       placeOrder,
-      updateTenant: (partial) =>
-        dispatch({ type: actionMap.UPDATE_TENANT, payload: partial }),
+      updateTenant: async (partial) => {
+        dispatch({ type: actionMap.UPDATE_TENANT, payload: partial });
+        
+        try {
+            const current = state.tenant;
+            const updated = { ...current, ...partial };
+            
+            const mapDeliveryMethodToBackend = (dm) => {
+                if (dm === 'own') return 'OWN_DELIVERY';
+                if (dm === 'pool') return 'POOL';
+                return dm;
+            };
+
+            const payload = {
+                id: updated.id,
+                ownerUserId: updated.owner_user_id,
+                name: updated.name,
+                mainColor: updated.main_color,
+                cnpjCpf: updated.cnpj_cpf,
+                address: updated.address,
+                geoLat: updated.geo_lat ? Number(updated.geo_lat) : null,
+                geoLng: updated.geo_lng ? Number(updated.geo_lng) : null,
+                isOpen: updated.is_open,
+                workingHours: updated.working_hours,
+                acceptsCash: updated.accepts_cash,
+                deliveryMethod: mapDeliveryMethodToBackend(updated.delivery_method),
+                serviceFeePercentage: updated.service_fee_percentage,
+                deliveryFee: updated.delivery_fee,
+                deliveryEstimateMin: updated.delivery_estimate_min,
+                deliveryEstimateMax: updated.delivery_estimate_max,
+                status: updated.status,
+                email: updated.email,
+                slug: updated.slug,
+                photoUrl: updated.photo_url,
+                paymentChannels: updated.payment_channels
+            };
+
+            if (updated.id) {
+                await api.put(`/tenants/${updated.id}`, payload);
+            } else {
+                await api.post('/tenants/create', payload);
+            }
+            return true;
+        } catch (e) {
+            console.error("Error updating tenant", e);
+            return false;
+        }
+      },
       addOrderStatus: (orderId, status) =>
         dispatch({ type: actionMap.ADD_ORDER_STATUS, payload: { orderId, status } }),
       // menu: categorias
@@ -1395,14 +1457,14 @@ export const StorefrontProvider = ({ children }) => {
       saveMenuItem: async (item) => {
           try {
               const payload = {
-                  id: item.id,
+                  id: item.id && !String(item.id).startsWith('item-') ? item.id : null,
                   name: item.name,
                   description: item.description,
                   price: item.price,
                   isAvailable: item.is_available,
                   photoUrl: item.photo_url,
                   categoryId: { id: item.category_id },
-                  tenantId: { id: item.tenant_id || state.tenant.id }
+                  tenant: { id: item.tenant_id || state.tenant.id }
               };
               
               const savedDto = await api.post('/menu-items', payload);
@@ -1423,11 +1485,16 @@ export const StorefrontProvider = ({ children }) => {
           }
       },
       deleteMenuItem: async (itemId) => {
-          try {
-              await api.delete(`/menu-items/${itemId}`);
+          const isBackendId = itemId && !isNaN(Number(itemId)) && !String(itemId).startsWith('item-');
+          if (isBackendId) {
+              try {
+                  await api.delete(`/menu-items/${itemId}`);
+                  dispatch({ type: actionMap.DELETE_MENU_ITEM, payload: itemId });
+              } catch (e) {
+                  console.error("Error deleting menu item", e);
+              }
+          } else {
               dispatch({ type: actionMap.DELETE_MENU_ITEM, payload: itemId });
-          } catch (e) {
-              console.error("Error deleting menu item", e);
           }
       },
       toggleItemAvailability: async (itemId) => {
@@ -1436,14 +1503,14 @@ export const StorefrontProvider = ({ children }) => {
           
           try {
              const payload = {
-                  id: item.id,
+                  id: item.id && !String(item.id).startsWith('item-') ? item.id : null,
                   name: item.name,
                   description: item.description,
                   price: item.price,
                   isAvailable: !item.is_available,
                   photoUrl: item.photo_url,
                   categoryId: { id: item.category_id },
-                  tenantId: { id: item.tenant_id }
+                  tenant: { id: item.tenant_id }
              };
              await api.post('/menu-items', payload);
              dispatch({ type: actionMap.TOGGLE_MENU_ITEM_AVAILABILITY, payload: itemId });
@@ -1455,21 +1522,20 @@ export const StorefrontProvider = ({ children }) => {
       saveOptionGroup: async (group) => {
           try {
              const payload = {
-                 id: group.id,
-                 itemId: { id: group.item_id },
+                 id: group.id && !String(group.id).startsWith('grp-') ? group.id : null,
+                 itemId: group.item_id, // Send ID directly, not object
                  name: group.name,
-                 isRequired: group.is_required,
-                 min: group.min,
-                 max: group.max
+                 required: group.is_required, // Map to DTO 'required'
+                 minOptions: group.min,       // Map to DTO 'minOptions'
+                 maxOptions: group.max        // Map to DTO 'maxOptions'
              };
              const res = await api.post('/option-groups/create', payload);
-             // res is OptionGroupDTO
              
              dispatch({ 
                  type: actionMap.UPSERT_OPTION_GROUP, 
                  payload: {
                      ...group,
-                     id: res.id // Ensure we have the real ID
+                     id: res.id // Use ID from response
                  } 
              });
              return res;
@@ -1477,40 +1543,112 @@ export const StorefrontProvider = ({ children }) => {
               console.error("Error saving option group", e);
           }
       },
-      deleteOptionGroup: (groupId) =>
-        dispatch({ type: actionMap.DELETE_OPTION_GROUP, payload: groupId }),
+      deleteOptionGroup: async (groupId) => {
+          const isBackendId = groupId && !isNaN(Number(groupId)) && !String(groupId).startsWith('grp-');
+          if (isBackendId) {
+              try {
+                  await api.delete(`/option-groups/${groupId}`);
+                  dispatch({ type: actionMap.DELETE_OPTION_GROUP, payload: groupId });
+              } catch (e) {
+                  console.error("Error deleting option group", e);
+              }
+          } else {
+              dispatch({ type: actionMap.DELETE_OPTION_GROUP, payload: groupId });
+          }
+      },
       // menu: opções
       saveOption: async (option) => {
           try {
               const payload = {
-                  id: option.id,
-                  groupId: { id: option.group_id },
+                  id: option.id && !String(option.id).startsWith('opt-') ? option.id : null,
+                  group: { id: option.group_id },
                   name: option.name,
                   additionalPrice: option.additional_charge
               };
-              await api.post('/options/create', payload);
-              dispatch({ type: actionMap.UPSERT_OPTION, payload: option });
+              const res = await api.post('/options/create', payload);
+              const savedOption = {
+                  ...option,
+                  id: res && res.id ? res.id : option.id
+              };
+              dispatch({ type: actionMap.UPSERT_OPTION, payload: savedOption });
+              return savedOption;
           } catch(e) {
               console.error("Error saving option", e);
           }
       },
-      deleteOption: (optionId) =>
-        dispatch({ type: actionMap.DELETE_OPTION, payload: optionId }),
+      deleteOption: async (optionId) => {
+          const isBackendId = optionId && !isNaN(Number(optionId)) && !String(optionId).startsWith('opt-');
+          if (isBackendId) {
+              try {
+                  await api.delete(`/options/${optionId}`);
+                  dispatch({ type: actionMap.DELETE_OPTION, payload: optionId });
+              } catch (e) {
+                  console.error("Error deleting option", e);
+              }
+          } else {
+              dispatch({ type: actionMap.DELETE_OPTION, payload: optionId });
+          }
+      },
       // banners
-      saveBanner: (banner) =>
-        dispatch({ type: actionMap.UPSERT_BANNER, payload: banner }),
-      deleteBanner: (bannerId) =>
-        dispatch({ type: actionMap.DELETE_BANNER, payload: bannerId }),
+      saveBanner: async (banner) => {
+        try {
+            const payload = {
+                id: banner.id && !String(banner.id).startsWith('bnr-') ? banner.id : null,
+                tenantId: { id: banner.tenant_id || state.tenant.id },
+                bannerImage: banner.banner_image,
+                productLink: banner.product_link
+            };
+            const res = await api.post('/banners', payload); // Backend returns void (200 OK)
+            
+            // Como o backend não retorna o objeto criado (retorna void), 
+            // precisamos recarregar os dados ou assumir um ID temporário se quisermos otimismo.
+            // O ideal seria o backend retornar o DTO criado.
+            // Dado que o controller retorna ResponseEntity<Void>, vamos recarregar os dados.
+            loadData();
+
+        } catch (e) {
+            console.error("Error saving banner", e);
+        }
+      },
+      deleteBanner: async (bannerId) => {
+        // Validar se é um ID numérico (do backend) ou temporário/inválido
+        // IDs temporários (gerados no front antigo) ou strings não numéricas não devem ser enviados ao backend
+        const isBackendId = bannerId && !isNaN(Number(bannerId)) && !String(bannerId).startsWith('bnr-');
+
+        if (isBackendId) {
+            try {
+                await api.delete(`/banners/${bannerId}`);
+                dispatch({ type: actionMap.DELETE_BANNER, payload: bannerId });
+            } catch (e) {
+                console.error("Error deleting banner", e);
+            }
+        } else {
+            // Se for ID local/inválido, apenas remove do estado
+            dispatch({ type: actionMap.DELETE_BANNER, payload: bannerId });
+        }
+      },
       // neighborhoods
       saveNeighborhood: (neighborhood) =>
         dispatch({ type: actionMap.UPSERT_NEIGHBORHOOD, payload: neighborhood }),
-      deleteNeighborhood: (neighborhoodId) =>
-        dispatch({ type: actionMap.DELETE_NEIGHBORHOOD, payload: neighborhoodId }),
+      deleteNeighborhood: async (neighborhoodId) => {
+          const isBackendId = neighborhoodId && !isNaN(Number(neighborhoodId)) && !String(neighborhoodId).startsWith('nh-');
+          if (isBackendId) {
+              try {
+                  await api.delete(`/neighborhoods/${neighborhoodId}`);
+                  dispatch({ type: actionMap.DELETE_NEIGHBORHOOD, payload: neighborhoodId });
+              } catch (e) {
+                  console.error("Error deleting neighborhood", e);
+              }
+          } else {
+              dispatch({ type: actionMap.DELETE_NEIGHBORHOOD, payload: neighborhoodId });
+          }
+      },
     }),
     [
       state,
       maps,
       cartTotals,
+      loadData,
     ]
   );
 
