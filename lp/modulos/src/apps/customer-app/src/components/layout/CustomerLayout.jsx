@@ -13,11 +13,33 @@ import { IoFastFoodOutline } from "react-icons/io5";
 const CustomerLayout = ({ children }) => {
   const location = useLocation();
   const { tenant, cart, cartItems, cartTotals } = useStorefront();
-  const accent = tenant.main_color || '#EA1D2C';
+
+  const normalizeHex = (input) => {
+    const s = String(input || '').trim();
+    if (!s) return '#EA1D2C';
+    
+    const maybeHash = s.startsWith('#') ? s : (/^[0-9a-fA-F]{3,8}$/.test(s) ? `#${s}` : s);
+    const short3 = /^#([0-9a-fA-F]{3})$/;
+    const long6 = /^#([0-9a-fA-F]{6})$/;
+    const long8 = /^#([0-9a-fA-F]{8})$/;
+
+    if (short3.test(maybeHash)) {
+      const m = maybeHash.slice(1);
+      const full = m.split('').map((c) => c + c).join('');
+      return `#${full}`;
+    }
+    if (long6.test(maybeHash)) return maybeHash;
+    if (long8.test(maybeHash)) {
+      return `#${maybeHash.slice(1, 7)}`;
+    }
+    return '#EA1D2C';
+  };
+
+  const accent = normalizeHex(tenant.main_color);
   const accentHover = accent.length === 7 ? `${accent}e6` : accent;
   
   const getContrast = (hex) => {
-    const normalized = hex.replace('#', '');
+    const normalized = (hex || '').replace('#', '');
     const full = normalized.length === 3
       ? normalized.split('').map((c) => c + c).join('')
       : normalized.padEnd(6, '0');

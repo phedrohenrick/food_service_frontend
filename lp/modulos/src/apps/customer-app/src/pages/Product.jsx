@@ -6,16 +6,106 @@ import { useStorefront } from '../../../../shared/generalContext.jsx';
 const Product = () => {
   const { productSlug } = useParams();
   const navigate = useNavigate();
-  const { maps, addToCart, menuItems } = useStorefront();
-  const product = maps.menuItemMap[productSlug] || menuItems.find((mi) => mi.slug === productSlug);
+  const { maps, addToCart, menuItems, getOptionGroupsForItem, getOptionsForGroup } = useStorefront();
+  
+  const product = useMemo(() => {
+     return maps.menuItemMap[productSlug] || menuItems.find((mi) => mi.slug === productSlug);
+  }, [productSlug, maps.menuItemMap, menuItems]);
+
   const [quantity, setQuantity] = useState(1);
+  const [selectedOptions, setSelectedOptions] = useState({}); // { groupId: [optionId] }
+  const [notes, setNotes] = useState('');
   const [feedback, setFeedback] = useState('');
   const [added, setAdded] = useState(false);
 
-  const relatedItems = useMemo(() => {
+  // Resolve option groups (fallback to context if nested data missing)
+  const optionGroups = useMemo(() => {
     if (!product) return [];
-    return menuItems.filter((item) => item.id !== product.id).slice(0, 3);
-  }, [menuItems, product]);
+    
+    // 1. Try nested DTO structure (camelCase from backend)
+    if (product.optionGroups && product.optionGroups.length > 0) {
+      return product.optionGroups;
+    }
+
+    // 2. Fallback to context data (snake_case normalization)
+    const contextGroups = getOptionGroupsForItem(product.id);
+    return contextGroups.map(g => ({
+      ...g,
+      // Normalize to match component expectations
+      required: g.is_required, 
+      minOptions: g.min,
+      maxOptions: g.max,
+      options: getOptionsForGroup(g.id).map(o => ({
+        ...o,
+        additionalPrice: o.additional_charge
+      }))
+    }));
+  }, [product, getOptionGroupsForItem, getOptionsForGroup]);
+
+  // Calculate total price including options
+  const totalPrice = useMemo(() => {
+    if (!product) return 0;
+    let total = product.price;
+    
+    Object.values(selectedOptions).flat().forEach(optId => {
+      for (const group of optionGroups) {
+        const option = group.options?.find(o => o.id === optId);
+        if (option) {
+          total += option.additionalPrice || 0;
+          break;
+        }
+      }
+    });
+
+    return total * quantity;
+  }, [product, selectedOptions, quantity, optionGroups]);
+
+  const handleOptionToggle = (groupId, optionId, maxOptions) => {
+    setSelectedOptions(prev => {
+      const currentSelection = prev[groupId] || [];
+      const isSelected = currentSelection.includes(optionId);
+      
+      let newSelection;
+      if (maxOptions === 1) {
+        // Radio behavior
+        newSelection = [optionId];
+      } else {
+        // Checkbox behavior
+        if (isSelected) {
+          newSelection = currentSelection.filter(id => id !== optionId);
+        } else {
+          if (currentSelection.length >= maxOptions) return prev; // Max reached
+          newSelection = [...currentSelection, optionId];
+        }
+      }
+
+      return { ...prev, [groupId]: newSelection };
+    });
+  };
+
+  const validateRequirements = () => {
+    if (!optionGroups) return true;
+    for (const group of optionGroups) {
+      if (group.required) {
+        const selectedCount = (selectedOptions[group.id] || []).length;
+        if (selectedCount < (group.minOptions || 1)) {
+          alert(`Selecione pelo menos ${group.minOptions || 1} opção(ões) em "${group.name}"`);
+          return false;
+        }
+      }
+    }
+    return true;
+  };
+
+  const handleAddToCart = () => {
+    if (!validateRequirements()) return;
+
+    const flattenedOptions = Object.values(selectedOptions).flat();
+    addToCart(product.id, quantity, notes, flattenedOptions);
+    setFeedback(`${quantity}x ${product.name} adicionado à sacola`);
+    setAdded(true);
+    setTimeout(() => setFeedback(''), 3000);
+  };
 
   if (!product) {
     return (
@@ -33,13 +123,6 @@ const Product = () => {
       </div>
     );
   }
-
-  const handleAddToCart = () => {
-    addToCart(product.id, quantity);
-    setFeedback(`${quantity}x ${product.name} adicionado à sacola`);
-    setAdded(true);
-    setTimeout(() => setFeedback(''), 3000);
-  };
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1.5fr_1fr]">
@@ -59,7 +142,7 @@ const Product = () => {
           <p className="text-gray-600 text-lg">{product.description}</p>
           <div className="flex flex-wrap items-center gap-3">
             <p className="text-3xl font-bold text-black">
-              R$ {product.price.toFixed(2)}
+              R$ {totalPrice.toFixed(2)}
             </p>
             {product.highlights?.map((highlight) => (
               <span
@@ -70,85 +153,94 @@ const Product = () => {
               </span>
             ))}
           </div>
-          <div className="flex flex-col gap-4 rounded-2xl border border-gray-100 p-4 sm:flex-row sm:items-center">
-            <div className="flex items-center gap-4">
-              <button
-                type="button"
-                className="h-12 w-12 rounded-full border border-gray-200 text-2xl"
-                onClick={() => setQuantity((current) => Math.max(1, current - 1))}
-              >
-                -
-              </button>
-              <span className="text-2xl font-semibold">{quantity}</span>
-              <button
-                type="button"
-                className="h-12 w-12 rounded-full border border-gray-200 text-2xl"
-                onClick={() => setQuantity((current) => current + 1)}
-              >
-                +
-              </button>
-            </div>
-            <Button className="flex-1" onClick={handleAddToCart}>
-              Adicionar à sacola · R$ {((product.price ?? 0) * quantity).toFixed(2)}
-            </Button>
-            <Button variant="ghost" onClick={() => navigate('/app/sacola')}>
-              {added ? 'Finalizar compra' : 'Ir para a sacola'}
-            </Button>
+
+          {/* Option Groups Section */}
+          <div className="space-y-6">
+             {optionGroups.map(group => (
+               <div key={group.id} className="border-t border-gray-100 pt-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <div>
+                      <h3 className="font-semibold text-gray-900">{group.name}</h3>
+                      <p className="text-xs text-gray-500">
+                        {group.minOptions > 0 ? `Mínimo: ${group.minOptions}` : ''} 
+                        {group.maxOptions ? ` · Máximo: ${group.maxOptions}` : ''}
+                      </p>
+                    </div>
+                    {group.required && (
+                      <span className="bg-gray-100 text-gray-600 text-[10px] font-bold px-2 py-1 rounded uppercase">
+                        Obrigatório
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    {group.options?.map(option => {
+                      const isSelected = (selectedOptions[group.id] || []).includes(option.id);
+                      return (
+                        <label key={option.id} className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-colors ${isSelected ? 'border-[var(--accent)] bg-orange-50' : 'border-gray-100 hover:bg-gray-50'}`}>
+                          <div className="flex items-center gap-3">
+                             <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${isSelected ? 'border-[var(--accent)]' : 'border-gray-300'}`}>
+                                {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-[var(--accent)]" />}
+                             </div>
+                             <span className="text-gray-900 font-medium">{option.name}</span>
+                          </div>
+                          {option.additionalPrice > 0 && (
+                             <span className="text-gray-600 font-semibold">+ R$ {option.additionalPrice.toFixed(2)}</span>
+                          )}
+                          <input 
+                            type="checkbox" 
+                            className="hidden"
+                            checked={isSelected}
+                            onChange={() => handleOptionToggle(group.id, option.id, group.maxOptions)}
+                          />
+                        </label>
+                      );
+                    })}
+                  </div>
+               </div>
+             ))}
           </div>
-          {feedback && (
-            <p className="rounded-2xl bg-green-50 px-4 py-3 text-sm text-green-700">
-              {feedback}
-            </p>
-          )}
+
+          {/* Notes Section */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Observações</label>
+            <textarea
+              className="w-full rounded-xl border-gray-200 focus:border-[var(--accent)] focus:ring-[var(--accent)]"
+              rows="2"
+              placeholder="Ex: Tirar cebola, ponto da carne..."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+          </div>
         </div>
       </section>
-      <aside className="space-y-6 rounded-3xl bg-white p-6 shadow-lg">
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900">
-            Mais pedidos do momento
-          </h2>
-          <p className="text-sm text-gray-500">
-            Inspire-se em outros pratos para adicionar ao pedido.
-          </p>
-        </div>
-        <div className="space-y-4">
-          {relatedItems.map((item) => (
-            <article
-              key={item.id}
-              className="flex gap-4 rounded-2xl border border-gray-100 p-4"
-            >
-              <div className="h-20 w-20 overflow-hidden rounded-xl">
-                <img
-                  src={item.photo_url}
-                  alt={item.name}
-                  className="h-full w-full object-cover"
-                />
+
+      {/* Cart Actions Panel */}
+      <div className="space-y-6">
+        <div className="rounded-3xl bg-white p-6 shadow">
+           <div className="flex items-center justify-between mb-4">
+              <span className="font-semibold text-gray-900">Quantidade</span>
+              <div className="flex items-center gap-4 border rounded-full px-3 py-1">
+                 <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="text-xl font-bold text-[var(--accent)]">-</button>
+                 <span className="text-lg font-medium w-4 text-center">{quantity}</span>
+                 <button onClick={() => setQuantity(q => q + 1)} className="text-xl font-bold text-[var(--accent)]">+</button>
               </div>
-              <div className="flex-1">
-                <Link
-                  to={`/app/produto/${item.slug || item.id}`}
-                  className="text-base font-semibold text-gray-900 hover:text-[var(--accent-contrast)]"
-                >
-                  {item.name}
-                </Link>
-                <p className="text-sm text-gray-500 line-clamp-2">{item.description}</p>
-                <div className="mt-2 flex items-center justify-between">
-                  <span className="font-semibold text-gray-900 ">
-                    R$ {(item.price ?? 0).toFixed(2)}
-                  </span>
-                  <button
-                    type="button"
-                    className="text-sm font-semibold text-[var(--accent)]"
-                    onClick={() => addToCart(item.id, 1)}
-                  >
-                    Adicionar +
-                  </button>
-                </div>
-              </div>
-            </article>
-          ))}
+           </div>
+           
+           <Button 
+             className="w-full h-12 text-lg"
+             onClick={handleAddToCart}
+           >
+             Adicionar • R$ {totalPrice.toFixed(2)}
+           </Button>
+           
+           {feedback && (
+             <p className="mt-3 text-center text-sm font-medium text-[var(--accent)] animate-pulse">
+               {feedback}
+             </p>
+           )}
         </div>
-      </aside>
+      </div>
     </div>
   );
 };
