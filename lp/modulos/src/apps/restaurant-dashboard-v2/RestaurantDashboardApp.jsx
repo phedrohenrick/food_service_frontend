@@ -5,21 +5,18 @@ import { Dashboard } from './src/pages';
 import Orders from './src/pages/Orders';
 import Menu from './src/pages/Menu';
 import Settings from './src/pages/Settings';
-import { StorefrontProvider } from '../../shared/generalContext.jsx';
 
 const RestaurantDashboard = () => {
   return (
-    <StorefrontProvider>
-      <DashboardLayout>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/orders" element={<Orders />} />
-          <Route path="/menu" element={<Menu />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </DashboardLayout>
-    </StorefrontProvider>
+    <DashboardLayout>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/orders" element={<Orders />} />
+        <Route path="/menu" element={<Menu />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </DashboardLayout>
   );
 };
 

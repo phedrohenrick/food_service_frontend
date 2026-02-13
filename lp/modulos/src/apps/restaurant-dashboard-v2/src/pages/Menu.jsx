@@ -7,6 +7,7 @@ const money = (n) => (n || 0).toLocaleString('pt-BR', { style: 'currency', curre
 const Menu = () => {
   const {
     tenant,
+    banners,
     menuCategories,
     menuItems,
     optionGroups,
@@ -25,9 +26,13 @@ const Menu = () => {
     saveOption,
     deleteOption,
     saveBanner,
+    deleteBanner,
+    loadData,
   } = useStorefront();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isBannerModalOpen, setIsBannerModalOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [editingItemId, setEditingItemId] = useState(null);
   const [itemForm, setItemForm] = useState({
     name: '',
@@ -39,6 +44,7 @@ const Menu = () => {
   });
   const [groupsForm, setGroupsForm] = useState([]); // [{id?, name, is_required, min, max, options:[{id?, name, additional_charge}]}]
   const [bannerForm, setBannerForm] = useState({ banner_image: '', enabled: false });
+  const [newBanner, setNewBanner] = useState({ banner_image: '', product_link: '' });
 
   const sortedCategories = useMemo(
     () => [...menuCategories].sort((a, b) => (a.order || 0) - (b.order || 0)),
@@ -171,16 +177,29 @@ const Menu = () => {
     toggleItemAvailability(id);
   };
 
+  const handleSaveNewBanner = () => {
+    if (!newBanner.banner_image) return;
+    saveBanner({
+      banner_image: newBanner.banner_image,
+      product_link: newBanner.product_link,
+      tenant_id: tenant.id
+    });
+    setNewBanner({ banner_image: '', product_link: '' });
+    setIsBannerModalOpen(false);
+  };
+
+  const handleSync = async () => {
+    setIsSyncing(true);
+    await loadData();
+    setTimeout(() => setIsSyncing(false), 800); // Visual feedback
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="text-sm text-gray-500">Curadoria do cardápio</p>
-          <h1 className="text-2xl font-bold text-gray-900">Itens com cara de app</h1>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="ghost" className="border border-gray-200 text-gray-700">Sincronizar</Button>
-          <Button onClick={openNewItem}>Adicionar item</Button>
+          <h1 className="text-2xl font-bold text-gray-900">Itens do estabelecimento</h1>
         </div>
       </div>
 
@@ -215,13 +234,35 @@ const Menu = () => {
         })}
       </div>
 
+
+
       <div className="bg-white rounded-3xl border border-gray-100 shadow-lg p-6 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-sm text-gray-500">Itens ao vivo</p>
             <h2 className="text-xl font-semibold text-gray-900">Lista pronta para o cliente</h2>
           </div>
-
+        <div className="flex gap-2">
+          <Button 
+            variant="ghost" 
+            className="border border-gray-200 text-gray-700 flex items-center gap-2"
+            onClick={handleSync}
+            disabled={isSyncing}
+          >
+            {isSyncing ? (
+              <>
+                <div className="w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin"></div>
+                Sincronizando...
+              </>
+            ) : (
+              <>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-refresh-cw"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+                Sincronizar
+              </>
+            )}
+          </Button>
+          <Button onClick={openNewItem}>Adicionar item</Button>
+        </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -249,6 +290,45 @@ const Menu = () => {
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      <div className="bg-white rounded-3xl border border-gray-100 shadow-lg p-6 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm text-gray-500">Marketing e Destaques</p>
+            <h2 className="text-xl font-semibold text-gray-900">Banners do App</h2>
+          </div>
+          <Button onClick={() => setIsBannerModalOpen(true)}>
+            Novo Banner
+          </Button>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {banners.map((banner) => (
+            <div key={banner.id} className="group relative rounded-2xl overflow-hidden border border-gray-200 aspect-[2/1] bg-gray-50">
+              <img src={banner.banner_image} alt="Banner" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                <Button variant="destructive" size="sm" onClick={() => deleteBanner(banner.id)}>Excluir</Button>
+              </div>
+              {banner.product_link && (
+                <div className="absolute bottom-2 left-2 right-2">
+                   <div className="bg-white/90 backdrop-blur px-3 py-1.5 rounded-xl text-xs font-medium shadow-sm truncate">
+                    Ref: {menuItems.find(i => i.id === banner.product_link)?.name || 'Produto indisponível'}
+                   </div>
+                </div>
+              )}
+            </div>
+          ))}
+          {banners.length === 0 && (
+            <div className="col-span-full py-12 text-center rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/50">
+              <p className="text-gray-500 font-medium">Nenhum banner ativo</p>
+              <p className="text-sm text-gray-400 mt-1">Adicione banners para destacar promoções e pratos.</p>
+              <Button variant="link" className="mt-2 text-[var(--accent)]" onClick={() => setIsBannerModalOpen(true)}>
+                Adicionar agora
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -334,27 +414,30 @@ const Menu = () => {
                       <Input label="Nome" value={opt.name} onChange={(e) => { const next = [...groupsForm]; next[gi].options[oi].name = e.target.value; setGroupsForm(next); }} />
                       <Input label="Adicional (R$)" type="number" value={opt.additional_charge} onChange={(e) => { const next = [...groupsForm]; next[gi].options[oi].additional_charge = e.target.value; setGroupsForm(next); }} />
                       <div className="flex items-end">
-                        <Button size="sm" variant="ghost" className="border border-gray-200 text-red-600" onClick={() => { const next = [...groupsForm]; next[gi].options.splice(oi, 1); setGroupsForm(next); }}>Remover</Button>
+                        <Button size="sm" variant="ghost" className="border border-gray-200 text-red-600" onClick={async () => {
+                          if(opt.id) {
+                            await deleteOption(opt.id);
+                          }
+                          const next = [...groupsForm]; 
+                          next[gi].options.splice(oi, 1); 
+                          setGroupsForm(next); 
+                        }}>Remover</Button>
                       </div>
                     </div>
                   ))}
                 </div>
                 <div className="flex justify-end">
-                  <Button size="sm" variant="ghost" className="border border-gray-200 text-red-600" onClick={() => { const next = [...groupsForm]; next.splice(gi, 1); setGroupsForm(next); }}>Remover grupo</Button>
+                  <Button size="sm" variant="ghost" className="border border-gray-200 text-red-600" onClick={async () => { 
+                    if(grp.id) {
+                      await deleteOptionGroup(grp.id);
+                    }
+                    const next = [...groupsForm]; 
+                    next.splice(gi, 1); 
+                    setGroupsForm(next); 
+                  }}>Remover grupo</Button>
                 </div>
               </div>
             ))}
-          </div>
-
-          {/* Banner opcional */}
-          <div className="mt-4 space-y-2">
-            <div className="flex items-center gap-2">
-              <input id="banner-enabled" type="checkbox" checked={bannerForm.enabled} onChange={(e) => setBannerForm({ ...bannerForm, enabled: e.target.checked })} />
-              <label htmlFor="banner-enabled" className="text-sm text-gray-700">Associar banner a este item</label>
-            </div>
-            {bannerForm.enabled && (
-              <Input label="Imagem do banner (URL)" value={bannerForm.banner_image} onChange={(e) => setBannerForm({ ...bannerForm, banner_image: e.target.value })} placeholder="https://..." />
-            )}
           </div>
 
           <div className="flex justify-end gap-3 pt-3">
@@ -362,6 +445,46 @@ const Menu = () => {
               Cancelar
             </Button>
             <Button onClick={handleSaveItem}>{editingItemId ? 'Salvar alterações' : 'Criar item'}</Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal isOpen={isBannerModalOpen} onClose={() => setIsBannerModalOpen(false)} title="Novo Banner">
+        <div className="space-y-4">
+          <Input
+            label="URL da Imagem"
+            value={newBanner.banner_image}
+            onChange={(e) => setNewBanner({ ...newBanner, banner_image: e.target.value })}
+            placeholder="https://..."
+          />
+          {newBanner.banner_image && (
+             <div className="rounded-xl overflow-hidden border border-gray-200 aspect-[2/1] bg-gray-50">
+               <img src={newBanner.banner_image} alt="Preview" className="w-full h-full object-cover" />
+             </div>
+          )}
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Vincular a um produto (opcional)</label>
+            <select
+              value={newBanner.product_link}
+              onChange={(e) => setNewBanner({ ...newBanner, product_link: e.target.value })}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+            >
+              <option value="">Sem vínculo</option>
+              {itemsSorted.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">Ao clicar no banner, o cliente será levado para este produto.</p>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-3">
+            <Button variant="ghost" className="border border-gray-200 text-gray-700" onClick={() => setIsBannerModalOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveNewBanner}>Adicionar Banner</Button>
           </div>
         </div>
       </Modal>

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Button, Input } from '../../../../shared/components/ui';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
 
@@ -7,12 +7,9 @@ const Settings = () => {
     tenant,
     neighborhoods,
     user,
-    banners,
     updateTenant,
     saveNeighborhood,
     deleteNeighborhood,
-    saveBanner,
-    deleteBanner,
   } = useStorefront();
 
   const [tenantForm, setTenantForm] = useState(() => ({
@@ -32,13 +29,35 @@ const Settings = () => {
     accepts_cash: !!tenant?.accepts_cash,
   }));
 
+  useEffect(() => {
+    if (tenant) {
+      setTenantForm(prev => ({
+        ...prev,
+        name: tenant.name || '',
+        email: tenant.email || '',
+        slug: tenant.slug || '',
+        cnpj_cpf: tenant.cnpj_cpf || '',
+        address: tenant.address || '',
+        geo_lat: tenant.geo_lat || '',
+        geo_lng: tenant.geo_lng || '',
+        status: tenant.status || 'ACTIVE',
+        photo_url: tenant.photo_url || '',
+        main_color: tenant.main_color || '#EA1D2C',
+        working_hours: tenant.working_hours || '',
+        delivery_method: tenant.delivery_method || 'own',
+        service_fee_percentage: tenant.service_fee_percentage ?? 0.08,
+        accepts_cash: !!tenant.accepts_cash,
+      }));
+    }
+  }, [tenant]);
+
   const onTenantChange = (field) => (e) => {
     const value = e?.target?.type === 'checkbox' ? e.target.checked : e?.target?.value ?? e;
     setTenantForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const saveTenantProfile = () => {
-    updateTenant({
+  const saveTenantProfile = async () => {
+    const success = await updateTenant({
       name: tenantForm.name,
       email: tenantForm.email,
       slug: tenantForm.slug,
@@ -50,15 +69,19 @@ const Settings = () => {
       photo_url: tenantForm.photo_url,
       main_color: tenantForm.main_color,
     });
+    if (success) showToast('Perfil salvo com sucesso!');
+    else showToast('Erro ao salvar perfil.', 'error');
   };
 
-  const saveTenantOps = () => {
-    updateTenant({
+  const saveTenantOps = async () => {
+    const success = await updateTenant({
       working_hours: tenantForm.working_hours,
       delivery_method: tenantForm.delivery_method,
       service_fee_percentage: parseFloat(tenantForm.service_fee_percentage) || 0,
       accepts_cash: !!tenantForm.accepts_cash,
     });
+    if (success) showToast('Configurações salvas com sucesso!');
+    else showToast('Erro ao salvar configurações.', 'error');
   };
 
   const toggleOpen = () => updateTenant({ is_open: !tenant.is_open });
@@ -66,6 +89,12 @@ const Settings = () => {
   // Neighborhoods
   const [newNeighborhood, setNewNeighborhood] = useState({ name: '', price: '' });
   const [editingNeighborhood, setEditingNeighborhood] = useState({}); // id -> {name, price}
+  const [toast, setToast] = useState({ message: '', type: '', visible: false });
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type, visible: true });
+    setTimeout(() => setToast((prev) => ({ ...prev, visible: false })), 3000);
+  };
 
   const neighborhoodsSorted = useMemo(
     () => [...neighborhoods].sort((a, b) => a.name.localeCompare(b.name)),
@@ -254,52 +283,27 @@ const Settings = () => {
               </div>
             </div>
           </div>
-
-          {/* Marketing opcional: banners */}
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-lg p-5 sm:p-6 space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <p className="text-sm text-gray-500">Marketing</p>
-                <h3 className="text-lg font-semibold text-gray-900">Banners</h3>
-              </div>
-            </div>
-            <div className="space-y-2">
-              {banners.map((b) => (
-                <div key={b.id} className="flex flex-wrap items-center gap-2">
-                  <input className="w-full min-w-0 rounded-2xl border border-gray-200 px-3 py-2 text-sm" value={b.banner_image} readOnly />
-                  <input className="w-full min-w-0 rounded-2xl border border-gray-200 px-3 py-2 text-sm" value={b.product_link || ''} readOnly />
-                  <Button size="sm" variant="ghost" className="w-full border border-red-200 text-red-700" onClick={() => deleteBanner(b.id)}>Remover</Button>
-                </div>
-              ))}
-              <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-gray-100">
-                <input
-                  className="w-full min-w-0 rounded-2xl border border-gray-200 px-3 py-2 text-sm"
-                  placeholder="URL da imagem"
-                  onChange={(e) => setTenantForm((prev) => ({ ...prev, _newBannerImage: e.target.value }))}
-                />
-                <input
-                  className="w-full min-w-0 rounded-2xl border border-gray-200 px-3 py-2 text-sm"
-                  placeholder="Link do produto (opcional)"
-                  onChange={(e) => setTenantForm((prev) => ({ ...prev, _newBannerLink: e.target.value }))}
-                />
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="w-full border border-gray-200 text-gray-700"
-                  onClick={() => {
-                    const img = tenantForm._newBannerImage?.trim();
-                    if (!img) return;
-                    saveBanner({ banner_image: img, product_link: tenantForm._newBannerLink || '', tenant_id: tenant.id });
-                    setTenantForm((prev) => ({ ...prev, _newBannerImage: '', _newBannerLink: '' }));
-                  }}
-                >
-                  Adicionar banner
-                </Button>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
+      {/* Toast Notification */}
+      {toast.visible && (
+        <div
+          className={`fixed bottom-6 right-6 px-6 py-4 rounded-2xl shadow-2xl text-white font-medium transition-all transform translate-y-0 opacity-100 z-50 flex items-center gap-3 ${
+            toast.type === 'error' ? 'bg-red-500' : 'bg-green-600'
+          }`}
+        >
+          {toast.type === 'error' ? (
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          ) : (
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          )}
+          {toast.message}
+        </div>
+      )}
     </div>
   );
 };
