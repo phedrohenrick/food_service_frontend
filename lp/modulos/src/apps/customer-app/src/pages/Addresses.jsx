@@ -1,52 +1,68 @@
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { FaTrash } from 'react-icons/fa';
 import { Button } from '../../../../shared/components/ui';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
 import api from '../../../../shared/services/api';
 
 const Addresses = () => {
-  const { addresses, cart, setCartAddress, setAddresses } = useStorefront();
+  const { addresses: addressesList, userId, cart, setCartAddress, deleteAddress } = useStorefront();
+  const [addresses, setAddresses] = React.useState([]);
+  const [alertModal, setAlertModal] = React.useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: null,
+    onCancel: null
+  });
+
+  const handleDeleteAddress = (id) => {
+    setAlertModal({
+      isOpen: true,
+      title: 'Remover endereço',
+      message: 'Tem certeza que deseja remover este endereço?',
+      onConfirm: async () => {
+        if (deleteAddress) {
+          await deleteAddress(id);
+        } else {
+          console.error("Função deleteAddress não encontrada no contexto");
+        }
+        setAlertModal({ ...alertModal, isOpen: false });
+      },
+      onCancel: () => setAlertModal({ ...alertModal, isOpen: false })
+    });
+  };
 
   useEffect(() => {
     const loadAddresses = async () => {
       try {
-        // TODO: Obter userId real da autenticação. Por enquanto fixo em 1.
-        const userId = 1;
+        if (!userId) {
+          // Fallback se userId não estiver disponível
+          // console.warn('User ID not available');
+          // return;
+        }
 
-        const [addressesData, neighborhoodsData] = await Promise.all([
-          api.get(`/user-addresses/by-user/${userId}`),
-        ]);
+        const raw = await api
+          .get(`/user-addresses/by-user/${userId}/active`)
+          .catch(() => []);
 
-        const neighborhoodIndex = Array.isArray(neighborhoodsData)
-          ? neighborhoodsData.reduce((acc, neighborhood) => {
-              acc[String(neighborhood.id)] = neighborhood;
-              return acc;
-            }, {})
-          : {};
-
-        const normalized = Array.isArray(addressesData)
-          ? addressesData.map((item, index) => {
-              const neighborhoodId = item.neighborhoodId ? String(item.neighborhoodId) : '';
-              const neighborhood = neighborhoodIndex[neighborhoodId];
-
-              return {
-                id: String(item.id),
-                user_id: String(item.userId || userId),
-                street: item.street,
-                streetNumber: item.streetNumber,
-                street_number: item.streetNumber,
-                neighborhood_id: neighborhoodId,
-                neighborhoodName: neighborhood?.name || '',
-                city: item.city,
-                state: item.state,
-                zipCode: item.zipCode,
-                zip_code: item.zipCode,
-                complement: item.complement,
-                geo_lat: item.geoLat,
-                geo_lng: item.geoLng,
-                is_default: index === 0, // Assumindo o primeiro como default se não houver flag
-              };
-            })
+        const normalized = Array.isArray(raw)
+          ? raw.map(item => ({
+              id: String(item.id),
+              user_id: String(item.userId || userId),
+              label: item.label,
+              street: item.street,
+              streetNumber: item.streetNumber,
+              neighborhood: item.neighborhood,
+              neighborhoodName: item.neighborhoodName,
+              city: item.city,
+              state: item.state,
+              zip_code: item.zipCode,
+              complement: item.complement,
+              is_default: item.isDefault,
+              geo_lat: item.geoLat,
+              geo_lng: item.geoLng,
+            }))
           : [];
 
         setAddresses(normalized);
@@ -57,16 +73,39 @@ const Addresses = () => {
 
     loadAddresses();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [addressesList, userId]); // Updated dependencies
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 relative">
+      {alertModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <h3 className="mb-2 text-xl font-bold text-gray-900">{alertModal.title}</h3>
+            <p className="mb-6 text-gray-600">{alertModal.message}</p>
+            <div className="flex justify-end gap-3">
+              <Button 
+                variant="outline" 
+                onClick={alertModal.onCancel}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                onClick={alertModal.onConfirm}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Confirmar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-sm uppercase tracking-[0.3em] text-gray-400">Endereços</p>
           <h1 className="text-3xl font-semibold text-gray-900">Locais de entrega</h1>
           <p className="text-sm text-gray-500">
-            Selecione ou cadastre os endereços que estarão disponíveis durante o checkout.
+            Selecione ou cadastre os endereços que estarão disponíveis para a entrega.
           </p>
         </div>
         <Link to="/app/enderecos/novo">
@@ -105,9 +144,9 @@ const Addresses = () => {
                  
                 </Link>
                 
-                {(address.isDefault || address.is_default) && (
+                {(cart.address_id === address.id) && (
                   <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-                     Endereço Principal
+                     Selecionado
                   </span>
                 )}
               </div>
@@ -124,22 +163,8 @@ const Addresses = () => {
               {address.complement && <p>Complemento: {address.complement}</p>}
             </div>
             <div className="mt-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setCartAddress(address.id);
-                  }}
-                  className={`text-sm font-bold ${
-                    cart.address_id === address.id
-                      ? 'text-[var(--accent-contrast)]'
-                      : 'text-[var(--accent-contrast)] hover:text-gray-700'
-                  }`}
-                >
-                  {cart.address_id === address.id ? "" : 'Entregar aqui'}
-                </button>
-                {cart.address_id === address.id && (
+              <div className="flex items-center">
+                {cart.address_id === address.id ? (
                   <Link
                     to="/app/sacola"
                     onClick={(e) => e.stopPropagation()}
@@ -151,9 +176,32 @@ const Addresses = () => {
                       Ir para a sacola
                     </Button>
                   </Link>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCartAddress(address.id);
+                    }}
+                    className="text-sm font-bold text-[var(--accent-contrast)] hover:text-gray-700"
+                  >
+                    Entregar aqui
+                  </button>
                 )}
               </div>
-              <p className="text-xs text-gray-500 ml-4">Distância estimada 2,3 km</p>
+
+              {cart.address_id === address.id && (
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteAddress(address.id);
+                  }}
+                  className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                  title="Excluir endereço"
+                >
+                  <FaTrash size={14} />
+                </button>
+              )}
             </div>
           </article>
         ))}

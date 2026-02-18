@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../../../../shared/components/ui';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
+import { LiaShoppingBagSolid } from "react-icons/lia";
 
 const Bag = () => {
   const navigate = useNavigate();
@@ -34,8 +35,8 @@ const Bag = () => {
 
   if (!detailedItems.length) {
     return (
-      <div className="rounded-3xl bg-white p-10 text-center shadow">
-        <p className="text-4xl mb-3">🛍️</p>
+      <div className="rounded-3xl bg-white p-10 text-center shadow flex flex-col items-center">
+        <LiaShoppingBagSolid className="text-4xl text-gray-900 mb-3" />
         <h2 className="text-2xl font-semibold text-gray-900 mb-2">Sua sacola está vazia</h2>
         <p className="text-gray-600 mb-6">
           Explore o cardápio e adicione um item para começar seu pedido.
@@ -63,16 +64,27 @@ const Bag = () => {
             </Link>
           </header>
           <div className="mt-3 rounded-2xl border border-gray-100 p-4 text-sm text-gray-600">
-            <p>
-              {selectedAddress?.street}, {selectedAddress?.streetNumber || selectedAddress?.street_number} ·{' '}
-              {selectedAddress?.neighborhoodName || 'Bairro'}
-            </p>
-            {selectedAddress?.city && (
-              <p>
-                {selectedAddress.city}
-              </p>
+            {selectedAddress ? (
+              <>
+                <p>
+                  {selectedAddress?.street}, {selectedAddress?.streetNumber || selectedAddress?.street_number} ·{' '}
+                  {selectedAddress?.neighborhoodName || 'Bairro'}
+                </p>
+                {selectedAddress?.city && (
+                  <p>
+                    {selectedAddress.city}
+                  </p>
+                )}
+                {selectedAddress?.complement && <p>Complemento: {selectedAddress.complement}</p>}
+              </>
+            ) : (
+              <div className="flex flex-col items-center py-4">
+                <p className="mb-3 text-gray-500">Nenhum endereço selecionado</p>
+                <Link to="/app/enderecos">
+                  <Button>Cadastrar endereço</Button>
+                </Link>
+              </div>
             )}
-            {selectedAddress?.complement && <p>Complemento: {selectedAddress.complement}</p>}
             <div className="mt-3 flex flex-wrap gap-3">
               {addresses.map((address) => (
                 <button
