@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../../../../shared/components/ui';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
+import { FaRegClock } from "react-icons/fa6";
 
 const statusPills = {
   CREATED: 'bg-gray-100 text-gray-700',
@@ -18,6 +19,10 @@ const statusPills = {
 
 const Orders = () => {
   const { orders, getOrderDetailed } = useStorefront();
+
+  const sortedOrders = React.useMemo(() => {
+    return [...orders].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  }, [orders]);
 
   return (
     <div className="space-y-8">
@@ -36,9 +41,9 @@ const Orders = () => {
         </Link>
       </div>
 
-      {orders.length === 0 ? (
-        <div className="rounded-3xl bg-white p-10 text-center shadow">
-          <p className="text-4xl mb-3">🕑</p>
+      {sortedOrders.length === 0 ? (
+        <div className="rounded-3xl bg-white p-10 text-center shadow flex flex-col items-center">
+          <FaRegClock className="text-4xl text-gray-900 mb-3" />
           <h2 className="text-2xl font-semibold text-gray-900 mb-2">
             Você ainda não fez pedidos
           </h2>
@@ -48,7 +53,7 @@ const Orders = () => {
         </div>
       ) : (
         <div className="space-y-5">
-          {orders.map((order) => {
+          {sortedOrders.map((order) => {
             const detailed = getOrderDetailed(order.id);
             const lastStatus = detailed?.timeline?.[detailed.timeline.length - 1]?.status;
             const statusClass = statusPills[lastStatus] || 'bg-gray-100 text-gray-700';
