@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useReducer, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useReducer } from 'react';
 import api from './services/api';
 
 /*
@@ -205,7 +205,7 @@ const initialBanners = [
 
 // cart (bag)
 const initialCart = {
-  id: 'cart-001',
+  id: null,
   user_id: initialUser.id,
   tenant_id: initialTenant.id,
   subtotal: 0,
@@ -380,10 +380,26 @@ const actionMap = {
   DELETE_BANNER: 'DELETE_BANNER',
   UPSERT_NEIGHBORHOOD: 'UPSERT_NEIGHBORHOOD',
   DELETE_NEIGHBORHOOD: 'DELETE_NEIGHBORHOOD',
+  SET_CART: 'SET_CART',
+  DELETE_ADDRESS: 'DELETE_ADDRESS',
 };
 
 const reducer = (state, action) => {
   switch (action.type) {
+    case actionMap.DELETE_ADDRESS: {
+      const id = action.payload;
+      const addresses = state.addresses.filter((a) => a.id !== id);
+      const cart = state.cart.address_id === id 
+        ? { ...state.cart, address_id: null } 
+        : state.cart;
+      return { ...state, addresses, cart };
+    }
+    case actionMap.SET_CART:
+      return {
+        ...state,
+        cart: { ...state.cart, ...action.payload },
+      };
+
     case actionMap.ADD_TO_CART: {
       const { itemId, quantity = 1, notes = '' } = action.payload;
       if (quantity <= 0) return state;
@@ -759,7 +775,7 @@ export const StorefrontProvider = ({ children }) => {
     orderItemOptions: initialOrderItemOptions,
   });
 
-  const loadData = useCallback(async () => {
+  const loadData = async () => {
     try {
       // ID fixo para demo ou pegar de configuração
       const tenantId = 1;
@@ -777,6 +793,7 @@ export const StorefrontProvider = ({ children }) => {
         rawAddresses,
         rawUser,
         rawOrdersList,
+        rawCart,
       ] = await Promise.all([
         api.get(`/tenants/${tenantId}`).catch(() => initialTenant),
         api.get(`/menu-categories?tenantId=${tenantId}`).catch(() => []),
@@ -788,6 +805,7 @@ export const StorefrontProvider = ({ children }) => {
         api.get(`/user-addresses/by-user/${userId}`).catch(() => []),
         api.get(`/users/${userId}`).catch(() => initialUser),
         api.get(`/orders/by-user/${userId}`).catch(() => []),
+        api.get(`/cart?userId=${userId}&tenantId=${tenantId}`).catch(() => null),
       ]);
 
       // Fetch details for orders (items + timeline)
@@ -966,42 +984,37 @@ export const StorefrontProvider = ({ children }) => {
       let cartItems = [];
       let cartItemOptions = [];
 
-      try {
-        const rawCart = await api.get(`/cart?userId=${userId}&tenantId=${tenantId}`);
-        if (rawCart) {
-           cart = {
-               ...rawCart,
-               user_id: rawCart.userId || rawCart.user_id,
-               tenant_id: rawCart.tenantId || rawCart.tenant_id,
-               address_id: rawCart.addressId || rawCart.address_id,
-               payment_channel: rawCart.paymentChannel || rawCart.payment_channel,
-               change: rawCart.changeFor || rawCart.change,
-               delivery_fee: rawCart.deliveryFee || rawCart.delivery_fee,
-               notes: rawCart.notes,
-               discount: rawCart.discount || 0,
-           };
+      if (rawCart) {
+         cart = {
+             ...rawCart,
+             user_id: rawCart.userId || rawCart.user_id,
+             tenant_id: rawCart.tenantId || rawCart.tenant_id,
+             address_id: rawCart.addressId || rawCart.address_id,
+             payment_channel: rawCart.paymentChannel || rawCart.payment_channel,
+             change: rawCart.changeFor || rawCart.change,
+             delivery_fee: rawCart.deliveryFee || rawCart.delivery_fee,
+             notes: rawCart.notes,
+             discount: rawCart.discount || 0,
+         };
 
-           if (rawCart.items && Array.isArray(rawCart.items)) {
-              cartItems = rawCart.items.map(ci => ({
-                  ...ci,
-                  cart_id: ci.cartId || ci.cart_id,
-                  item_id: ci.itemId || ci.item_id,
-              }));
-              
-              cartItemOptions = rawCart.items.flatMap(ci => {
-                  if (ci.selectedOptions && Array.isArray(ci.selectedOptions)) {
-                      return ci.selectedOptions.map(opt => ({
-                          id: opt.id,
-                          cart_item_id: ci.id,
-                          option_id: opt.optionId,
-                      }));
-                  }
-                  return [];
-              });
-           }
-        }
-      } catch (err) {
-        console.log('Nenhum carrinho ativo encontrado ou erro ao buscar.');
+         if (rawCart.items && Array.isArray(rawCart.items)) {
+            cartItems = rawCart.items.map(ci => ({
+                ...ci,
+                cart_id: ci.cartId || ci.cart_id,
+                item_id: ci.itemId || ci.item_id,
+            }));
+            
+            cartItemOptions = rawCart.items.flatMap(ci => {
+                if (ci.selectedOptions && Array.isArray(ci.selectedOptions)) {
+                    return ci.selectedOptions.map(opt => ({
+                        id: opt.id,
+                        cart_item_id: ci.id,
+                        option_id: opt.optionId,
+                    }));
+                }
+                return [];
+            });
+         }
       }
 
       dispatch({
@@ -1028,11 +1041,11 @@ export const StorefrontProvider = ({ children }) => {
     } catch (error) {
       console.error('Erro ao carregar dados iniciais:', error);
     }
-  }, []);
+  };
 
   useEffect(() => {
     loadData();
-  }, [loadData]);
+  }, []);
 
   const maps = useMemo(() => {
     return {
@@ -1138,27 +1151,48 @@ export const StorefrontProvider = ({ children }) => {
 
   /* ------------ Actions Integradas com Backend ------------ */
 
-  const addToCart = async (itemId, quantity = 1, notes = '', selectedOptions = []) => {
-    // Optimistic
-    const optimisticOptions = selectedOptions.map(optId => ({
-         optionId: optId,
-         // We might not have price/name here easily without looking up maps, 
-         // but let's try to look them up for better optimistic UI
-         ...maps.optionMap[optId]
-    }));
+  const getEffectiveCartId = async () => {
+    if (state.cart && state.cart.id) return state.cart.id;
+    try {
+      // Tenta buscar/criar o carrinho
+      const res = await api.get(`/cart?userId=${state.user.id}&tenantId=${state.tenant.id}`);
+      if (res && res.id) {
+        const normalizedCart = {
+           ...res,
+           user_id: res.userId || res.user_id,
+           tenant_id: res.tenantId || res.tenant_id,
+           address_id: res.addressId || res.address_id,
+           payment_channel: res.paymentChannel || res.payment_channel,
+           change: res.changeFor || res.change,
+           delivery_fee: res.deliveryFee || res.delivery_fee,
+           notes: res.notes,
+           discount: res.discount || 0,
+        };
+        dispatch({ type: actionMap.SET_CART, payload: normalizedCart });
+        return res.id;
+      }
+    } catch (error) {
+      console.error('Erro ao recuperar ID do carrinho:', error);
+    }
+    return null;
+  };
 
+  const addToCart = async (itemId, quantity = 1, notes = '') => {
+    // Optimistic
     dispatch({
       type: actionMap.ADD_TO_CART,
-      payload: { itemId, quantity, notes, selectedOptions: optimisticOptions },
+      payload: { itemId, quantity, notes },
     });
 
     try {
+      const cartId = await getEffectiveCartId();
+      if (!cartId) throw new Error("Cart ID not available");
+
       await api.post(`/cart/items`, {
-        cartId: state.cart.id,
+        cartId,
         itemId,
         quantity,
         notes,
-        selectedOptions: selectedOptions.map(id => ({ optionId: id }))
       });
     } catch (error) {
       console.error('Erro ao adicionar ao carrinho:', error);
@@ -1173,7 +1207,10 @@ export const StorefrontProvider = ({ children }) => {
     });
 
     try {
-      await api.put(`/cart/items/${cartItemId}?cartId=${state.cart.id}`, { quantity });
+      const cartId = await getEffectiveCartId();
+      if (!cartId) return;
+
+      await api.put(`/cart/items/${cartItemId}?cartId=${cartId}`, { quantity });
     } catch (error) {
       console.error('Erro ao atualizar item do carrinho:', error);
     }
@@ -1186,7 +1223,10 @@ export const StorefrontProvider = ({ children }) => {
     });
 
     try {
-      await api.delete(`/cart/items/${cartItemId}?cartId=${state.cart.id}`);
+      const cartId = await getEffectiveCartId();
+      if (!cartId) return;
+
+      await api.delete(`/cart/items/${cartItemId}?cartId=${cartId}`);
     } catch (error) {
       console.error('Erro ao remover item do carrinho:', error);
     }
@@ -1199,7 +1239,10 @@ export const StorefrontProvider = ({ children }) => {
     });
 
     try {
-      await api.post(`/carts/${state.cart.id}/items/${cartItemId}/toggle-option`, {
+      const cartId = await getEffectiveCartId();
+      if (!cartId) return;
+
+      await api.post(`/carts/${cartId}/items/${cartItemId}/toggle-option`, {
         option_id: optionId,
       });
     } catch (error) {
@@ -1213,7 +1256,10 @@ export const StorefrontProvider = ({ children }) => {
       payload: addressId,
     });
     try {
-      await api.put(`/cart/${state.cart.id}/details`, { addressId });
+      const cartId = await getEffectiveCartId();
+      if (!cartId) return;
+
+      await api.put(`/cart/${cartId}/details`, { addressId });
     } catch (error) {
       console.error('Erro ao definir endereço do carrinho:', error);
     }
@@ -1225,7 +1271,10 @@ export const StorefrontProvider = ({ children }) => {
       payload: channel,
     });
     try {
-      await api.put(`/cart/${state.cart.id}/details`, { paymentChannel: channel });
+      const cartId = await getEffectiveCartId();
+      if (!cartId) return;
+
+      await api.put(`/cart/${cartId}/details`, { paymentChannel: channel });
     } catch (error) {
       console.error('Erro ao definir pagamento:', error);
     }
@@ -1238,7 +1287,10 @@ export const StorefrontProvider = ({ children }) => {
     });
     // Debounce idealmente, mas direto por enquanto
     try {
-      await api.put(`/cart/${state.cart.id}/details`, { changeFor: value });
+      const cartId = await getEffectiveCartId();
+      if (!cartId) return;
+
+      await api.put(`/cart/${cartId}/details`, { changeFor: value });
     } catch (error) {
       console.error('Erro ao definir troco:', error);
     }
@@ -1250,7 +1302,10 @@ export const StorefrontProvider = ({ children }) => {
       payload: notes,
     });
     try {
-      await api.put(`/cart/${state.cart.id}/details`, { notes });
+      const cartId = await getEffectiveCartId();
+      if (!cartId) return;
+
+      await api.put(`/cart/${cartId}/details`, { notes });
     } catch (error) {
       console.error('Erro ao definir observações:', error);
     }
@@ -1265,9 +1320,13 @@ export const StorefrontProvider = ({ children }) => {
       const payload = { ...address, user_id: state.user.id };
       const saved = await api[method](url, payload);
 
-      dispatch({
-        type: actionMap.SAVE_ADDRESS,
-        payload: { address: saved },
+      // Refresh addresses from server to ensure sync
+      const userId = state.user.id;
+      const updatedAddresses = await api.get(`/user-addresses/by-user/${userId}`);
+
+      dispatch({ 
+        type: actionMap.SET_ADDRESSES, 
+        payload: { addresses: updatedAddresses } 
       });
       return saved.id;
     } catch (error) {
@@ -1279,6 +1338,25 @@ export const StorefrontProvider = ({ children }) => {
         payload: { address: { ...address, id } },
       });
       return id;
+    }
+  };
+
+  const deleteAddress = async (id) => {
+    dispatch({ type: actionMap.DELETE_ADDRESS, payload: id });
+    try {
+      await api.delete(`/user-addresses/${id}`);
+      
+      // Refresh addresses from server to ensure sync
+      const userId = state.user.id;
+      const updatedAddresses = await api.get(`/user-addresses/by-user/${userId}`);
+      
+      dispatch({ 
+        type: actionMap.SET_ADDRESSES, 
+        payload: { addresses: updatedAddresses } 
+      });
+    } catch (error) {
+      console.error('Erro ao deletar endereço:', error);
+      // Opcional: Reverter estado ou exibir erro
     }
   };
 
@@ -1366,7 +1444,6 @@ export const StorefrontProvider = ({ children }) => {
       getOrderDetailed,
 
       // actions
-      loadData,
       addToCart,
       updateCartItem,
       removeCartItem,
@@ -1378,6 +1455,7 @@ export const StorefrontProvider = ({ children }) => {
       setAddresses: (addresses) =>
         dispatch({ type: actionMap.SET_ADDRESSES, payload: { addresses } }),
       saveAddress,
+      deleteAddress,
       placeOrder,
       updateTenant: async (partial) => {
         dispatch({ type: actionMap.UPDATE_TENANT, payload: partial });
@@ -1429,6 +1507,17 @@ export const StorefrontProvider = ({ children }) => {
       },
       addOrderStatus: (orderId, status) =>
         dispatch({ type: actionMap.ADD_ORDER_STATUS, payload: { orderId, status } }),
+      updateOrderStatus: async (orderId, status) => {
+        try {
+          if (!orderId || !status) return false;
+          await api.put(`/orders/${orderId}/status`, { status });
+          dispatch({ type: actionMap.ADD_ORDER_STATUS, payload: { orderId, status } });
+          return true;
+        } catch (e) {
+          console.error('Erro ao atualizar status do pedido no backend', e);
+          return false;
+        }
+      },
       // menu: categorias
       saveMenuCategory: async (category) => {
         try {
@@ -1436,7 +1525,7 @@ export const StorefrontProvider = ({ children }) => {
           const payload = {
               id: category.id,
               name: category.name,
-              tenantId: { id: category.tenant_id || state.tenant.id },
+              tenantId: category.tenant_id || state.tenant.id,
               displayOrder: category.order || category.display_order
           };
           
@@ -1457,14 +1546,14 @@ export const StorefrontProvider = ({ children }) => {
       saveMenuItem: async (item) => {
           try {
               const payload = {
-                  id: item.id && !String(item.id).startsWith('item-') ? item.id : null,
+                  id: item.id,
                   name: item.name,
                   description: item.description,
                   price: item.price,
                   isAvailable: item.is_available,
                   photoUrl: item.photo_url,
                   categoryId: { id: item.category_id },
-                  tenant: { id: item.tenant_id || state.tenant.id }
+                  tenantId: { id: item.tenant_id || state.tenant.id }
               };
               
               const savedDto = await api.post('/menu-items', payload);
@@ -1485,16 +1574,11 @@ export const StorefrontProvider = ({ children }) => {
           }
       },
       deleteMenuItem: async (itemId) => {
-          const isBackendId = itemId && !isNaN(Number(itemId)) && !String(itemId).startsWith('item-');
-          if (isBackendId) {
-              try {
-                  await api.delete(`/menu-items/${itemId}`);
-                  dispatch({ type: actionMap.DELETE_MENU_ITEM, payload: itemId });
-              } catch (e) {
-                  console.error("Error deleting menu item", e);
-              }
-          } else {
+          try {
+              await api.delete(`/menu-items/${itemId}`);
               dispatch({ type: actionMap.DELETE_MENU_ITEM, payload: itemId });
+          } catch (e) {
+              console.error("Error deleting menu item", e);
           }
       },
       toggleItemAvailability: async (itemId) => {
@@ -1503,14 +1587,14 @@ export const StorefrontProvider = ({ children }) => {
           
           try {
              const payload = {
-                  id: item.id && !String(item.id).startsWith('item-') ? item.id : null,
+                  id: item.id,
                   name: item.name,
                   description: item.description,
                   price: item.price,
                   isAvailable: !item.is_available,
                   photoUrl: item.photo_url,
                   categoryId: { id: item.category_id },
-                  tenant: { id: item.tenant_id }
+                  tenantId: { id: item.tenant_id }
              };
              await api.post('/menu-items', payload);
              dispatch({ type: actionMap.TOGGLE_MENU_ITEM_AVAILABILITY, payload: itemId });
@@ -1522,20 +1606,21 @@ export const StorefrontProvider = ({ children }) => {
       saveOptionGroup: async (group) => {
           try {
              const payload = {
-                 id: group.id && !String(group.id).startsWith('grp-') ? group.id : null,
-                 itemId: group.item_id, // Send ID directly, not object
-                 name: group.name,
-                 required: group.is_required, // Map to DTO 'required'
-                 minOptions: group.min,       // Map to DTO 'minOptions'
-                 maxOptions: group.max        // Map to DTO 'maxOptions'
-             };
+              id: group.id,
+              itemId: group.item_id,
+              name: group.name,
+              isRequired: group.is_required,
+              min: group.min,
+              max: group.max
+          };
              const res = await api.post('/option-groups/create', payload);
+             // res is OptionGroupDTO
              
              dispatch({ 
                  type: actionMap.UPSERT_OPTION_GROUP, 
                  payload: {
                      ...group,
-                     id: res.id // Use ID from response
+                     id: res.id // Ensure we have the real ID
                  } 
              });
              return res;
@@ -1543,112 +1628,78 @@ export const StorefrontProvider = ({ children }) => {
               console.error("Error saving option group", e);
           }
       },
-      deleteOptionGroup: async (groupId) => {
-          const isBackendId = groupId && !isNaN(Number(groupId)) && !String(groupId).startsWith('grp-');
-          if (isBackendId) {
-              try {
-                  await api.delete(`/option-groups/${groupId}`);
-                  dispatch({ type: actionMap.DELETE_OPTION_GROUP, payload: groupId });
-              } catch (e) {
-                  console.error("Error deleting option group", e);
-              }
-          } else {
-              dispatch({ type: actionMap.DELETE_OPTION_GROUP, payload: groupId });
-          }
-      },
+      deleteOptionGroup: (groupId) =>
+        dispatch({ type: actionMap.DELETE_OPTION_GROUP, payload: groupId }),
       // menu: opções
       saveOption: async (option) => {
           try {
+              // If ID is temporary (string starting with opt-), send null so backend generates ID
+              const isTempId = typeof option.id === 'string' && option.id.startsWith('opt-');
               const payload = {
-                  id: option.id && !String(option.id).startsWith('opt-') ? option.id : null,
+                  id: isTempId ? null : option.id,
                   group: { id: option.group_id },
                   name: option.name,
                   additionalPrice: option.additional_charge
               };
               const res = await api.post('/options/create', payload);
-              const savedOption = {
-                  ...option,
-                  id: res && res.id ? res.id : option.id
-              };
-              dispatch({ type: actionMap.UPSERT_OPTION, payload: savedOption });
-              return savedOption;
+              
+              dispatch({ 
+                  type: actionMap.UPSERT_OPTION, 
+                  payload: {
+                      ...option,
+                      id: res.id // Update with real ID from backend
+                  } 
+              });
           } catch(e) {
               console.error("Error saving option", e);
           }
       },
-      deleteOption: async (optionId) => {
-          const isBackendId = optionId && !isNaN(Number(optionId)) && !String(optionId).startsWith('opt-');
-          if (isBackendId) {
-              try {
-                  await api.delete(`/options/${optionId}`);
-                  dispatch({ type: actionMap.DELETE_OPTION, payload: optionId });
-              } catch (e) {
-                  console.error("Error deleting option", e);
-              }
-          } else {
-              dispatch({ type: actionMap.DELETE_OPTION, payload: optionId });
-          }
-      },
+      deleteOption: (optionId) =>
+        dispatch({ type: actionMap.DELETE_OPTION, payload: optionId }),
       // banners
       saveBanner: async (banner) => {
         try {
-            const payload = {
-                id: banner.id && !String(banner.id).startsWith('bnr-') ? banner.id : null,
-                tenantId: { id: banner.tenant_id || state.tenant.id },
-                bannerImage: banner.banner_image,
-                productLink: banner.product_link
-            };
-            const res = await api.post('/banners', payload); // Backend returns void (200 OK)
-            
-            // Como o backend não retorna o objeto criado (retorna void), 
-            // precisamos recarregar os dados ou assumir um ID temporário se quisermos otimismo.
-            // O ideal seria o backend retornar o DTO criado.
-            // Dado que o controller retorna ResponseEntity<Void>, vamos recarregar os dados.
-            loadData();
+          const payload = {
+            id: banner.id,
+            tenantId: { id: banner.tenant_id || state.tenant.id },
+            bannerImage: banner.banner_image,
+            productLink: banner.product_link,
+          };
 
+          await api.post('/banners', payload);
+          const raw = await api.get(`/banners?tenantId=${state.tenant.id}`);
+          const refreshed = Array.isArray(raw) ? raw.map(b => ({
+            id: b.id,
+            tenant_id: b.tenantId?.id || b.tenantId,
+            banner_image: b.bannerImage,
+            product_link: b.productLink,
+          })) : [];
+          dispatch({ type: actionMap.SET_DATA, payload: { banners: refreshed } });
         } catch (e) {
-            console.error("Error saving banner", e);
+          console.error('Error saving banner', e);
         }
       },
       deleteBanner: async (bannerId) => {
-        // Validar se é um ID numérico (do backend) ou temporário/inválido
-        // IDs temporários (gerados no front antigo) ou strings não numéricas não devem ser enviados ao backend
-        const isBackendId = bannerId && !isNaN(Number(bannerId)) && !String(bannerId).startsWith('bnr-');
-
-        if (isBackendId) {
-            try {
-                await api.delete(`/banners/${bannerId}`);
-                dispatch({ type: actionMap.DELETE_BANNER, payload: bannerId });
-            } catch (e) {
-                console.error("Error deleting banner", e);
-            }
-        } else {
-            // Se for ID local/inválido, apenas remove do estado
-            dispatch({ type: actionMap.DELETE_BANNER, payload: bannerId });
+        try {
+          const isTemp = typeof bannerId === 'string' && bannerId.startsWith('bnr-');
+          if (!isTemp) {
+            await api.delete(`/banners/${bannerId}`);
+          }
+          dispatch({ type: actionMap.DELETE_BANNER, payload: bannerId });
+        } catch (e) {
+          console.error('Error deleting banner', e);
         }
       },
       // neighborhoods
       saveNeighborhood: (neighborhood) =>
         dispatch({ type: actionMap.UPSERT_NEIGHBORHOOD, payload: neighborhood }),
-      deleteNeighborhood: async (neighborhoodId) => {
-          const isBackendId = neighborhoodId && !isNaN(Number(neighborhoodId)) && !String(neighborhoodId).startsWith('nh-');
-          if (isBackendId) {
-              try {
-                  await api.delete(`/neighborhoods/${neighborhoodId}`);
-                  dispatch({ type: actionMap.DELETE_NEIGHBORHOOD, payload: neighborhoodId });
-              } catch (e) {
-                  console.error("Error deleting neighborhood", e);
-              }
-          } else {
-              dispatch({ type: actionMap.DELETE_NEIGHBORHOOD, payload: neighborhoodId });
-          }
-      },
+      deleteNeighborhood: (neighborhoodId) =>
+        dispatch({ type: actionMap.DELETE_NEIGHBORHOOD, payload: neighborhoodId }),
     }),
     [
       state,
       maps,
       cartTotals,
-      loadData,
     ]
   );
 
