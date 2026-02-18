@@ -66,7 +66,7 @@ const nextStatus = (current) => {
 };
 
 const Orders = () => {
-  const { orders, user, maps, getOrderDetailed, addOrderStatus } = useStorefront();
+  const { orders, user, maps, getOrderDetailed, addOrderStatus, updateOrderStatus } = useStorefront();
   const [filter, setFilter] = useState('todos');
   const [expanded, setExpanded] = useState(null);
   const [dayClosed, setDayClosed] = useState(false);
@@ -382,7 +382,7 @@ const Orders = () => {
                           <Button
                             size="sm"
                             className="flex-1 min-w-[160px]"
-                            onClick={() => addOrderStatus(order.id, nextStatus(lastStatus))}
+                            onClick={() => updateOrderStatus(order.id, nextStatus(lastStatus))}
                           >
                             Avançar etapa
                           </Button>
@@ -390,7 +390,7 @@ const Orders = () => {
                             size="sm"
                             variant="ghost"
                             className="border border-gray-200 text-gray-700 w-full sm:w-auto"
-                            onClick={() => addOrderStatus(order.id, 'DELIVERED')}
+                            onClick={() => updateOrderStatus(order.id, 'DELIVERED')}
                           >
                             Entregue
                           </Button>
@@ -398,7 +398,7 @@ const Orders = () => {
                             size="sm"
                             variant="ghost"
                             className="text-red-700 border border-red-200 w-full sm:w-auto"
-                            onClick={() => addOrderStatus(order.id, 'CANCELED')}
+                            onClick={() => updateOrderStatus(order.id, 'CANCELED')}
                           >
                             Cancelar
                           </Button>
@@ -408,7 +408,7 @@ const Orders = () => {
                         <Button
                           size="sm"
                           className="w-full sm:w-auto"
-                          onClick={() => addOrderStatus(order.id, 'IN_PREPARATION')}
+                          onClick={() => updateOrderStatus(order.id, 'IN_PREPARATION')}
                         >
                           Reabrir
                         </Button>

@@ -20,6 +20,7 @@ const Menu = () => {
     deleteMenuItem,
     toggleItemAvailability,
     saveMenuCategory,
+    deleteMenuCategory,
     reorderMenuCategories,
     saveOptionGroup,
     deleteOptionGroup,
@@ -31,9 +32,16 @@ const Menu = () => {
   } = useStorefront();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isBannerModalOpen, setIsBannerModalOpen] = useState(false);
+  
+  // Alert modal state
+  const [alertModal, setAlertModal] = useState({ isOpen: false, title: '', message: '', items: [] });
+  
   const [isSyncing, setIsSyncing] = useState(false);
   const [editingItemId, setEditingItemId] = useState(null);
+  const [editingCategoryId, setEditingCategoryId] = useState(null);
+  const [categoryForm, setCategoryForm] = useState({ name: '', order: 0 });
   const [itemForm, setItemForm] = useState({
     name: '',
     description: '',
@@ -60,6 +68,51 @@ const Menu = () => {
       return a.name.localeCompare(b.name);
     });
   }, [menuItems, sortedCategories]);
+
+  const openNewCategory = () => {
+    setEditingCategoryId(null);
+    setCategoryForm({ name: '', order: sortedCategories.length + 1 });
+    setIsCategoryModalOpen(true);
+  };
+
+  const openEditCategory = (category) => {
+    setEditingCategoryId(category.id);
+    setCategoryForm({ name: category.name, order: category.order || 0 });
+    setIsCategoryModalOpen(true);
+  };
+
+  const handleSaveCategory = async () => {
+    if (!categoryForm.name) return;
+    
+    await saveMenuCategory({
+      id: editingCategoryId || undefined,
+      name: categoryForm.name,
+      order: categoryForm.order,
+      tenant_id: tenant.id
+    });
+
+    setIsCategoryModalOpen(false);
+    setCategoryForm({ name: '', order: 0 });
+    setEditingCategoryId(null);
+  };
+
+  const handleRemoveCategory = (id) => {
+      // Check for associated items
+      const associatedItems = menuItems.filter(item => item.category_id === id);
+      
+      if (associatedItems.length > 0) {
+          setAlertModal({
+            isOpen: true,
+            title: 'Não é possível remover no momento',
+            message: `Esta categoria possui itens vinculados. Remova-os ou altere a categoria deles antes de excluir.`,
+            items: associatedItems
+          });
+          return;
+      }
+
+            deleteMenuCategory(id);
+
+  };
 
   const openNewItem = () => {
     setEditingItemId(null);
@@ -199,17 +252,28 @@ const Menu = () => {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="text-sm text-gray-500">Curadoria do cardápio</p>
-          <h1 className="text-2xl font-bold text-gray-900">Itens do estabelecimento</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Categorias de Produtos</h1>
         </div>
+        <Button onClick={openNewCategory}>Adicionar Categoria</Button>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
         {sortedCategories.map((category, idx) => {
           const activeCount = menuItems.filter((mi) => mi.category_id === category.id && mi.is_available).length;
           return (
-            <div key={category.id} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
-              <div className="inline-flex px-3 py-1 rounded-full text-xs font-semibold bg-gray-50 text-gray-700">
-                {category.name}
+            <div key={category.id} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm group relative">
+              <div className="flex justify-between items-start">
+                  <div className="inline-flex px-3 py-1 rounded-full text-xs font-semibold bg-gray-50 text-gray-700">
+                    {category.name}
+                  </div>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => openEditCategory(category)} className="text-gray-400 hover:text-blue-600">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                      </button>
+                      <button onClick={() => handleRemoveCategory(category.id)} className="text-gray-400 hover:text-red-600">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                      </button>
+                  </div>
               </div>
               <div className="mt-2 flex gap-2">
                 <Button size="sm" variant="ghost" className="border border-gray-200" disabled={idx===0} onClick={() => {
@@ -308,8 +372,10 @@ const Menu = () => {
           {banners.map((banner) => (
             <div key={banner.id} className="group relative rounded-2xl overflow-hidden border border-gray-200 aspect-[2/1] bg-gray-50">
               <img src={banner.banner_image} alt="Banner" className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                <Button variant="destructive" size="sm" onClick={() => deleteBanner(banner.id)}>Excluir</Button>
+              <div className="absolute inset-0 pointer-events-none">
+                <div className="absolute bottom-2 right-2">
+                  <button type="button" onClick={() => deleteBanner(banner.id)} className="pointer-events-auto px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs font-semibold shadow hover:bg-red-700">Excluir</button>
+                </div>
               </div>
               {banner.product_link && (
                 <div className="absolute bottom-2 left-2 right-2">
@@ -449,6 +515,29 @@ const Menu = () => {
         </div>
       </Modal>
 
+      <Modal isOpen={isCategoryModalOpen} onClose={() => setIsCategoryModalOpen(false)} title={editingCategoryId ? 'Editar Categoria' : 'Nova Categoria'}>
+        <div className="space-y-4">
+          <Input
+            label="Nome da Categoria"
+            value={categoryForm.name}
+            onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
+            placeholder="Ex: Combos, Bebidas..."
+          />
+          <Input
+            label="Ordem de Exibição"
+            type="number"
+            value={categoryForm.order}
+            onChange={(e) => setCategoryForm({ ...categoryForm, order: Number(e.target.value) })}
+          />
+          <div className="flex justify-end gap-3 pt-3">
+            <Button variant="ghost" className="border border-gray-200 text-gray-700" onClick={() => setIsCategoryModalOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveCategory}>Salvar</Button>
+          </div>
+        </div>
+      </Modal>
+
       <Modal isOpen={isBannerModalOpen} onClose={() => setIsBannerModalOpen(false)} title="Novo Banner">
         <div className="space-y-4">
           <Input
@@ -486,6 +575,32 @@ const Menu = () => {
             </Button>
             <Button onClick={handleSaveNewBanner}>Adicionar Banner</Button>
           </div>
+        </div>
+      </Modal>
+
+      <Modal isOpen={alertModal.isOpen} onClose={() => setAlertModal({ ...alertModal, isOpen: false })} title={alertModal.title}>
+        <div className="space-y-4">
+            <div className="text-gray-700">
+                {alertModal.message}
+            </div>
+            {alertModal.items && alertModal.items.length > 0 && (
+                <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 max-h-48 overflow-y-auto">
+                    <p className="text-xs font-semibold text-gray-500 mb-2 uppercase">Itens vinculados:</p>
+                    <ul className="space-y-1">
+                        {alertModal.items.map(item => (
+                            <li key={item.id} className="text-sm text-gray-700 flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
+                                {item.name}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+            <div className="flex justify-end pt-2">
+                <Button onClick={() => setAlertModal({ ...alertModal, isOpen: false })}>
+                    Entendi
+                </Button>
+            </div>
         </div>
       </Modal>
     </div>
