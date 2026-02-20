@@ -36,20 +36,19 @@ const Addresses = () => {
   useEffect(() => {
     const loadAddresses = async () => {
       try {
-        if (!userId) {
-          // Fallback se userId não estiver disponível
-          // console.warn('User ID not available');
-          // return;
+        const effectiveUserId = userId || 1;
+        if (!effectiveUserId) {
+          return;
         }
 
         const raw = await api
-          .get(`/user-addresses/by-user/${userId}/active`)
+          .get(`/user-addresses/by-user/${effectiveUserId}/active`)
           .catch(() => []);
 
         const normalized = Array.isArray(raw)
           ? raw.map(item => ({
               id: String(item.id),
-              user_id: String(item.userId || userId),
+              user_id: String(item.userId || effectiveUserId),
               label: item.label,
               street: item.street,
               streetNumber: item.streetNumber,

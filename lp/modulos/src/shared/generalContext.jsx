@@ -401,7 +401,7 @@ const reducer = (state, action) => {
       };
 
     case actionMap.ADD_TO_CART: {
-      const { itemId, quantity = 1, notes = '' } = action.payload;
+      const { itemId, quantity = 1, notes = '', selectedOptionIds = [] } = action.payload;
       if (quantity <= 0) return state;
 
       const existing = state.cartItems.find(
@@ -409,6 +409,7 @@ const reducer = (state, action) => {
       );
 
       let cartItems = [...state.cartItems];
+      let cartItemOptions = [...state.cartItemOptions];
 
       if (existing) {
         cartItems = cartItems.map((ci) =>
@@ -416,17 +417,41 @@ const reducer = (state, action) => {
             ? { ...ci, quantity: ci.quantity + quantity }
             : ci
         );
+
+        selectedOptionIds.forEach((optionId) => {
+          const already = cartItemOptions.some(
+            (cio) =>
+              cio.cart_item_id === existing.id && cio.option_id === optionId
+          );
+          if (!already) {
+            cartItemOptions.push({
+              id: `cio-${Date.now()}-${optionId}`,
+              cart_item_id: existing.id,
+              option_id: optionId,
+            });
+          }
+        });
       } else {
+        const newId = `ci-${Date.now()}`;
         cartItems.push({
-          id: `ci-${Date.now()}`,
+          id: newId,
           cart_id: state.cart.id,
           item_id: itemId,
           quantity,
           notes,
         });
+
+        cartItemOptions = [
+          ...cartItemOptions,
+          ...selectedOptionIds.map((optionId) => ({
+            id: `cio-${Date.now()}-${optionId}`,
+            cart_item_id: newId,
+            option_id: optionId,
+          })),
+        ];
       }
 
-      return { ...state, cartItems };
+      return { ...state, cartItems, cartItemOptions };
     }
 
     case actionMap.UPDATE_CART_ITEM: {
@@ -946,11 +971,12 @@ export const StorefrontProvider = ({ children }) => {
           item_id: g.itemId || g.item_id,
           is_required: g.isRequired !== undefined ? g.isRequired : g.is_required,
       })) : [];
-
-       // Normalize Options
+      
+      // Normalize Options
       const options = Array.isArray(rawOptions) ? rawOptions.map(o => ({
           ...o,
-          group_id: o.groupId || o.group_id,
+          // Backend envia OptionDTO com "group" aninhado; garantir que group_id seja o id desse grupo
+          group_id: (o.group && o.group.id) || o.groupId || o.group_id,
           additional_charge: o.additionalPrice !== undefined ? o.additionalPrice : (o.additional_charge || 0),
       })) : [];
 
@@ -1105,7 +1131,15 @@ export const StorefrontProvider = ({ children }) => {
       const item = maps.menuItemMap[ci.item_id];
       const selectedOptions = state.cartItemOptions
         .filter((cio) => cio.cart_item_id === ci.id)
-        .map((cio) => maps.optionMap[cio.option_id])
+        .map((cio) => {
+          const option = maps.optionMap[cio.option_id];
+          if (!option) return null;
+          const group = maps.optionGroupMap[option.group_id];
+          return {
+            ...option,
+            groupName: group ? group.name : undefined,
+          };
+        })
         .filter(Boolean);
 
       const optionsTotal = selectedOptions.reduce(
@@ -1134,10 +1168,15 @@ export const StorefrontProvider = ({ children }) => {
       .map((oi) => {
         const opts = state.orderItemOptions
           .filter((oio) => String(oio.order_item_id) === String(oi.id))
-          .map((oio) => ({
-            ...oio,
-            option: maps.optionMap[oio.option_id],
-          }));
+          .map((oio) => {
+            const option = maps.optionMap[oio.option_id];
+            const group = option ? maps.optionGroupMap[option.group_id] : null;
+            return {
+              ...oio,
+              option,
+              groupName: group ? group.name : undefined,
+            };
+          });
 
         return { ...oi, options: opts };
       });
@@ -1177,11 +1216,11 @@ export const StorefrontProvider = ({ children }) => {
     return null;
   };
 
-  const addToCart = async (itemId, quantity = 1, notes = '') => {
+  const addToCart = async (itemId, quantity = 1, notes = '', selectedOptionIds = []) => {
     // Optimistic
     dispatch({
       type: actionMap.ADD_TO_CART,
-      payload: { itemId, quantity, notes },
+      payload: { itemId, quantity, notes, selectedOptionIds },
     });
 
     try {
@@ -1193,6 +1232,11 @@ export const StorefrontProvider = ({ children }) => {
         itemId,
         quantity,
         notes,
+        selectedOptions: Array.isArray(selectedOptionIds)
+          ? selectedOptionIds.map((optionId) => ({
+              optionId,
+            }))
+          : [],
       });
     } catch (error) {
       console.error('Erro ao adicionar ao carrinho:', error);
@@ -1614,26 +1658,31 @@ export const StorefrontProvider = ({ children }) => {
               max: group.max
           };
              const res = await api.post('/option-groups/create', payload);
-             // res is OptionGroupDTO
-             
+             const nextGroup = {
+                 ...group,
+                 id: res.id
+             };
              dispatch({ 
                  type: actionMap.UPSERT_OPTION_GROUP, 
-                 payload: {
-                     ...group,
-                     id: res.id // Ensure we have the real ID
-                 } 
+                 payload: nextGroup
              });
-             return res;
+             return nextGroup;
           } catch(e) {
               console.error("Error saving option group", e);
+              return null;
           }
       },
-      deleteOptionGroup: (groupId) =>
-        dispatch({ type: actionMap.DELETE_OPTION_GROUP, payload: groupId }),
+      deleteOptionGroup: async (groupId) => {
+        try {
+          await api.delete(`/option-groups/${groupId}`);
+          dispatch({ type: actionMap.DELETE_OPTION_GROUP, payload: groupId });
+        } catch (e) {
+          console.error('Error deleting option group', e);
+        }
+      },
       // menu: opções
       saveOption: async (option) => {
           try {
-              // If ID is temporary (string starting with opt-), send null so backend generates ID
               const isTempId = typeof option.id === 'string' && option.id.startsWith('opt-');
               const payload = {
                   id: isTempId ? null : option.id,
@@ -1642,20 +1691,28 @@ export const StorefrontProvider = ({ children }) => {
                   additionalPrice: option.additional_charge
               };
               const res = await api.post('/options/create', payload);
-              
+              const nextOption = {
+                  ...option,
+                  id: res.id
+              };
               dispatch({ 
                   type: actionMap.UPSERT_OPTION, 
-                  payload: {
-                      ...option,
-                      id: res.id // Update with real ID from backend
-                  } 
+                  payload: nextOption
               });
+              return nextOption;
           } catch(e) {
               console.error("Error saving option", e);
+              return null;
           }
       },
-      deleteOption: (optionId) =>
-        dispatch({ type: actionMap.DELETE_OPTION, payload: optionId }),
+      deleteOption: async (optionId) => {
+        try {
+          await api.delete(`/options/${optionId}`);
+          dispatch({ type: actionMap.DELETE_OPTION, payload: optionId });
+        } catch (e) {
+          console.error('Error deleting option', e);
+        }
+      },
       // banners
       saveBanner: async (banner) => {
         try {

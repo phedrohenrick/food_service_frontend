@@ -61,20 +61,19 @@ const Product = () => {
   }, [product, selectedOptions, quantity, optionGroups]);
 
   const handleOptionToggle = (groupId, optionId, maxOptions) => {
-    setSelectedOptions(prev => {
+    setSelectedOptions((prev) => {
       const currentSelection = prev[groupId] || [];
       const isSelected = currentSelection.includes(optionId);
-      
+      const max = maxOptions && maxOptions > 0 ? maxOptions : Infinity;
+
       let newSelection;
-      if (maxOptions === 1) {
-        // Radio behavior
-        newSelection = [optionId];
+      if (max === 1) {
+        newSelection = isSelected ? [] : [optionId];
       } else {
-        // Checkbox behavior
         if (isSelected) {
-          newSelection = currentSelection.filter(id => id !== optionId);
+          newSelection = currentSelection.filter((id) => id !== optionId);
         } else {
-          if (currentSelection.length >= maxOptions) return prev; // Max reached
+          if (currentSelection.length >= max) return prev;
           newSelection = [...currentSelection, optionId];
         }
       }

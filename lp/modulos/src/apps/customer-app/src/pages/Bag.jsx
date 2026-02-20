@@ -3,12 +3,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../../../../shared/components/ui';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
 import { LiaShoppingBagSolid } from "react-icons/lia";
+import api from '../../../../shared/services/api';
 
 const Bag = () => {
   const navigate = useNavigate();
   const {
     tenant,
     addresses,
+    user,
     maps,
     cart,
     cartTotals,
@@ -22,7 +24,39 @@ const Bag = () => {
     placeOrder,
   } = useStorefront();
 
-  const selectedAddress = maps.addressMap[cart.address_id] || addresses[0];
+  const [activeAddresses, setActiveAddresses] = React.useState([]);
+
+  React.useEffect(() => {
+    const loadActiveAddresses = async () => {
+      try {
+        const effectiveUserId = user?.id || 1;
+        if (!effectiveUserId) return;
+
+        const raw = await api
+          .get(`/user-addresses/by-user/${effectiveUserId}/active`)
+          .catch(() => []);
+
+        const normalized = Array.isArray(raw)
+          ? raw.map((item) => ({
+              ...item,
+              streetNumber: item.streetNumber || item.street_number,
+              zipCode: item.zipCode || item.zip_code,
+            }))
+          : [];
+
+        setActiveAddresses(normalized);
+      } catch (e) {
+        console.error('Erro ao carregar endereços ativos na sacola:', e);
+      }
+    };
+
+    loadActiveAddresses();
+  }, [user]);
+
+  const addressList =
+    activeAddresses && activeAddresses.length > 0 ? activeAddresses : addresses;
+
+  const selectedAddress = maps.addressMap[cart.address_id] || addressList[0];
 
   const handleCheckout = () => {
     const orderId = placeOrder();
@@ -86,7 +120,7 @@ const Bag = () => {
               </div>
             )}
             <div className="mt-3 flex flex-wrap gap-3">
-              {addresses.map((address) => (
+              {addressList.map((address) => (
                 <button
                   key={address.id}
                   type="button"
@@ -148,51 +182,83 @@ const Bag = () => {
           </header>
 
           <div className="space-y-4">
-            {detailedItems.map((item) => (
-              <div
-                key={item.id}
-                className="flex gap-4 rounded-2xl border border-gray-100 p-4"
-              >
-                <div className="h-24 w-24 overflow-hidden rounded-xl">
-                  <img src={item.item?.photo_url} alt={item.item?.name} className="h-full w-full object-cover" />
-                </div>
-                <div className="flex flex-1 flex-col gap-2">
-                  <div className="flex justify-between">
-                    <p className="text-lg font-semibold text-gray-900">{item.item?.name}</p>
-                    <span className="text-lg font-semibold text-gray-900">
-                      R$ {Number(item.line_total ?? 0).toFixed(2)}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-500 line-clamp-2">{item.item?.description}</p>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center rounded-full border border-gray-200">
-                      <button
-                        type="button"
-                        className="px-3 py-1 text-xl"
-                        onClick={() => updateCartItem(item.id, item.quantity - 1)}
-                      >
-                        -
-                      </button>
-                      <span className="px-3 text-sm font-semibold">{item.quantity}</span>
-                      <button
-                        type="button"
-                        className="px-3 py-1 text-xl"
-                        onClick={() => updateCartItem(item.id, item.quantity + 1)}
-                      >
-                        +
-                      </button>
+            {detailedItems.map((item) => {
+              const grouped = (item.selectedOptions || []).reduce((acc, opt) => {
+                const key = opt.group.name || 'Opções';
+                if (!acc[key]) acc[key] = [];
+                acc[key].push(opt);
+                return acc;
+              }, {});
+              const groupEntries = Object.entries(grouped);
+
+              return (
+                <div key={item.id} className="space-y-2">
+                  <div className="flex gap-4 rounded-2xl border border-gray-100 p-4">
+                    <div className="h-24 w-24 overflow-hidden rounded-xl">
+                      <img src={item.item?.photo_url} alt={item.item?.name} className="h-full w-full object-cover" />
                     </div>
-                    <button
-                      type="button"
-                      className="text-sm font-semibold text-red-500"
-                      onClick={() => removeCartItem(item.id)}
-                    >
-                      remover
-                    </button>
+                    <div className="flex flex-1 flex-col gap-2">
+                      <div className="flex justify-between">
+                        <p className="text-lg font-semibold text-gray-900">{item.item?.name}</p>
+                        <span className="text-lg font-semibold text-gray-900">
+                          R$ {Number(item.line_total ?? 0).toFixed(2)}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-500 line-clamp-2">{item.item?.description}</p>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center rounded-full border border-gray-200">
+                          <button
+                            type="button"
+                            className="px-3 py-1 text-xl"
+                            onClick={() => updateCartItem(item.id, item.quantity - 1)}
+                          >
+                            -
+                          </button>
+                          <span className="px-3 text-sm font-semibold">{item.quantity}</span>
+                          <button
+                            type="button"
+                            className="px-3 py-1 text-xl"
+                            onClick={() => updateCartItem(item.id, item.quantity + 1)}
+                          >
+                            +
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          className="text-sm font-semibold text-red-500"
+                          onClick={() => removeCartItem(item.id)}
+                        >
+                          remover
+                        </button>
+                      </div>
+                    </div>
                   </div>
+
+                  {groupEntries.length > 0 && (
+                    <div className="space-y-2">
+                      {groupEntries.map(([groupName, opts]) => (
+                        <div
+                          key={groupName}
+                          className="rounded-2xl border border-gray-100 p-4"
+                        >
+                          <p className="text-xs font-semibold text-gray-700">{groupName}</p>
+                          <div className="mt-1 space-y-0.5 text-xs text-gray-600">
+                            {opts.map((opt, idx) => (
+                              <p key={idx}>
+                                {opt.name}
+                                {opt.additional_charge
+                                  ? ` (+ R$ ${Number(opt.additional_charge).toFixed(2)})`
+                                  : ''}
+                              </p>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="space-y-2">
