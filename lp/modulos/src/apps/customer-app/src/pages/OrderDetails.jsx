@@ -11,7 +11,7 @@ const statusLabel = {
   IN_PREPARATION: 'Sendo preparado',
   READY: 'Pronto para sair',
   WAITING_FOR_COLLECTION: 'Aguardando coleta',
-  IN_ROUTE: 'Em rota de entrega',
+  ON_ROUTE: 'Em rota de entrega',
   DELIVERED: 'Entregue',
   COMPLETED: 'Concluído',
   CANCELED: 'Cancelado',
@@ -54,7 +54,7 @@ const OrderDetails = () => {
     ? liveTimeline
     : (detailed?.timeline || []);
 
-  const orderedSteps = ['CREATED','IN_PREPARATION','READY','IN_ROUTE','DELIVERED','COMPLETED'];
+  const orderedSteps = ['CREATED','IN_PREPARATION','READY','ON_ROUTE','DELIVERED','COMPLETED'];
   const currentStatus = timeline?.[timeline.length - 1]?.status || 'CREATED';
 
   if (!order) {
@@ -168,37 +168,68 @@ const OrderDetails = () => {
         <article className="rounded-3xl bg-white p-6 shadow space-y-4">
           <h2 className="text-xl font-semibold text-gray-900">Itens do pedido</h2>
           <div className="space-y-3 text-sm text-gray-600">
-            {detailed.items.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center justify-between rounded-2xl border border-gray-100 p-4"
-              >
-                <div>
-                  <p className="font-semibold text-gray-900">
-                    {item.quantity}x {item.item_name_snapshot}
-                  </p>
-                  {item.options && item.options.length > 0 && (
-                    <div className="mt-1 space-y-0.5">
-                      {item.options.map((opt, idx) => {
-                         const optName = opt.optionNameSnapshot || opt.option?.name || 'Opção';
-                         const optPrice = opt.additionalCharge || opt.option?.additional_charge || 0;
-                         return (
-                           <p key={idx} className="text-xs text-gray-500">
-                             + {optName} {optPrice > 0 ? `(R$ ${Number(optPrice).toFixed(2)})` : ''}
-                           </p>
-                         );
-                      })}
+            {detailed.items.map((item) => {
+              const grouped = (item.options || []).reduce((acc, opt) => {
+                const key = opt.group?.name || opt.groupName || 'Opções';
+                if (!acc[key]) acc[key] = [];
+                acc[key].push(opt);
+                return acc;
+              }, {});
+              const groupEntries = Object.entries(grouped);
+
+              const optionsExtraPerUnit = (item.options || []).reduce(
+                (acc, opt) =>
+                  acc + (opt.additionalCharge || opt.option?.additional_charge || 0),
+                0
+              );
+
+              return (
+                <div key={item.id} className="space-y-2">
+                  <div className="flex items-center justify-between rounded-2xl border border-gray-100 p-4">
+                    <div>
+                      <p className="font-semibold text-gray-900">
+                        {item.quantity}x {item.item_name_snapshot}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Preço unitário R$ {(item.unit_price ?? 0).toFixed(2)}
+                      </p>
+                    </div>
+                    <span className="text-sm font-semibold text-gray-900">
+                      R$ {((item.unit_price ?? 0) * item.quantity + optionsExtraPerUnit * item.quantity).toFixed(2)}
+                    </span>
+                  </div>
+
+                  {groupEntries.length > 0 && (
+                    <div className="space-y-2">
+                      {groupEntries.map(([groupName, opts]) => (
+                        <div
+                          key={groupName}
+                          className="rounded-2xl border border-gray-100 p-4"
+                        >
+                          <p className="text-xs font-semibold text-gray-700">{groupName}</p>
+                          <div className="mt-1 space-y-0.5 text-xs text-gray-600">
+                            {opts.map((opt, idx) => {
+                              const optName =
+                                opt.optionNameSnapshot || opt.option?.name || 'Opção';
+                              const optPrice =
+                                opt.additionalCharge || opt.option?.additional_charge || 0;
+                              return (
+                                <p key={idx}>
+                                  {optName}
+                                  {optPrice > 0
+                                    ? ` (+ R$ ${Number(optPrice).toFixed(2)})`
+                                    : ''}
+                                </p>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
-                  <p className="text-xs text-gray-500 mt-1">
-                    Preço unitário R$ {(item.unit_price ?? 0).toFixed(2)}
-                  </p>
                 </div>
-                <span className="text-sm font-semibold text-gray-900">
-                  R$ {((item.unit_price ?? 0) * item.quantity + (item.options?.reduce((acc, opt) => acc + (opt.additionalCharge || opt.option?.additional_charge || 0), 0) || 0) * item.quantity).toFixed(2)}
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </article>
         <article className="rounded-3xl bg-white p-6 shadow space-y-4">

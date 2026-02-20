@@ -16,7 +16,7 @@ const statusPills = {
   PAYMENT_AUTHORIZED: 'bg-blue-100 text-blue-700',
   IN_PREPARATION: 'bg-amber-100 text-amber-800',
   READY: 'bg-emerald-100 text-emerald-700',
-  IN_ROUTE: 'bg-purple-100 text-purple-700',
+  ON_ROUTE: 'bg-purple-100 text-purple-700',
   DELIVERED: 'bg-green-100 text-green-700',
   COMPLETED: 'bg-green-200 text-green-800',
   CANCELED: 'bg-red-100 text-red-700',
@@ -37,7 +37,7 @@ const pipelineKeyForStatus = (status) => {
       return 'preparando';
     case 'READY':
       return 'pronto';
-    case 'IN_ROUTE':
+    case 'ON_ROUTE':
     case 'DELIVERED':
     case 'COMPLETED':
     case 'CANCELED':
@@ -55,8 +55,8 @@ const nextStatus = (current) => {
     case 'IN_PREPARATION':
       return 'READY';
     case 'READY':
-      return 'IN_ROUTE';
-    case 'IN_ROUTE':
+      return 'ON_ROUTE';
+    case 'ON_ROUTE':
       return 'DELIVERED';
     case 'DELIVERED':
       return 'COMPLETED';
@@ -343,7 +343,10 @@ const Orders = () => {
                                   <div className="mt-2 text-xs text-gray-600 space-y-1">
                                     {item.options.map((opt) => (
                                       <div key={opt.id} className="flex items-center justify-between">
-                                        <span>- {opt.option?.name || opt.option_name_snapshot}</span>
+                                        <span className="text-sm font-medium text-gray-800">
+                                          + {opt.groupName ? `${opt.groupName}: ` : ''}
+                                          {opt.option?.name || opt.option_name_snapshot}
+                                        </span>
                                         <span>{money(opt.option?.additional_charge ?? opt.additional_charge ?? 0)}</span>
                                       </div>
                                     ))}
