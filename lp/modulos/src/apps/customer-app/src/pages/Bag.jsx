@@ -53,15 +53,20 @@ const Bag = () => {
     loadActiveAddresses();
   }, [user]);
 
-  const addressList =
+  const baseAddresses =
     activeAddresses && activeAddresses.length > 0 ? activeAddresses : addresses;
 
-  const selectedAddress = maps.addressMap[cart.address_id] || addressList[0];
+  const addressList = Array.isArray(baseAddresses)
+    ? baseAddresses.filter((addr) => addr.active === undefined || addr.active === null || addr.active === true)
+    : [];
 
-  const handleCheckout = () => {
-    const orderId = placeOrder();
+  const selectedAddress =
+    addressList.find((addr) => addr.id === cart.address_id) || addressList[0];
+
+  const handleCheckout = async () => {
+    const orderId = await placeOrder();
     if (orderId) {
-      navigate(`/app/pedidos/${orderId}`);
+      navigate('/app/pedidos');
     }
   };
 
