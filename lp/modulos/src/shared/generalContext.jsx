@@ -1501,6 +1501,7 @@ export const StorefrontProvider = ({ children }) => {
       saveAddress,
       deleteAddress,
       placeOrder,
+      reloadOrders: loadData,
       updateTenant: async (partial) => {
         dispatch({ type: actionMap.UPDATE_TENANT, payload: partial });
         
