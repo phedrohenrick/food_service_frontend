@@ -18,7 +18,15 @@ const statusPills = {
 };
 
 const Orders = () => {
-  const { orders, getOrderDetailed } = useStorefront();
+  const { orders, getOrderDetailed, reloadOrders } = useStorefront();
+
+  React.useEffect(() => {
+    reloadOrders();
+    const intervalId = setInterval(() => {
+      reloadOrders();
+    }, 10000);
+    return () => clearInterval(intervalId);
+  }, [reloadOrders]);
 
   const sortedOrders = React.useMemo(() => {
     return [...orders].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));

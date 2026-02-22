@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Button, Input, Modal } from '../../../../shared/components/ui';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
 
@@ -12,7 +12,7 @@ const pipelineStyles = {
 
 // Estilos para status atuais (último status do pedido)
 const statusPills = {
-  CREATED: 'bg-gray-100 text-gray-700',
+  CREATED: 'bg-green-100 text-green-800 border border-green-400',
   PAYMENT_AUTHORIZED: 'bg-blue-100 text-blue-700',
   IN_PREPARATION: 'bg-amber-100 text-amber-800',
   READY: 'bg-emerald-100 text-emerald-700',
@@ -66,7 +66,7 @@ const nextStatus = (current) => {
 };
 
 const Orders = () => {
-  const { orders, user, maps, getOrderDetailed, addOrderStatus, updateOrderStatus } = useStorefront();
+  const { orders, user, maps, getOrderDetailed, addOrderStatus, updateOrderStatus, reloadOrders } = useStorefront();
   const [filter, setFilter] = useState('todos');
   const [expanded, setExpanded] = useState(null);
   const [dayClosed, setDayClosed] = useState(false);
@@ -81,6 +81,15 @@ const Orders = () => {
   });
   const [exportSending, setExportSending] = useState(false);
   const [exportMessage, setExportMessage] = useState('');
+
+  useEffect(() => {
+    if (!reloadOrders) return;
+    reloadOrders();
+    const intervalId = setInterval(() => {
+      reloadOrders();
+    }, 5000);
+    return () => clearInterval(intervalId);
+  }, [reloadOrders]);
 
   const isToday = (iso) => {
     const d = new Date(iso);
@@ -266,7 +275,14 @@ const Orders = () => {
                         <p className="text-xs text-gray-500">{user?.phone}</p>
                       </div>
                       <div className="text-right">
-                        <span className={`text-xs px-3 py-1 rounded-full ${statusClass}`}>{lastStatus}</span>
+                        <div className="relative inline-flex items-center justify-center">
+                          {lastStatus === 'CREATED' && (
+                            <span className="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-60 animate-ping"></span>
+                          )}
+                          <span className={`relative text-xs px-3 py-1 rounded-full ${statusClass}`}>
+                            {lastStatus}
+                          </span>
+                        </div>
                         <p className="text-[10px] text-gray-500 mt-1">{lastAt ? fmtDate(lastAt) : ''}</p>
                       </div>
                     </div>
