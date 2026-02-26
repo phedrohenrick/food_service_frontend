@@ -13,7 +13,6 @@ const statusLabel = {
   WAITING_FOR_COLLECTION: 'Aguardando coleta',
   ON_ROUTE: 'Em rota de entrega',
   DELIVERED: 'Entregue',
-  COMPLETED: 'Concluído',
   CANCELED: 'Cancelado',
 };
 
@@ -54,7 +53,7 @@ const OrderDetails = () => {
     ? liveTimeline
     : (detailed?.timeline || []);
 
-  const orderedSteps = ['CREATED','IN_PREPARATION','READY','ON_ROUTE','DELIVERED','COMPLETED'];
+  const orderedSteps = ['CREATED','ACCEPTED','IN_PREPARATION','READY','ON_ROUTE','DELIVERED'];
   const currentStatus = timeline?.[timeline.length - 1]?.status || 'CREATED';
 
   if (!order) {
@@ -102,35 +101,45 @@ const OrderDetails = () => {
             </p>
           </header>
           <div className="space-y-4">
-            {orderedSteps.map((st, index) => (
-              <div key={st} className="flex gap-4">
-                <div className="flex flex-col items-center">
-                  <div className="relative flex items-center justify-center h-4 w-4">
-                    {st === currentStatus && (
-                      <span className="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75 animate-ping"></span>
+            {orderedSteps.map((st, index) => {
+              const entry = timeline?.find((t) => t.status === st);
+              const timeText = entry?.timestamp
+                ? new Intl.DateTimeFormat('pt-BR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  }).format(new Date(entry.timestamp))
+                : st === currentStatus
+                  ? 'Atual'
+                  : '';
+
+              return (
+                <div key={st} className="flex gap-4">
+                  <div className="flex flex-col items-center">
+                    <div className="relative flex items-center justify-center h-4 w-4">
+                      {st === currentStatus && (
+                        <span className="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75 animate-ping"></span>
+                      )}
+                      <span
+                        className={`relative inline-flex h-4 w-4 rounded-full border-4 ${
+                          st === currentStatus ? 'border-green-500 bg-white' : 'border-gray-200'
+                        }`}
+                      />
+                    </div>
+                    {index < orderedSteps.length - 1 && (
+                      <span className="h-12 w-px bg-gradient-to-b from-gray-300 to-transparent" />
                     )}
-                    <span
-                      className={`relative inline-flex h-4 w-4 rounded-full border-4 ${
-                        st === currentStatus ? 'border-green-500 bg-white' : 'border-gray-200'
-                      }`}
-                    />
                   </div>
-                  {index < orderedSteps.length - 1 && (
-                    <span className="h-12 w-px bg-gradient-to-b from-gray-300 to-transparent" />
-                  )}
+                  <div className="flex-1">
+                    <p className="font-semibold text-gray-900">
+                      {statusLabel[st] || st}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {timeText}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-gray-900">
-                    {statusLabel[st] || st}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {st === currentStatus && timeline?.[timeline.length - 1]?.timestamp
-                      ? new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(new Date(timeline[timeline.length - 1].timestamp))
-                      : st === currentStatus ? 'Atual' : ''}
-                  </p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </article>
         <article className="space-y-4 rounded-3xl bg-white p-6 shadow">
@@ -138,7 +147,7 @@ const OrderDetails = () => {
           <div className="space-y-2 text-sm text-gray-600">
             <div className="flex justify-between">
               <span>Subtotal</span>
-              <span>R$ {order.subtotal.toFixed(2)}</span>
+              <span >R$ {order.subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
               <span>Serviço</span>
@@ -151,7 +160,7 @@ const OrderDetails = () => {
           </div>
           <div className="flex items-center justify-between border-t border-gray-100 pt-4">
             <span className="text-base font-semibold text-gray-900">Total</span>
-            <span className="text-3xl font-bold text-[var(--accent-contrast)]">
+            <span className="text-3xl font-bold text-gray-900">
               R$ {order.total.toFixed(2)}
             </span>
           </div>
