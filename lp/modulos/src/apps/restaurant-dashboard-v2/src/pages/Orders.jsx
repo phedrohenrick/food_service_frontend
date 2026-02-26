@@ -14,6 +14,7 @@ const pipelineStyles = {
 const statusPills = {
   CREATED: 'bg-green-100 text-green-800 border border-green-400',
   PAYMENT_AUTHORIZED: 'bg-blue-100 text-blue-700',
+  ACCEPTED: 'bg-blue-100 text-blue-700',
   IN_PREPARATION: 'bg-amber-100 text-amber-800',
   READY: 'bg-emerald-100 text-emerald-700',
   ON_ROUTE: 'bg-purple-100 text-purple-700',
@@ -32,6 +33,7 @@ const pipelineKeyForStatus = (status) => {
   switch (status) {
     case 'CREATED':
     case 'PAYMENT_AUTHORIZED':
+    case 'ACCEPTED':
       return 'novo';
     case 'IN_PREPARATION':
       return 'preparando';
@@ -50,7 +52,9 @@ const pipelineKeyForStatus = (status) => {
 const nextStatus = (current) => {
   switch (current) {
     case 'CREATED':
+      return 'ACCEPTED';
     case 'PAYMENT_AUTHORIZED':
+    case 'ACCEPTED':
       return 'IN_PREPARATION';
     case 'IN_PREPARATION':
       return 'READY';
@@ -66,7 +70,7 @@ const nextStatus = (current) => {
 };
 
 const Orders = () => {
-  const { orders, user, maps, getOrderDetailed, addOrderStatus, updateOrderStatus, reloadOrders } = useStorefront();
+  const { orders, user, tenant, updateTenant, maps, getOrderDetailed, addOrderStatus, updateOrderStatus, reloadOrders } = useStorefront();
   const [filter, setFilter] = useState('todos');
   const [expanded, setExpanded] = useState(null);
   const [dayClosed, setDayClosed] = useState(false);
@@ -174,6 +178,45 @@ const Orders = () => {
 
   return (
     <div className="space-y-6">
+      {/* Banner de Status da Loja */}
+      <div
+        className={`rounded-2xl border p-4 flex flex-wrap items-center justify-between gap-4 transition-colors ${
+          tenant?.is_open
+            ? 'bg-green-50 border-green-200'
+            : 'bg-red-50 border-red-200'
+        }`}
+      >
+        <div>
+          <h2
+            className={`text-lg font-semibold ${
+              tenant?.is_open ? 'text-green-800' : 'text-red-800'
+            }`}
+          >
+            {tenant?.is_open ? 'Loja aberta' : 'Loja fechada'}
+          </h2>
+          <p
+            className={`text-sm ${
+              tenant?.is_open ? 'text-green-600' : 'text-red-600'
+            }`}
+          >
+            {tenant?.is_open
+              ? 'Recebendo pedidos em tempo real'
+              : 'Não está recebendo novos pedidos'}
+          </p>
+        </div>
+        <Button
+          variant="ghost"
+          className={`border ${
+            tenant?.is_open
+              ? 'border-green-200 text-green-700 hover:bg-green-100'
+              : 'border-red-200 text-red-700 hover:bg-red-100'
+          }`}
+          onClick={() => updateTenant({ is_open: !tenant?.is_open })}
+        >
+          {tenant?.is_open ? 'Fechar loja' : 'Abrir loja'}
+        </Button>
+      </div>
+
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="text-sm text-gray-500">Pedidos em andamento</p>
@@ -353,7 +396,7 @@ const Orders = () => {
                                   <p className="text-[10px] text-amber-700">{item.highlights.join(', ')}</p>
                                 )}
                                 {item.notes && (
-                                  <p className="text-xs text-gray-600 mt-1">Obs: {item.notes}</p>
+                                  <p className="text-xs text-gray-700 mt-1">Observação: {item.notes}</p>
                                 )}
                                 {(item.options || []).length > 0 && (
                                   <div className="mt-2 text-xs text-gray-600 space-y-1">
@@ -403,7 +446,7 @@ const Orders = () => {
                             className="flex-1 min-w-[160px]"
                             onClick={() => updateOrderStatus(order.id, nextStatus(lastStatus))}
                           >
-                            Avançar etapa
+                            {lastStatus === 'CREATED' ? 'Aceitar pedido' : 'Avançar etapa'}
                           </Button>
                           <Button
                             size="sm"
