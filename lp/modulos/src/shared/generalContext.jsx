@@ -404,52 +404,26 @@ const reducer = (state, action) => {
       const { itemId, quantity = 1, notes = '', selectedOptionIds = [] } = action.payload;
       if (quantity <= 0) return state;
 
-      const existing = state.cartItems.find(
-        (ci) => ci.item_id === itemId && ci.cart_id === state.cart.id
-      );
+      const newId = `ci-${Date.now()}-${state.cartItems.length}`;
 
-      let cartItems = [...state.cartItems];
-      let cartItemOptions = [...state.cartItemOptions];
-
-      if (existing) {
-        cartItems = cartItems.map((ci) =>
-          ci.id === existing.id
-            ? { ...ci, quantity: ci.quantity + quantity }
-            : ci
-        );
-
-        selectedOptionIds.forEach((optionId) => {
-          const already = cartItemOptions.some(
-            (cio) =>
-              cio.cart_item_id === existing.id && cio.option_id === optionId
-          );
-          if (!already) {
-            cartItemOptions.push({
-              id: `cio-${Date.now()}-${optionId}`,
-              cart_item_id: existing.id,
-              option_id: optionId,
-            });
-          }
-        });
-      } else {
-        const newId = `ci-${Date.now()}`;
-        cartItems.push({
+      const cartItems = [
+        ...state.cartItems,
+        {
           id: newId,
           cart_id: state.cart.id,
           item_id: itemId,
           quantity,
           notes,
-        });
+        },
+      ];
 
-        cartItemOptions = [
-          ...cartItemOptions,
-          ...selectedOptionIds.map((optionId) => ({
-            id: `cio-${Date.now()}-${optionId}`,
-            cart_item_id: newId,
-            option_id: optionId,
-          })),
-        ];
-      }
+      const newOptions = selectedOptionIds.map((optionId, index) => ({
+        id: `cio-${Date.now()}-${optionId}-${index}`,
+        cart_item_id: newId,
+        option_id: optionId,
+      }));
+
+      const cartItemOptions = [...state.cartItemOptions, ...newOptions];
 
       return { ...state, cartItems, cartItemOptions };
     }
@@ -969,7 +943,9 @@ export const StorefrontProvider = ({ children }) => {
       const optionGroups = Array.isArray(rawOptionGroups) ? rawOptionGroups.map(g => ({
           ...g,
           item_id: g.itemId || g.item_id,
-          is_required: g.isRequired !== undefined ? g.isRequired : g.is_required,
+          is_required: g.isRequired !== undefined ? g.isRequired : g.is_required ?? g.required,
+          min: g.min ?? g.minOptions ?? 0,
+          max: g.max ?? g.maxOptions ?? 0,
       })) : [];
       
       // Normalize Options
@@ -1121,10 +1097,18 @@ export const StorefrontProvider = ({ children }) => {
       .sort((a, b) => a.name.localeCompare(b.name));
 
   const getOptionGroupsForItem = (itemId) =>
-    state.optionGroups.filter((g) => g.item_id === itemId);
+    state.optionGroups.filter(
+      (g) =>
+        g.item_id === itemId &&
+        (g.active === undefined || g.active === null || g.active === true)
+    );
 
   const getOptionsForGroup = (groupId) =>
-    state.options.filter((o) => o.group_id === groupId);
+    state.options.filter(
+      (o) =>
+        o.group_id === groupId &&
+        (o.active === undefined || o.active === null || o.active === true)
+    );
 
   const getCartDetailedItems = () => {
     return state.cartItems.map((ci) => {
@@ -1227,7 +1211,7 @@ export const StorefrontProvider = ({ children }) => {
       const cartId = await getEffectiveCartId();
       if (!cartId) throw new Error("Cart ID not available");
 
-      await api.post(`/cart/items`, {
+      const res = await api.post(`/cart/items`, {
         cartId,
         itemId,
         quantity,
@@ -1238,6 +1222,51 @@ export const StorefrontProvider = ({ children }) => {
             }))
           : [],
       });
+      const data = res?.data ?? res;
+      if (data && typeof data === 'object') {
+        const normalizedCart = {
+          id: data.id,
+          user_id: data.userId || data.user_id,
+          tenant_id: data.tenantId || data.tenant_id,
+          address_id: data.addressId || data.address_id,
+          subtotal: data.subtotal ?? 0,
+          delivery_fee: data.deliveryFee ?? data.delivery_fee ?? 0,
+          total: data.total ?? 0,
+          payment_channel: data.paymentChannel || data.payment_channel,
+          change: data.changeFor || data.change,
+          notes: data.notes ?? '',
+          discount: data.discount ?? 0,
+        };
+        let cartItems = [];
+        let cartItemOptions = [];
+        if (Array.isArray(data.items)) {
+          cartItems = data.items.map((ci) => ({
+            id: ci.id,
+            cart_id: ci.cartId || ci.cart_id,
+            item_id: ci.itemId || ci.item_id,
+            quantity: ci.quantity,
+            notes: ci.notes,
+          }));
+          cartItemOptions = data.items.flatMap((ci) => {
+            if (Array.isArray(ci.selectedOptions)) {
+              return ci.selectedOptions.map((opt) => ({
+                id: opt.id,
+                cart_item_id: ci.id,
+                option_id: opt.optionId || opt.option_id,
+              }));
+            }
+            return [];
+          });
+        }
+        dispatch({
+          type: actionMap.SET_DATA,
+          payload: {
+            cart: normalizedCart,
+            cartItems,
+            cartItemOptions,
+          },
+        });
+      }
     } catch (error) {
       console.error('Erro ao adicionar ao carrinho:', error);
       // TODO: Reverter em caso de erro crítico
@@ -1254,6 +1283,8 @@ export const StorefrontProvider = ({ children }) => {
       const cartId = await getEffectiveCartId();
       if (!cartId) return;
 
+      const isNumeric = typeof cartItemId === 'number' || (/^\d+$/).test(String(cartItemId));
+      if (!isNumeric) return;
       await api.put(`/cart/items/${cartItemId}?cartId=${cartId}`, { quantity });
     } catch (error) {
       console.error('Erro ao atualizar item do carrinho:', error);
@@ -1270,6 +1301,8 @@ export const StorefrontProvider = ({ children }) => {
       const cartId = await getEffectiveCartId();
       if (!cartId) return;
 
+      const isNumeric = typeof cartItemId === 'number' || (/^\d+$/).test(String(cartItemId));
+      if (!isNumeric) return;
       await api.delete(`/cart/items/${cartItemId}?cartId=${cartId}`);
     } catch (error) {
       console.error('Erro ao remover item do carrinho:', error);
@@ -1654,9 +1687,9 @@ export const StorefrontProvider = ({ children }) => {
               id: group.id,
               itemId: group.item_id,
               name: group.name,
-              isRequired: group.is_required,
-              min: group.min,
-              max: group.max
+              required: group.is_required ?? group.required ?? false,
+              minOptions: group.min,
+              maxOptions: group.max
           };
              const res = await api.post('/option-groups/create', payload);
              const nextGroup = {
