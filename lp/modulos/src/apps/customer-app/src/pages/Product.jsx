@@ -16,30 +16,74 @@ const Product = () => {
   const [selectedOptions, setSelectedOptions] = useState({}); // { groupId: [optionId] }
   const [notes, setNotes] = useState('');
   const [feedback, setFeedback] = useState('');
+  const [showToast, setShowToast] = useState(false);
   const [added, setAdded] = useState(false);
+  const [validationError, setValidationError] = useState('');
 
-  // Resolve option groups (fallback to context if nested data missing)
+  // Resolve option groups (considerando apenas grupos/opções ativos)
   const optionGroups = useMemo(() => {
     if (!product) return [];
-    
-    // 1. Try nested DTO structure (camelCase from backend)
-    if (product.optionGroups && product.optionGroups.length > 0) {
-      return product.optionGroups;
-    }
 
-    // 2. Fallback to context data (snake_case normalization)
-    const contextGroups = getOptionGroupsForItem(product.id);
-    return contextGroups.map(g => ({
-      ...g,
-      // Normalize to match component expectations
-      required: g.is_required, 
-      minOptions: g.min,
-      maxOptions: g.max,
-      options: getOptionsForGroup(g.id).map(o => ({
-        ...o,
-        additionalPrice: o.additional_charge
-      }))
-    }));
+    const fromNested = () => {
+      if (!product.optionGroups || product.optionGroups.length === 0) return [];
+
+      const groups = product.optionGroups.map((g) => {
+        const rawOptions = Array.isArray(g.options) ? g.options : [];
+        const filteredOptions = rawOptions.filter(
+          (o) =>
+            o.active === undefined || o.active === null || o.active === true
+        );
+
+        return {
+          ...g,
+          required:
+            g.required ??
+            g.isRequired ??
+            g.is_required ??
+            false,
+          minOptions: g.minOptions ?? g.min ?? 0,
+          maxOptions: (g.maxOptions ?? g.max ?? filteredOptions.length) || 0,
+          options: filteredOptions.map((o) => ({
+            ...o,
+            additionalPrice:
+              o.additionalPrice !== undefined
+                ? o.additionalPrice
+                : o.additional_charge || 0,
+          })),
+        };
+      });
+
+      return groups.filter(
+        (g) => Array.isArray(g.options) && g.options.length > 0
+      );
+    };
+
+    const fromContext = () => {
+      const contextGroups = getOptionGroupsForItem(product.id);
+      const groups = contextGroups.map((g) => {
+        const opts = getOptionsForGroup(g.id).map((o) => ({
+          ...o,
+          additionalPrice: o.additional_charge,
+        }));
+
+        return {
+          ...g,
+          required: g.is_required,
+          minOptions: g.min,
+          maxOptions: g.max,
+          options: opts,
+        };
+      });
+
+      return groups.filter(
+        (g) => Array.isArray(g.options) && g.options.length > 0
+      );
+    };
+
+    const nestedGroups = fromNested();
+    if (nestedGroups.length > 0) return nestedGroups;
+
+    return fromContext();
   }, [product, getOptionGroupsForItem, getOptionsForGroup]);
 
   // Calculate total price including options
@@ -88,7 +132,9 @@ const Product = () => {
       if (group.required) {
         const selectedCount = (selectedOptions[group.id] || []).length;
         if (selectedCount < (group.minOptions || 1)) {
-          alert(`Selecione pelo menos ${group.minOptions || 1} opção(ões) em "${group.name}"`);
+          setValidationError(
+            `Selecione pelo menos ${group.minOptions || 1} opção(ões) em "${group.name}".`
+          );
           return false;
         }
       }
@@ -102,8 +148,9 @@ const Product = () => {
     const flattenedOptions = Object.values(selectedOptions).flat();
     addToCart(product.id, quantity, notes, flattenedOptions);
     setFeedback(`${quantity}x ${product.name} adicionado à sacola`);
+    setShowToast(true);
     setAdded(true);
-    setTimeout(() => setFeedback(''), 3000);
+    setTimeout(() => setShowToast(false), 3000);
   };
 
   if (!product) {
@@ -124,7 +171,25 @@ const Product = () => {
   }
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[1.5fr_1fr]">
+    <div className="relative grid gap-8 lg:grid-cols-[1.5fr_1fr]">
+      {validationError && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+            <h3 className="mb-2 text-lg font-bold text-gray-900">Selecione as opções obrigatórias</h3>
+            <p className="mb-6 text-sm text-gray-600">{validationError}</p>
+            <div className="flex justify-end">
+              <Button onClick={() => setValidationError('')}>Entendi</Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showToast && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+          <div className="rounded-2xl bg-green-600 text-white px-5 py-3 shadow-2xl text-sm font-semibold">
+            {feedback}
+          </div>
+        </div>
+      )}
       <section className="rounded-3xl bg-white p-6 shadow space-y-6">
         <div className="overflow-hidden rounded-2xl">
           <img
@@ -226,17 +291,21 @@ const Product = () => {
               </div>
            </div>
            
-           <Button 
-             className="w-full h-12 text-lg"
+          <Button 
+             className="w-full h-12 text-lg !text-[var(--accent-contrast)]"
              onClick={handleAddToCart}
            >
              Adicionar • R$ {totalPrice.toFixed(2)}
            </Button>
-           
-           {feedback && (
-             <p className="mt-3 text-center text-sm font-medium text-[var(--accent)] animate-pulse">
-               {feedback}
-             </p>
+          
+           {added && (
+             <Button
+               variant="ghost"
+               className="w-full mt-3 border border-green-200 text-green-700"
+               onClick={() => navigate('/app')}
+             >
+               Continuar comprando
+             </Button>
            )}
         </div>
       </div>
