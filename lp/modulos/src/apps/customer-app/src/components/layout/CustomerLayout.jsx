@@ -136,13 +136,21 @@ const CustomerLayout = ({ children }) => {
               <Link
                 key={item.label}
                 to={item.to}
-                className={`flex flex-col items-center gap-1 py-3 transition ${
+                className={`relative flex flex-col items-center gap-1 py-3 transition ${
                   active
                     ? 'text-[var(--accent-contrast)] font-semibold'
                     : 'text-[var(--accent-contrast)]/80 hover:text-[var(--accent-contrast)]'
                 }`}
               >
-                <span className="text-lg">{item.icon}</span>
+                <span className="relative text-lg">
+                  {item.icon}
+                  {item.label === 'Sacola' && showCardapioHeader && cartItems.length > 0 && (
+                    <span className="pointer-events-none absolute -top-1 -right-1 flex items-center justify-center">
+                      <span className="absolute inline-flex h-3 w-3 animate-ping rounded-full bg-[var(--accent-contrast)] opacity-75" />
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--accent-contrast)]" />
+                    </span>
+                  )}
+                </span>
                 {item.label}
               </Link>
             );
