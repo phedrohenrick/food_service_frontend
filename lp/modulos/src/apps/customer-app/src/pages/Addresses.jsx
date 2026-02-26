@@ -131,7 +131,7 @@ const Addresses = () => {
             }`}
           >
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-900">{address.label || 'Endereço'}</h2>
+              <h2 className="text-xl font-semibold text-gray-900">{address.label || "Endereço"}</h2>
               <div className="flex gap-2">
                 
                 <Link
