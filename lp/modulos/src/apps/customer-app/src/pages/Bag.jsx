@@ -25,6 +25,7 @@ const Bag = () => {
   } = useStorefront();
 
   const [activeAddresses, setActiveAddresses] = React.useState([]);
+  const [addressAlertOpen, setAddressAlertOpen] = React.useState(false);
 
   React.useEffect(() => {
     const loadActiveAddresses = async () => {
@@ -53,17 +54,30 @@ const Bag = () => {
     loadActiveAddresses();
   }, [user]);
 
-  const baseAddresses =
-    activeAddresses && activeAddresses.length > 0 ? activeAddresses : addresses;
+  const baseAddresses = Array.isArray(activeAddresses) ? activeAddresses : [];
 
-  const addressList = Array.isArray(baseAddresses)
+  const addressList = baseAddresses
     ? baseAddresses.filter((addr) => addr.active === undefined || addr.active === null || addr.active === true)
     : [];
 
   const selectedAddress =
-    addressList.find((addr) => addr.id === cart.address_id) || addressList[0];
+    cart.address_id != null
+      ? addressList.find((addr) => addr.id === cart.address_id) || null
+      : null;
+
+  const getPaymentChannelLabel = (channel) => {
+    const normalized = String(channel || '').toLowerCase();
+    if (normalized === 'card') return 'Cartão';
+    if (normalized === 'pix') return 'Pix';
+    if (normalized === 'cash') return 'Dinheiro';
+    return channel;
+  };
 
   const handleCheckout = async () => {
+    if (!addressList.length && cart.address_id == null) {
+      setAddressAlertOpen(true);
+      return;
+    }
     const orderId = await placeOrder();
     if (orderId) {
       navigate('/app/pedidos');
@@ -88,22 +102,51 @@ const Bag = () => {
   }
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[1.7fr_1fr]">
+    <>
+      {addressAlertOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <h3 className="mb-2 text-xl font-bold text-gray-900">Endereço obrigatório</h3>
+            <p className="mb-6 text-gray-600">
+              Cadastre um endereço de entrega ativo para finalizar seu pedido.
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setAddressAlertOpen(false)}
+              >
+                Fechar
+              </Button>
+              <Link to="/app/enderecos">
+                <Button onClick={() => setAddressAlertOpen(false)}>
+                  Cadastrar endereço
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="grid gap-8 lg:grid-cols-[1.7fr_1fr]">
       <section className="space-y-6">
         <article className="rounded-3xl bg-white p-6 shadow">
           <header className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-400 uppercase tracking-[0.3em]">Endereço</p>
               <h2 className="text-xl font-semibold text-gray-900">
-                {selectedAddress?.label || 'Selecione um endereço'}
+                {cart.address_id == null
+                  ? 'Retirar na loja'
+                  : selectedAddress?.label || 'Selecione um endereço'}
               </h2>
             </div>
-            <Link to="/app/enderecos" className="text-sm font-semibold text-[var(--accent)]">
+            <Link to="/app/enderecos" className="text-sm font-semibold text-gray-800">
               Gerenciar
             </Link>
           </header>
           <div className="mt-3 rounded-2xl border border-gray-100 p-4 text-sm text-gray-600">
-            {selectedAddress ? (
+            {cart.address_id == null ? (
+              <p>Você escolheu retirar o pedido na loja.</p>
+            ) : selectedAddress ? (
               <>
                 <p>
                   {selectedAddress?.street}, {selectedAddress?.streetNumber || selectedAddress?.street_number} ·{' '}
@@ -125,18 +168,29 @@ const Bag = () => {
               </div>
             )}
             <div className="mt-3 flex flex-wrap gap-3">
+              <button
+                type="button"
+                className={`rounded-full border px-3 py-1 text-xs ${
+                  cart.address_id == null
+                    ? 'border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-contrast)]'
+                    : 'border-gray-300 text-gray-700'
+                }`}
+                onClick={() => setCartAddress(null)}
+              >
+                Retirar na loja
+              </button>
               {addressList.map((address) => (
                 <button
                   key={address.id}
                   type="button"
                   className={`rounded-full border px-3 py-1 text-xs ${
                     cart.address_id === address.id
-                      ? 'border-[var(--accent)] text-[var(--accent)]'
-                      : 'border-gray-200 text-gray-500'
+                      ? 'border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-contrast)]'
+                      : 'border-gray-300 text-gray-700'
                   }`}
                   onClick={() => setCartAddress(address.id)}
                 >
-                  {address.street}, {address.streetNumber || address.street_number}
+                  {address.street}, {address.streetNumber || address.street_number} • {address.label}
                 </button>
               ))}
             </div>
@@ -160,7 +214,7 @@ const Bag = () => {
                     : 'border-gray-200 text-gray-500 hover:text-gray-900'
                 }`}
               >
-                {channel}
+                {getPaymentChannelLabel(channel)}
               </button>
             ))}
           </div>
@@ -266,24 +320,23 @@ const Bag = () => {
             })}
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">
-              Observações para a cozinha
-            </label>
-            <textarea
-              value={cart.notes}
-              onChange={(event) => setCartNotes(event.target.value)}
-              placeholder="Ex: tirar cebola, mandar molho à parte..."
-              className="w-full rounded-2xl border border-gray-200 px-4 py-3 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
-              rows={3}
-            />
-          </div>
+
         </article>
       </section>
 
       <aside className="rounded-3xl bg-white p-6 shadow space-y-4 h-fit">
         <h2 className="text-lg font-semibold text-gray-900">Resumo do pedido</h2>
-        <div className="space-y-2 text-sm text-gray-600">
+        <div className="space-y-2 text-sm text-gray-700">
+          {detailedItems.map((item) => (
+            <div key={item.id} className="flex justify-between">
+              <span>
+                {item.quantity}x {item.item?.name}
+              </span>
+              <span>R$ {Number(item.line_total ?? 0).toFixed(2)}</span>
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 space-y-2 text-sm text-gray-600">
           <div className="flex justify-between">
             <span>Subtotal</span>
             <span>R$ {(cartTotals.subtotal ?? 0).toFixed(2)}</span>
@@ -316,7 +369,8 @@ const Bag = () => {
           Ao finalizar, você será direcionado para acompanhar o status em tempo real.
         </p>
       </aside>
-    </div>
+      </div>
+    </>
   );
 };
 
