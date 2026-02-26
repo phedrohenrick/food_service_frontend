@@ -447,60 +447,193 @@ const Menu = () => {
             placeholder="https://..."
           />
 
-          {/* Grupos de opções */}
           <div className="mt-4 space-y-3">
             <div className="flex items-center justify-between">
               <h4 className="font-medium text-gray-900">Grupos de opções</h4>
-              <Button size="sm" variant="ghost" className="border border-gray-200" onClick={() => setGroupsForm([...groupsForm, { name: '', is_required: false, min: 0, max: 1, options: [] }])}>Adicionar grupo</Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="border border-gray-200"
+                onClick={() =>
+                  setGroupsForm([
+                    ...groupsForm,
+                    { name: '', is_required: false, min: 0, max: 1, options: [] },
+                  ])
+                }
+              >
+                Adicionar grupo
+              </Button>
             </div>
             {groupsForm.map((grp, gi) => (
-              <div key={gi} className="border border-gray-200 rounded-xl p-3 space-y-3">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <Input label="Nome do grupo" value={grp.name} onChange={(e) => {
-                    const next = [...groupsForm]; next[gi].name = e.target.value; setGroupsForm(next);
-                  }} />
-                  <div className="flex items-end gap-2">
-                    <label className="text-sm text-gray-700">Obrigatório</label>
-                    <input type="checkbox" checked={!!grp.is_required} onChange={(e) => { const next = [...groupsForm]; next[gi].is_required = e.target.checked; setGroupsForm(next); }} />
+              <div key={gi} className="border border-gray-200 rounded-xl p-4 space-y-3">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                  <div className="flex-1">
+                    <Input
+                      label="Nome do grupo"
+                      value={grp.name}
+                      onChange={(e) => {
+                        const next = [...groupsForm];
+                        next[gi].name = e.target.value;
+                        setGroupsForm(next);
+                      }}
+                    />
                   </div>
-                  <Input label="Mín" type="number" value={grp.min} onChange={(e) => { const next = [...groupsForm]; next[gi].min = Number(e.target.value || 0); setGroupsForm(next); }} />
-                  <Input label="Máx" type="number" value={grp.max} onChange={(e) => { const next = [...groupsForm]; next[gi].max = Number(e.target.value || 1); setGroupsForm(next); }} />
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = [...groupsForm];
+                        next[gi].is_required = !next[gi].is_required;
+                        setGroupsForm(next);
+                      }}
+                      className={`inline-flex items-center gap-2 px-3 py-2 rounded-full border text-xs font-medium transition-colors ${
+                        grp.is_required
+                          ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                          : 'border-gray-200 bg-gray-50 text-gray-500'
+                      }`}
+                    >
+                      <span>Obrigatório</span>
+                      <span
+                        className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
+                          grp.is_required ? 'bg-emerald-500' : 'bg-gray-300'
+                        }`}
+                      >
+                        <span
+                          className={`h-3 w-3 rounded-full bg-white shadow transform transition-transform ${
+                            grp.is_required ? 'translate-x-3' : 'translate-x-0'
+                          }`}
+                        />
+                      </span>
+                    </button>
+                    <div className="flex items-center gap-2">
+                      <div className="w-20">
+                        <Input
+                          label="Mín"
+                          type="number"
+                          value={grp.min}
+                          onChange={(e) => {
+                            const next = [...groupsForm];
+                            next[gi].min = Number(e.target.value || 0);
+                            setGroupsForm(next);
+                          }}
+                        />
+                      </div>
+                      <span className="text-xs text-gray-400">a</span>
+                      <div className="w-20">
+                        <Input
+                          label="Máx"
+                          type="number"
+                          value={grp.max}
+                          onChange={(e) => {
+                            const next = [...groupsForm];
+                            next[gi].max = Number(e.target.value || 1);
+                            setGroupsForm(next);
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="ml-1 inline-flex items-center justify-center h-9 w-9 rounded-full border border-gray-200 text-gray-400 hover:text-red-600 hover:border-red-200 transition-colors"
+                      onClick={async () => {
+                        if (grp.id) {
+                          await deleteOptionGroup(grp.id);
+                        }
+                        const next = [...groupsForm];
+                        next.splice(gi, 1);
+                        setGroupsForm(next);
+                      }}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M3 6h18" />
+                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Opções</span>
-                    <Button size="sm" variant="ghost" className="border border-gray-200" onClick={() => {
-                      const next = [...groupsForm];
-                      next[gi].options = [...(next[gi].options || []), { name: '', additional_charge: 0 }];
-                      setGroupsForm(next);
-                    }}>Adicionar opção</Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="border border-gray-200"
+                      onClick={() => {
+                        const next = [...groupsForm];
+                        next[gi].options = [
+                          ...(next[gi].options || []),
+                          { name: '', additional_charge: 0 },
+                        ];
+                        setGroupsForm(next);
+                      }}
+                    >
+                      Adicionar opção
+                    </Button>
                   </div>
                   {(grp.options || []).map((opt, oi) => (
                     <div key={oi} className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <Input label="Nome" value={opt.name} onChange={(e) => { const next = [...groupsForm]; next[gi].options[oi].name = e.target.value; setGroupsForm(next); }} />
-                      <Input label="Adicional (R$)" type="number" value={opt.additional_charge} onChange={(e) => { const next = [...groupsForm]; next[gi].options[oi].additional_charge = e.target.value; setGroupsForm(next); }} />
-                      <div className="flex items-end">
-                        <Button size="sm" variant="ghost" className="border border-gray-200 text-red-600" onClick={async () => {
-                          if(opt.id) {
-                            await deleteOption(opt.id);
-                          }
-                          const next = [...groupsForm]; 
-                          next[gi].options.splice(oi, 1); 
-                          setGroupsForm(next); 
-                        }}>Remover</Button>
+                      <Input
+                        label="Nome"
+                        value={opt.name}
+                        onChange={(e) => {
+                          const next = [...groupsForm];
+                          next[gi].options[oi].name = e.target.value;
+                          setGroupsForm(next);
+                        }}
+                      />
+                      <Input
+                        label="Adicional (R$)"
+                        type="number"
+                        value={opt.additional_charge}
+                        onChange={(e) => {
+                          const next = [...groupsForm];
+                          next[gi].options[oi].additional_charge = e.target.value;
+                          setGroupsForm(next);
+                        }}
+                      />
+                      <div className="flex items-end justify-end">
+                        <button
+                          type="button"
+                          className="inline-flex items-center justify-center h-9 w-9 rounded-full border border-gray-200 text-gray-400 hover:text-red-600 hover:border-red-200 transition-colors"
+                          onClick={async () => {
+                            if (opt.id) {
+                              await deleteOption(opt.id);
+                            }
+                            const next = [...groupsForm];
+                            next[gi].options.splice(oi, 1);
+                            setGroupsForm(next);
+                          }}
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M3 6h18" />
+                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                          </svg>
+                        </button>
                       </div>
                     </div>
                   ))}
-                </div>
-                <div className="flex justify-end">
-                  <Button size="sm" variant="ghost" className="border border-gray-200 text-red-600" onClick={async () => { 
-                    if(grp.id) {
-                      await deleteOptionGroup(grp.id);
-                    }
-                    const next = [...groupsForm]; 
-                    next.splice(gi, 1); 
-                    setGroupsForm(next); 
-                  }}>Remover grupo</Button>
                 </div>
               </div>
             ))}
