@@ -776,13 +776,54 @@ export const StorefrontProvider = ({ children }) => {
 
   const loadData = async () => {
     try {
-      // ID fixo para demo ou pegar de configuração
-      const tenantId = 1;
-      const userId = 1; // Mock user ID for now
+      let urlSlug = null;
+      if (typeof window !== 'undefined' && window.location) {
+        const p = window.location.pathname || '';
+        let m = /^\/([^/]+)\/dashboard(\/|$)/i.exec(p);
+        if (!m) m = /^\/([^/]+)\/app(\/|$)/i.exec(p);
+        if (m && m[1]) urlSlug = m[1];
+      }
+      const slug = urlSlug || ((typeof window !== 'undefined' && window.localStorage) ? localStorage.getItem('tenantSlug') : null);
+      const authToken = (typeof window !== 'undefined' && window.localStorage)
+        ? localStorage.getItem('authToken')
+        : null;
+      const isAuthenticated = !!authToken;
 
-      // Carregamento paralelo de dados
+      let tenantId = 1;
+      let rawTenant = null;
+      if (slug) {
+        rawTenant = await api.get(`/tenants/by-slug/${slug}`).catch(() => null);
+        if (rawTenant && rawTenant.id) {
+          tenantId = rawTenant.id;
+        }
+      }
+      if (!rawTenant) {
+        rawTenant = await api.get(`/tenants/${tenantId}`).catch(() => initialTenant);
+      }
+
+      // Resolve usuário atual (se autenticado) via /users/me
+      let rawUser = null;
+      if (isAuthenticated) {
+        rawUser = await api.get(`/users/me`).catch(() => null);
+      }
+      const userId = rawUser?.id || null;
+
+      // Monta chamadas condicionais para evitar 401 e logs desnecessários
+      const addressesPromise = userId
+        ? api.get(`/user-addresses/by-user/${userId}`).catch(() => [])
+        : Promise.resolve([]);
+      // Se estivermos no app do lojista (dashboard), buscamos pedidos da loja atual
+      const isMerchantApp = typeof window !== 'undefined' && window.location && window.location.pathname.includes('/dashboard');
+      const ordersPromise = (isMerchantApp && isAuthenticated)
+        ? api.get(`/orders`).catch(() => [])
+        : (!isMerchantApp && userId)
+          ? api.get(`/orders/by-user/${userId}`).catch(() => [])
+          : Promise.resolve([]);
+      const cartPromise = userId
+        ? api.get(`/cart?userId=${userId}&tenantId=${tenantId}`).catch(() => null)
+        : Promise.resolve(null);
+
       const [
-        rawTenant,
         rawMenuCategories,
         rawMenuItems,
         rawOptionGroups,
@@ -790,26 +831,29 @@ export const StorefrontProvider = ({ children }) => {
         rawBanners,
         rawNeighborhoods,
         rawAddresses,
-        rawUser,
         rawOrdersList,
         rawCart,
       ] = await Promise.all([
-        api.get(`/tenants/${tenantId}`).catch(() => initialTenant),
-        api.get(`/menu-categories?tenantId=${tenantId}`).catch(() => []),
-        api.get(`/menu-items?tenantId=${tenantId}`).catch(() => []),
-        api.get(`/option-groups?tenantId=${tenantId}`).catch(() => []),
-        api.get(`/options?tenantId=${tenantId}`).catch(() => []),
+        // Com X-Tenant-Slug no header, o backend já filtra por loja.
+        api.get(`/menu-categories`).catch(() => []),
+        api.get(`/menu-items`).catch(() => []),
+        api.get(`/option-groups`).catch(() => []),
+        api.get(`/options`).catch(() => []),
         api.get(`/banners?tenantId=${tenantId}`).catch(() => []),
         api.get(`/neighborhoods?tenantId=${tenantId}`).catch(() => []),
-        api.get(`/user-addresses/by-user/${userId}`).catch(() => []),
-        api.get(`/users/${userId}`).catch(() => initialUser),
-        api.get(`/orders/by-user/${userId}`).catch(() => []),
-        api.get(`/cart?userId=${userId}&tenantId=${tenantId}`).catch(() => null),
+        addressesPromise,
+        ordersPromise,
+        cartPromise,
       ]);
 
       // Fetch details for orders (items + timeline)
       const detailedOrders = await Promise.all(
-        (Array.isArray(rawOrdersList) ? rawOrdersList : []).map(async (o) => {
+        (Array.isArray(rawOrdersList) ? rawOrdersList : [])
+        .filter((o) => {
+          const oTenantId = o.tenantId ?? o.tenant_id;
+          return !tenantId || oTenantId == null || Number(oTenantId) === Number(tenantId);
+        })
+        .map(async (o) => {
              try {
                  const res = await api.get(`/orders/${o.id}`);
                  return res;
@@ -1174,8 +1218,16 @@ export const StorefrontProvider = ({ children }) => {
 
   /* ------------ Actions Integradas com Backend ------------ */
 
+  const isAuthenticated = () => {
+    const hasUser = !!state?.user?.id;
+    let hasToken = false;
+    try { hasToken = !!localStorage.getItem('authToken'); } catch (_) {}
+    return hasUser && hasToken;
+  };
+
   const getEffectiveCartId = async () => {
     if (state.cart && state.cart.id) return state.cart.id;
+    if (!isAuthenticated()) return null;
     try {
       // Tenta buscar/criar o carrinho
       const res = await api.get(`/cart?userId=${state.user.id}&tenantId=${state.tenant.id}`);
@@ -1208,6 +1260,10 @@ export const StorefrontProvider = ({ children }) => {
     });
 
     try {
+      if (!isAuthenticated()) {
+        // Modo convidado: manter apenas no estado local
+        return null;
+      }
       const cartId = await getEffectiveCartId();
       if (!cartId) throw new Error("Cart ID not available");
 
@@ -1631,7 +1687,7 @@ export const StorefrontProvider = ({ children }) => {
                   isAvailable: item.is_available,
                   photoUrl: item.photo_url,
                   categoryId: { id: item.category_id },
-                  tenantId: { id: item.tenant_id || state.tenant.id }
+                  tenant: { id: item.tenant_id || state.tenant.id }
               };
               
               const savedDto = await api.post('/menu-items', payload);
@@ -1672,7 +1728,7 @@ export const StorefrontProvider = ({ children }) => {
                   isAvailable: !item.is_available,
                   photoUrl: item.photo_url,
                   categoryId: { id: item.category_id },
-                  tenantId: { id: item.tenant_id }
+                  tenant: { id: item.tenant_id || state.tenant.id }
              };
              await api.post('/menu-items', payload);
              dispatch({ type: actionMap.TOGGLE_MENU_ITEM_AVAILABILITY, payload: itemId });

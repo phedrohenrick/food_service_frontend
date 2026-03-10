@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useStorefront } from '../../../../../shared/generalContext.jsx';
 import { RiDashboardHorizontalFill } from "react-icons/ri";
@@ -9,10 +9,10 @@ import { IoSearch } from "react-icons/io5";
 import { MdOutlineRestaurantMenu } from "react-icons/md";
 
 const navItems = [
-  { label: 'Visão geral', path: '/dashboard', icon: <RiDashboardHorizontalFill /> },
-  { label: 'Pedidos', path: '/dashboard/orders', icon: <MdMenuBook /> },
-  { label: 'Cardápio', path: '/dashboard/menu', icon: <MdOutlineRestaurantMenu /> },
-  { label: 'Configurações', path: '/dashboard/settings', icon: <MdOutlineSettings /> },
+  { label: 'Visão geral', suffix: '', icon: <RiDashboardHorizontalFill /> },
+  { label: 'Pedidos', suffix: 'orders', icon: <MdMenuBook /> },
+  { label: 'Cardápio', suffix: 'menu', icon: <MdOutlineRestaurantMenu /> },
+  { label: 'Configurações', suffix: 'settings', icon: <MdOutlineSettings /> },
 ];
 
 const DashboardLayoutv2 = ({ children }) => {
@@ -80,14 +80,18 @@ const DashboardLayoutv2 = ({ children }) => {
   }
   const accentContrast = getContrast(accent);
 
+  
 
+  const basePrefix = (() => {
+    const m = /^\/([^/]+)\/dashboard(\/|$)/i.exec(location.pathname || '');
+    if (m && m[1]) return `/${m[1]}/dashboard`;
+    return '/dashboard';
+  })();
 
-
-
-  const isActive = (path) => {
-    // Evita marcar "Visão geral" ("/dashboard") em todas as subrotas
-    if (path === '/dashboard') return location.pathname === '/dashboard';
-    return location.pathname.startsWith(path);
+  const isActive = (suffix) => {
+    const target = suffix ? `${basePrefix}/${suffix}` : basePrefix;
+    if (!suffix) return location.pathname === basePrefix;
+    return location.pathname.startsWith(target);
   };
 
   return (
@@ -118,12 +122,14 @@ const DashboardLayoutv2 = ({ children }) => {
           </div>
 
           <nav className="px-3 py-6 space-y-2">
-            {navItems.map((item) => (
+            {navItems.map((item) => {
+              const target = item.suffix ? `${basePrefix}/${item.suffix}` : basePrefix;
+              return (
               <Link
-                key={item.path}
-                to={item.path}
+                key={item.label}
+                to={target}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
-                  isActive(item.path)
+                  isActive(item.suffix)
                     ? 'bg-[var(--accent)] text-[var(--accent-contrast)] shadow-lg shadow-[var(--accent)]/20'
                     : 'text-gray-700 hover:bg-gray-100'
                 }`}
@@ -132,7 +138,7 @@ const DashboardLayoutv2 = ({ children }) => {
                 <span className="text-lg">{item.icon}</span>
                 {item.label}
               </Link>
-            ))}
+            )})}
           </nav>
 
           <div className="mt-auto px-6 py-6 border-t border-gray-100">
