@@ -18,10 +18,35 @@ class ApiService {
       }
     }
 
-    // Add auth token if available
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    const deriveSlugFromLocation = () => {
+      try {
+        if (typeof window !== 'undefined' && window.location) {
+          const p = window.location.pathname || '';
+          const m = /^\/([^/]+)\/(dashboard|app)(\/|$)/i.exec(p);
+          if (m && m[1]) return m[1];
+        }
+      } catch (_) {}
+      return null;
+    };
+    const urlSlug = deriveSlugFromLocation();
+    const storedSlug = (() => {
+      try { return localStorage.getItem('tenantSlug'); } catch (_) { return null; }
+    })();
+    const finalSlug = urlSlug || storedSlug;
+    if (finalSlug && !config.headers['X-Tenant-Slug']) {
+      config.headers['X-Tenant-Slug'] = finalSlug;
+    }
+
+    const publicGetPrefixes = [
+      '/tenants', '/menu-items', '/menu-categories', '/options', '/option-groups', '/banners', '/neighborhoods'
+    ];
+    const isGet = !config.method || config.method.toUpperCase() === 'GET';
+    const isPublicGet = isGet && publicGetPrefixes.some(p => String(endpoint || '').startsWith(p));
+    if (!isPublicGet) {
+      const token = (() => { try { return localStorage.getItem('authToken'); } catch (_) { return null; } })();
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
 
     try {

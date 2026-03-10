@@ -37,9 +37,11 @@ function App() {
             <Route path="/login/esqueci-senha" element={<ForgotPasswordPage />} />
             
             {/* Restaurant Dashboard Routes */}
+            <Route path="/:slug/dashboard/*" element={<RestaurantDashboard />} />
             <Route path="/dashboard/*" element={<RestaurantDashboard />} />
             
             {/* Customer App Routes */}
+            <Route path="/:slug/app/*" element={<CustomerApp />} />
             <Route path="/app/*" element={<CustomerApp />} />
           </Routes>
         </React.Suspense>
