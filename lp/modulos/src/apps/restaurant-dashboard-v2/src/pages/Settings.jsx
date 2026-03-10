@@ -259,7 +259,11 @@ const Settings = () => {
             <Button
               variant="secondary"
               className="mt-4 bg-white text-[var(--accent)] hover:bg-white/90"
-              onClick={() => window.open('/app', '_blank', 'noopener,noreferrer')}
+              onClick={() => {
+                const slug = tenant?.slug;
+                const path = slug ? `/${slug}/app` : '/app';
+                window.open(path, '_blank', 'noopener,noreferrer');
+              }}
             >
               Ver como o cliente vê
             </Button>

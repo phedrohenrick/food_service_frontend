@@ -19,6 +19,11 @@ const statusLabel = {
 const OrderDetails = () => {
   const { orderId } = useParams();
   const { orders, addresses, tenant, getOrderDetailed } = useStorefront();
+  const basePrefix = (() => {
+    const p = window.location?.pathname || '';
+    const m = /^\/([^/]+)\/app(\/|$)/i.exec(p);
+    return m && m[1] ? `/${m[1]}/app` : '/app';
+  })();
   const detailed = getOrderDetailed(orderId);
   const order = detailed?.order || null;
   const [liveTimeline, setLiveTimeline] = React.useState(() => detailed?.timeline || []);
@@ -63,7 +68,7 @@ const OrderDetails = () => {
         <h2 className="text-2xl font-semibold text-gray-900 mb-2">
           Não encontramos esse pedido
         </h2>
-        <Link to="/app/pedidos" className="text-[var(--accent-contrast)] font-semibold">
+        <Link to={`${basePrefix}/pedidos`} className="text-[var(--accent-contrast)] font-semibold">
           Voltar para pedidos
         </Link>
       </div>
@@ -85,7 +90,7 @@ const OrderDetails = () => {
             }).format(new Date(order.created_at))}
           </p>
         </div>
-        <Link to="/app/pedidos">
+        <Link to={`${basePrefix}/pedidos`}>
           <Button variant="ghost" className="text-[var(--accent)]">
             Voltar
           </Button>

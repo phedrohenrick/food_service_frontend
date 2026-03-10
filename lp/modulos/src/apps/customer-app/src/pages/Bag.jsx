@@ -30,8 +30,18 @@ const Bag = () => {
   React.useEffect(() => {
     const loadActiveAddresses = async () => {
       try {
-        const effectiveUserId = user?.id || 1;
-        if (!effectiveUserId) return;
+        const hasToken = (() => {
+          try { return !!localStorage.getItem('authToken'); } catch (_) { return false; }
+        })();
+        if (!hasToken) {
+          setActiveAddresses([]);
+          return;
+        }
+        const effectiveUserId = user?.id;
+        if (!effectiveUserId) {
+          setActiveAddresses([]);
+          return;
+        }
 
         const raw = await api
           .get(`/user-addresses/by-user/${effectiveUserId}/active`)
@@ -74,17 +84,55 @@ const Bag = () => {
   };
 
   const handleCheckout = async () => {
+    if (!isAuthenticated) {
+      navigate('/login/cliente');
+      return;
+    }
     if (!addressList.length && cart.address_id == null) {
       setAddressAlertOpen(true);
       return;
     }
     const orderId = await placeOrder();
     if (orderId) {
-      navigate('/app/pedidos');
+      const p = window.location?.pathname || '';
+      const m = /^\/([^/]+)\/app(\/|$)/i.exec(p);
+      const basePrefix = m && m[1] ? `/${m[1]}/app` : '/app';
+      navigate(`${basePrefix}/pedidos`);
     }
   };
 
   const detailedItems = getCartDetailedItems();
+
+  const isAuthenticated = (() => {
+    const hasUser = !!user?.id;
+    let hasToken = false;
+    try { hasToken = !!localStorage.getItem('authToken'); } catch (_) {}
+    return hasUser && hasToken;
+  })();
+
+  if (!isAuthenticated) {
+    return (
+      <div className="rounded-3xl bg-white p-10 text-center shadow flex flex-col items-center">
+        <LiaShoppingBagSolid className="text-4xl text-gray-900 mb-3" />
+        <h2 className="text-2xl font-semibold text-gray-900 mb-2">Entre para continuar</h2>
+        <p className="text-gray-600 mb-6">
+          Faça login ou cadastre-se para finalizar seu pedido e salvar seus endereços.
+        </p>
+        <div className="flex gap-3">
+          <Link to="/login/cliente">
+            <Button> Fazer login </Button>
+          </Link>
+          <Link to={(() => {
+            const p = window.location?.pathname || '';
+            const m = /^\/([^/]+)\/app(\/|$)/i.exec(p);
+            return m && m[1] ? `/${m[1]}/app` : '/app';
+          })()}>
+            <Button variant="outline">Voltar ao cardápio</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (!detailedItems.length) {
     return (
@@ -94,7 +142,11 @@ const Bag = () => {
         <p className="text-gray-600 mb-6">
           Explore o cardápio e adicione um item para começar seu pedido.
         </p>
-        <Link to="/app">
+        <Link to={(() => {
+          const p = window.location?.pathname || '';
+          const m = /^\/([^/]+)\/app(\/|$)/i.exec(p);
+          return m && m[1] ? `/${m[1]}/app` : '/app';
+        })()}>
           <Button>Ver cardápio</Button>
         </Link>
       </div>
@@ -117,7 +169,12 @@ const Bag = () => {
               >
                 Fechar
               </Button>
-              <Link to="/app/enderecos">
+            <Link to={(() => {
+              const p = window.location?.pathname || '';
+              const m = /^\/([^/]+)\/app(\/|$)/i.exec(p);
+              const basePrefix = m && m[1] ? `/${m[1]}/app` : '/app';
+              return `${basePrefix}/enderecos`;
+            })()} >
                 <Button onClick={() => setAddressAlertOpen(false)}>
                   Cadastrar endereço
                 </Button>
@@ -139,7 +196,12 @@ const Bag = () => {
                   : selectedAddress?.label || 'Selecione um endereço'}
               </h2>
             </div>
-            <Link to="/app/enderecos" className="text-sm font-semibold text-gray-800">
+            <Link to={(() => {
+              const p = window.location?.pathname || '';
+              const m = /^\/([^/]+)\/app(\/|$)/i.exec(p);
+              const basePrefix = m && m[1] ? `/${m[1]}/app` : '/app';
+              return `${basePrefix}/enderecos`;
+            })()} className="text-sm font-semibold text-gray-800">
               Gerenciar
             </Link>
           </header>
@@ -162,7 +224,12 @@ const Bag = () => {
             ) : (
               <div className="flex flex-col items-center py-4">
                 <p className="mb-3 text-gray-500">Nenhum endereço selecionado</p>
-                <Link to="/app/enderecos">
+                <Link to={(() => {
+                  const p = window.location?.pathname || '';
+                  const m = /^\/([^/]+)\/app(\/|$)/i.exec(p);
+                  const basePrefix = m && m[1] ? `/${m[1]}/app` : '/app';
+                  return `${basePrefix}/enderecos`;
+                })()}>
                   <Button>Cadastrar endereço</Button>
                 </Link>
               </div>

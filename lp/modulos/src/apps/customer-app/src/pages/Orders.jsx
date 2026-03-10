@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../../../../shared/components/ui';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
-import { FaRegClock } from "react-icons/fa6";
+import { GoClock } from "react-icons/go";
 
 const statusPills = {
   CREATED: 'bg-gray-100 text-gray-700',
@@ -19,18 +19,47 @@ const statusPills = {
 
 const Orders = () => {
   const { orders, getOrderDetailed, reloadOrders } = useStorefront();
+  const isAuthenticated = (() => {
+    let hasToken = false;
+    try { hasToken = !!localStorage.getItem('authToken'); } catch (_) {}
+    return hasToken;
+  })();
+  const basePrefix = (() => {
+    const p = window.location?.pathname || '';
+    const m = /^\/([^/]+)\/app(\/|$)/i.exec(p);
+    return m && m[1] ? `/${m[1]}/app` : '/app';
+  })();
 
   React.useEffect(() => {
+    if (!isAuthenticated) return;
     reloadOrders();
     const intervalId = setInterval(() => {
       reloadOrders();
     }, 10000);
     return () => clearInterval(intervalId);
-  }, [reloadOrders]);
+  }, [reloadOrders, isAuthenticated]);
 
   const sortedOrders = React.useMemo(() => {
     return [...orders].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   }, [orders]);
+
+  if (!isAuthenticated) {
+    return (
+      <div className="rounded-3xl bg-white p-10 text-center shadow flex flex-col items-center">
+        <GoClock className="text-4xl text-gray-900 mb-3" />
+        <h2 className="text-2xl font-semibold text-gray-900 mb-2">Entre para ver seus pedidos</h2>
+        <p className="text-gray-600 mb-6">Acesse sua conta para visualizar seus pedidos.</p>
+        <div className="flex gap-3">
+          <Link to="/login/cliente">
+            <Button>Fazer login</Button>
+          </Link>
+          <Link to={basePrefix}>
+            <Button variant="outline">Voltar ao cardápio</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -42,7 +71,7 @@ const Orders = () => {
             Veja o status completo, valores e itens pedidos.
           </p>
         </div>
-        <Link to="/app">
+          <Link to={basePrefix}>
           <Button variant="ghost" className="text-[var(--accent)]">
             Voltar ao cardápio
           </Button>
@@ -51,11 +80,11 @@ const Orders = () => {
 
       {sortedOrders.length === 0 ? (
         <div className="rounded-3xl bg-white p-10 text-center shadow flex flex-col items-center">
-          <FaRegClock className="text-4xl text-gray-900 mb-3" />
+          <GoClock className="text-4xl text-gray-900 mb-3" />
           <h2 className="text-2xl font-semibold text-gray-900 mb-2">
             Você ainda não fez pedidos
           </h2>
-          <Link to="/app" className="text-[var(--accent-contrast)] font-semibold">
+          <Link to={basePrefix} className="text-[var(--accent-contrast)] font-semibold">
             Comece pelo cardápio
           </Link>
         </div>
@@ -109,7 +138,7 @@ const Orders = () => {
                     </p>
                   </div>
                   <div className="flex items-center justify-end">
-                    <Link to={`/app/pedidos/${order.id}`}>
+                    <Link to={`${basePrefix}/pedidos/${order.id}`}>
                       <Button variant="outline">Ver detalhes</Button>
                     </Link>
                   </div>

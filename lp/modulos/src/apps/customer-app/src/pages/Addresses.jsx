@@ -4,9 +4,10 @@ import { FaTrash } from 'react-icons/fa';
 import { Button } from '../../../../shared/components/ui';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
 import api from '../../../../shared/services/api';
+import { CiLocationOn } from "react-icons/ci";
 
 const Addresses = () => {
-  const { addresses: addressesList, userId, cart, setCartAddress, deleteAddress } = useStorefront();
+  const { addresses: addressesList, user, cart, setCartAddress, deleteAddress } = useStorefront();
   const [addresses, setAddresses] = React.useState([]);
   const [alertModal, setAlertModal] = React.useState({
     isOpen: false,
@@ -15,6 +16,17 @@ const Addresses = () => {
     onConfirm: null,
     onCancel: null
   });
+
+  const isAuthenticated = (() => {
+    let hasToken = false;
+    try { hasToken = !!localStorage.getItem('authToken'); } catch (_) {}
+    return hasToken && !!user?.id;
+  })();
+  const basePrefix = (() => {
+    const p = window.location?.pathname || '';
+    const m = /^\/([^/]+)\/app(\/|$)/i.exec(p);
+    return m && m[1] ? `/${m[1]}/app` : '/app';
+  })();
 
   const handleDeleteAddress = (id) => {
     setAlertModal({
@@ -36,10 +48,11 @@ const Addresses = () => {
   useEffect(() => {
     const loadAddresses = async () => {
       try {
-        const effectiveUserId = userId || 1;
-        if (!effectiveUserId) {
+        if (!isAuthenticated) {
+          setAddresses([]);
           return;
         }
+        const effectiveUserId = user?.id;
 
         const raw = await api
           .get(`/user-addresses/by-user/${effectiveUserId}/active`)
@@ -72,7 +85,25 @@ const Addresses = () => {
 
     loadAddresses();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [addressesList, userId]); // Updated dependencies
+  }, [addressesList, user?.id, isAuthenticated]); // Updated dependencies
+
+  if (!isAuthenticated) {
+    return (
+      <div className="rounded-3xl bg-white p-10 text-center shadow flex flex-col items-center">
+        <CiLocationOn className="text-4xl text-gray-900 mb-3"/>
+        <h2 className="text-2xl font-semibold text-gray-900 mb-2">Entre para gerenciar endereços</h2>
+        <p className="text-gray-600 mb-6">Acesse sua conta para salvar e selecionar locais de entrega.</p>
+        <div className="flex gap-3">
+          <Link to="/login/cliente">
+            <Button>Fazer Login</Button>
+          </Link>
+          <Link to={basePrefix}>
+            <Button variant="outline">Voltar ao cardápio</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 relative">
@@ -107,7 +138,7 @@ const Addresses = () => {
             Selecione ou cadastre os endereços que estarão disponíveis para a entrega.
           </p>
         </div>
-        <Link to="/app/enderecos/novo">
+        <Link to={`${basePrefix}/enderecos/novo`}>
           <Button>Adicionar endereço</Button>
         </Link>
       </div>
@@ -135,7 +166,7 @@ const Addresses = () => {
               <div className="flex gap-2">
                 
                 <Link
-                  to={`/app/enderecos/${address.id}`}
+                  to={`${basePrefix}/enderecos/${address.id}`}
                   onClick={(event) => event.stopPropagation()}
                   className="text-sm font-semibold text-[var(--accent-contrast)]"
                 >
@@ -165,7 +196,7 @@ const Addresses = () => {
               <div className="flex items-center">
                 {cart.address_id === address.id ? (
                   <Link
-                    to="/app/sacola"
+                    to={`${basePrefix}/sacola`}
                     onClick={(e) => e.stopPropagation()}
                   >
                     <Button

@@ -7,6 +7,11 @@ const Product = () => {
   const { productSlug } = useParams();
   const navigate = useNavigate();
   const { maps, addToCart, menuItems, getOptionGroupsForItem, getOptionsForGroup } = useStorefront();
+  const basePrefix = (() => {
+    const p = window.location?.pathname || '';
+    const m = /^\/([^/]+)\/app(\/|$)/i.exec(p);
+    return m && m[1] ? `/${m[1]}/app` : '/app';
+  })();
   
   const product = useMemo(() => {
      return maps.menuItemMap[productSlug] || menuItems.find((mi) => mi.slug === productSlug);
@@ -163,7 +168,11 @@ const Product = () => {
         <p className="text-gray-600 mb-6">
           Talvez ele tenha saído do cardápio ou o link esteja incorreto.
         </p>
-        <Link to="/app" className="text-[var(--accent-contrast)] font-semibold">
+        <Link to={(() => {
+          const p = window.location?.pathname || '';
+          const m = /^\/([^/]+)\/app(\/|$)/i.exec(p);
+          return m && m[1] ? `/${m[1]}/app` : '/app';
+        })()} className="text-[var(--accent-contrast)] font-semibold">
           Voltar ao cardápio
         </Link>
       </div>
@@ -299,10 +308,10 @@ const Product = () => {
            </Button>
           
            {added && (
-             <Button
+            <Button
                variant="ghost"
                className="w-full mt-3 border border-green-200 text-green-700"
-               onClick={() => navigate('/app')}
+              onClick={() => navigate(basePrefix)}
              >
                Continuar comprando
              </Button>

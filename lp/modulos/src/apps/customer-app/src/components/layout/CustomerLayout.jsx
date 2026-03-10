@@ -50,14 +50,20 @@ const CustomerLayout = ({ children }) => {
     return luminance > 0.6 ? '#0f172a' : '#ffffff';
   };
   const accentContrast = getContrast(accent);
-  const showCardapioHeader = location.pathname === '/app';
+  const showCardapioHeader = /\/app(\/)?$/.test(location.pathname || '');
   const isProductPage = location.pathname.includes('/produto/');
 
+  const basePrefix = (() => {
+    const p = location.pathname || '';
+    const m = /^\/([^/]+)\/app(\/|$)/i.exec(p);
+    return m && m[1] ? `/${m[1]}/app` : '/app';
+  })();
+
   const navigation = [
-    { label: 'Cardápio', to: '/app', exact: true, icon: <IoRestaurant /> },
-    { label: 'Sacola', to: '/app/sacola', icon:  <LiaShoppingBagSolid /> },
-    { label: 'Endereços', to: '/app/enderecos', icon: <IoIosPin /> },
-    { label: 'Pedidos', to: '/app/pedidos', icon: <GrRestaurant />},
+    { label: 'Cardápio', to: `${basePrefix}`, exact: true, icon: <IoRestaurant /> },
+    { label: 'Sacola', to: `${basePrefix}/sacola`, icon:  <LiaShoppingBagSolid /> },
+    { label: 'Endereços', to: `${basePrefix}/enderecos`, icon: <IoIosPin /> },
+    { label: 'Pedidos', to: `${basePrefix}/pedidos`, icon: <GrRestaurant />},
   ];
 
   return (
@@ -96,7 +102,7 @@ const CustomerLayout = ({ children }) => {
                   />
                 </form>
                 <Link
-                  to="/app/sacola"
+                  to={`${basePrefix}/sacola`}
                   className="inline-flex shrink-0 items-center gap-2 rounded-2xl bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-[var(--accent-contrast)] hover:bg-[var(--accent-hover)] transition"
                 >
                   <LiaShoppingBagSolid className="text-lg" />
@@ -115,7 +121,7 @@ const CustomerLayout = ({ children }) => {
               alt={tenant.name}
               className="h-14 w-14 rounded-full border border-gray-100 object-cover"
             />
-            <Link to="/app" className="text-2xl font-semibold text-background-black">
+            <Link to={basePrefix} className="text-2xl font-semibold text-background-black">
               {tenant.name}
             </Link>
           </div>

@@ -26,6 +26,12 @@ const Home = () => {
       .filter((category) => category.items.length > 0);
   }, [menuCategories, categoryFilter, searchTerm, getMenuItemsByCategory]);
 
+  const basePrefix = (() => {
+    const p = window.location?.pathname || '';
+    const m = /^\/([^/]+)\/app(\/|$)/i.exec(p);
+    return m && m[1] ? `/${m[1]}/app` : '/app';
+  })();
+
   return (
     <div className="space-y-10">
       <div className="flex items-center gap-4">
@@ -37,7 +43,7 @@ const Home = () => {
 
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <div>
-            <Link to="/app" className="text-2xl font-semibold text-background-black">
+            <Link to={basePrefix} className="text-2xl font-semibold text-background-black">
               {tenant.name}
             </Link>
 
@@ -70,7 +76,7 @@ const Home = () => {
         {banners.map((banner) => (
           <Link
             key={banner.id}
-            to={banner.product_link ? `/app/produto/${banner.product_link}` : '/app'}
+            to={banner.product_link ? `${basePrefix}/produto/${banner.product_link}` : basePrefix}
             className="relative overflow-hidden rounded-2xl border border-gray-100 bg-white shadow transition hover:-translate-y-1 hover:shadow-lg"
           >
             <div className="absolute inset-0">
@@ -134,7 +140,7 @@ const Home = () => {
                 {category.items.map((item) => (
                   <Link
                     key={item.id}
-                    to={`/app/produto/${item.id}`}
+                    to={`${basePrefix}/produto/${item.id}`}
                     className="group flex flex-col rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg sm:flex-row"
                   >
                     <div className="flex flex-1 flex-col gap-3 p-5">
