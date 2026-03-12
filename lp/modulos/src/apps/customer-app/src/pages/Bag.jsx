@@ -4,6 +4,7 @@ import { Button } from '../../../../shared/components/ui';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
 import { LiaShoppingBagSolid } from "react-icons/lia";
 import api from '../../../../shared/services/api';
+import { loginWithRedirect } from '../../../../shared/auth/keycloak';
 
 const Bag = () => {
   const navigate = useNavigate();
@@ -85,7 +86,7 @@ const Bag = () => {
 
   const handleCheckout = async () => {
     if (!isAuthenticated) {
-      navigate('/login/cliente');
+      await loginWithRedirect(window.location.href);
       return;
     }
     if (!addressList.length && cart.address_id == null) {
@@ -119,9 +120,9 @@ const Bag = () => {
           Faça login ou cadastre-se para finalizar seu pedido e salvar seus endereços.
         </p>
         <div className="flex gap-3">
-          <Link to="/login/cliente">
-            <Button> Fazer login </Button>
-          </Link>
+          <Button onClick={() => loginWithRedirect(window.location.href)}>
+            Fazer login
+          </Button>
           <Link to={(() => {
             const p = window.location?.pathname || '';
             const m = /^\/([^/]+)\/app(\/|$)/i.exec(p);

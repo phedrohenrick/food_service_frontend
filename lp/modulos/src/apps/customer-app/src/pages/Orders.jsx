@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '../../../../shared/components/ui';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
 import { GoClock } from "react-icons/go";
+import { loginWithRedirect } from '../../../../shared/auth/keycloak';
 
 const statusPills = {
   CREATED: 'bg-gray-100 text-gray-700',
@@ -50,9 +51,9 @@ const Orders = () => {
         <h2 className="text-2xl font-semibold text-gray-900 mb-2">Entre para ver seus pedidos</h2>
         <p className="text-gray-600 mb-6">Acesse sua conta para visualizar seus pedidos.</p>
         <div className="flex gap-3">
-          <Link to="/login/cliente">
-            <Button>Fazer login</Button>
-          </Link>
+          <Button onClick={() => loginWithRedirect(window.location.href)}>
+            Fazer login
+          </Button>
           <Link to={basePrefix}>
             <Button variant="outline">Voltar ao cardápio</Button>
           </Link>

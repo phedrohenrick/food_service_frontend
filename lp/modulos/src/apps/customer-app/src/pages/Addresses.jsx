@@ -5,6 +5,7 @@ import { Button } from '../../../../shared/components/ui';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
 import api from '../../../../shared/services/api';
 import { CiLocationOn } from "react-icons/ci";
+import { loginWithRedirect } from '../../../../shared/auth/keycloak';
 
 const Addresses = () => {
   const { addresses: addressesList, user, cart, setCartAddress, deleteAddress } = useStorefront();
@@ -94,9 +95,9 @@ const Addresses = () => {
         <h2 className="text-2xl font-semibold text-gray-900 mb-2">Entre para gerenciar endereços</h2>
         <p className="text-gray-600 mb-6">Acesse sua conta para salvar e selecionar locais de entrega.</p>
         <div className="flex gap-3">
-          <Link to="/login/cliente">
-            <Button>Fazer Login</Button>
-          </Link>
+          <Button onClick={() => loginWithRedirect(window.location.href)}>
+            Fazer Login
+          </Button>
           <Link to={basePrefix}>
             <Button variant="outline">Voltar ao cardápio</Button>
           </Link>
