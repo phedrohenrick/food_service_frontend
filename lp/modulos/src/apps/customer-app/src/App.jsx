@@ -2,8 +2,18 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import CustomerLayout from './components/layout/CustomerLayout.jsx';
 import { Home, Product, Bag, Addresses, AddressForm, Orders, OrderDetails } from './pages';
+import { useEffect } from 'react';
+import { ensureSso } from '../../../shared/auth/keycloak';
+import { useStorefront } from '../../../shared/generalContext.jsx';
 
 function CustomerApp() {
+  const { reloadOrders } = useStorefront();
+  useEffect(() => {
+    (async () => {
+      const ok = await ensureSso();
+      if (ok) reloadOrders();
+    })();
+  }, [reloadOrders]);
   return (
     <CustomerLayout>
       <Routes>

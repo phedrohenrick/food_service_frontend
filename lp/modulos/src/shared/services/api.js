@@ -1,3 +1,4 @@
+import { loginWithRedirect } from '../auth/keycloak';
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:81';
 
 class ApiService {
@@ -53,8 +54,18 @@ class ApiService {
       const response = await fetch(url, config);
       
       if (!response.ok) {
-        // Tenta ler o corpo da resposta para dar mais detalhes do erro
-        const errorBody = await response.text();
+        // Se 401/403 no app do cliente, forçar reautenticação no Keycloak
+        if ((response.status === 401 || response.status === 403) && typeof window !== 'undefined') {
+          const path = window.location?.pathname || '';
+          const isCustomerApp = /\/app(\/|$)/i.test(path);
+          if (isCustomerApp) {
+            try { localStorage.removeItem('authToken'); } catch (_) {}
+            try {
+              await loginWithRedirect(window.location.href);
+            } catch (_) {}
+          }
+        }
+        const errorBody = await response.text().catch(() => '');
         console.error('API Error Body:', errorBody);
         throw new Error(`HTTP error! status: ${response.status} - ${errorBody}`);
       }
