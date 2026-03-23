@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { Button } from "@relume_io/relume-ui";
 import React from "react";
@@ -72,11 +72,11 @@ export function Header30() {
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start animate-fade-in delay-600">
                 <Button
                   className="bg-white text-background-hero font-bold py-3 sm:py-4 px-6 sm:px-8 rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 transform animate-bounce-subtle"
-                  onClick={() => scrollToForm("lojista")}
+                  onClick={() => { try { window.location.assign('/onboarding/start'); } catch(_) {} }}
                   data-cta="hero-lojista"
                 >
                   <span className="flex items-center gap-2 text-sm sm:text-base">
-                     Sou Lojista
+                     Começar grátis
                   </span>
                 </Button>
                 <Button

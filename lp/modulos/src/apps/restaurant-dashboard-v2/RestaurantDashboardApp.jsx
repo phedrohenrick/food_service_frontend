@@ -23,27 +23,10 @@ const RestaurantDashboard = () => {
   }, []);
   useEffect(() => {
     const path = location.pathname || '';
-    let slug = null;
     const m = path.match(/^\/([^/]+)\/dashboard(\/|$)/i);
-    if (m && m[1]) slug = m[1];
-    if (!slug) {
-      const sp = new URLSearchParams(location.search);
-      slug = sp.get('slug');
-    }
+    const slug = m && m[1] ? m[1] : null;
     if (slug) {
-      try {
-        localStorage.setItem('tenantSlug', slug);
-        // Detect tenant switch and enforce fresh authentication
-        const prev = sessionStorage.getItem('dashboardPrevSlug');
-        const authSlug = localStorage.getItem('authTenantSlug');
-        const changed = (prev && prev !== slug) || (authSlug && authSlug !== slug);
-        sessionStorage.setItem('dashboardPrevSlug', slug);
-        if (changed) {
-          try { localStorage.removeItem('authToken'); } catch (_) {}
-          const kc = getKeycloak();
-          kc.login({ prompt: 'login', redirectUri: window.location.href });
-        }
-      } catch (_) {}
+      try { localStorage.setItem('tenantSlug', slug); } catch (_) {}
     }
   }, [location.pathname, location.search]);
   useEffect(() => {
@@ -56,7 +39,7 @@ const RestaurantDashboard = () => {
     }
     (async () => {
       try {
-        await api.get('/auth/tenant-access');
+        await api.get('/tenant-auth/tenant-access');
         setAuthDenied(false);
       } catch (e) {
         setAuthDenied(true);
