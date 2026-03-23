@@ -40,26 +40,24 @@ export function getKeycloak() {
 
 export async function loginWithRedirect(redirectUri) {
   try {
-    if (!initialized) {
-      await keycloak.init({ onLoad: 'check-sso', checkLoginIframe: false, pkceMethod: 'S256' });
-      initialized = true;
-      if (keycloak.authenticated) {
-        try { localStorage.setItem('authToken', keycloak.token || ''); } catch (_) {}
-      }
-    }
-  } catch (_) {}
-  try {
     await keycloak.login({ redirectUri });
   } catch (_) {}
 }
 
 export async function ensureSso() {
   try {
-    if (!initialized) {
-      await keycloak.init({ onLoad: 'check-sso', checkLoginIframe: false, pkceMethod: 'S256' });
+    const href = typeof window !== 'undefined' ? window.location.href : '';
+    const hasCallbackParams = /[?#].*(code=|session_state=)/.test(href);
+    if (!initialized || hasCallbackParams) {
+      const authenticated = await keycloak.init({ onLoad: 'check-sso', checkLoginIframe: false, pkceMethod: 'S256' });
       initialized = true;
+      if (authenticated && typeof window !== 'undefined') {
+        try {
+          const clean = window.location.pathname + window.location.search;
+          window.history.replaceState(null, '', clean);
+        } catch (_) {}
+      }
     } else {
-      // Refresh token storage if possible
       await keycloak.updateToken(0).catch(() => {});
     }
     if (keycloak.authenticated) {
