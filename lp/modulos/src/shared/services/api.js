@@ -1,4 +1,4 @@
-import { loginWithRedirect } from '../auth/keycloak';
+import { isLoginInProgress, loginWithRedirect } from '../auth/keycloak';
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:81';
 
 class ApiService {
@@ -54,11 +54,12 @@ class ApiService {
       const response = await fetch(url, config);
       
       if (!response.ok) {
-        // Se 401/403 no app do cliente, forçar reautenticação no Keycloak
-        if ((response.status === 401 || response.status === 403) && typeof window !== 'undefined') {
+        // Reautentica apenas em 401. Em 403 o usuário está autenticado, mas sem permissão.
+        if (response.status === 401 && typeof window !== 'undefined') {
           const path = window.location?.pathname || '';
           const isCustomerApp = /\/app(\/|$)/i.test(path);
-          if (isCustomerApp) {
+          const hasAuthCallbackParams = /[?#].*(code=|session_state=|state=|iss=)/.test(window.location.href || '');
+          if (isCustomerApp && !hasAuthCallbackParams && !isLoginInProgress()) {
             try { localStorage.removeItem('authToken'); } catch (_) {}
             try {
               await loginWithRedirect(window.location.href);
