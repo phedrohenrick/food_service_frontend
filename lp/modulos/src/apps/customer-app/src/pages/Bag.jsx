@@ -293,7 +293,7 @@ const Bag = () => {
               </label>
               <input
                 type="text"
-                value={cart.change}
+                value={cart.change ?? ''}
                 onChange={(event) => setCartChangeFor(event.target.value)}
                 placeholder="Ex: R$ 100,00"
                 className="w-full rounded-2xl border border-gray-200 px-4 py-3 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
