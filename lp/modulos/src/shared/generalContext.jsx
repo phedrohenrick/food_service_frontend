@@ -978,6 +978,7 @@ export const StorefrontProvider = ({ children }) => {
 
       const tenant = rawTenant ? {
           ...rawTenant,
+          cnpj_cpf: rawTenant.cnpjCpf || rawTenant.cnpj_cpf,
           main_color: rawTenant.mainColor || rawTenant.main_color,
           delivery_fee: rawTenant.deliveryFee || rawTenant.delivery_fee,
           service_fee_percentage: rawTenant.serviceFeePercentage || rawTenant.service_fee_percentage,

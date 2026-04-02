@@ -140,7 +140,7 @@ const Settings = () => {
 
   const saveTenantOps = async () => {
     const selectedPaymentChannels = Array.from(
-      new Set((tenantForm.payment_channels || []).filter(Boolean))
+      new Set((tenantForm.payment_channels || []).filter(Boolean).map((c) => String(c).toLowerCase()))
     );
     const success = await updateTenant({
       working_hours: tenantForm.working_hours,
@@ -155,11 +155,12 @@ const Settings = () => {
 
   const toggleOpen = () => updateTenant({ is_open: !tenant.is_open });
   const togglePaymentChannel = (channel) => {
+    const ch = String(channel).toLowerCase();
     setTenantForm((prev) => {
-      const currentChannels = Array.isArray(prev.payment_channels) ? prev.payment_channels : [];
-      const nextChannels = currentChannels.includes(channel)
-        ? currentChannels.filter((item) => item !== channel)
-        : [...currentChannels, channel];
+      const currentChannels = Array.isArray(prev.payment_channels) ? prev.payment_channels.map((c) => String(c).toLowerCase()) : [];
+      const nextChannels = currentChannels.includes(ch)
+        ? currentChannels.filter((item) => item !== ch)
+        : [...currentChannels, ch];
 
       return {
         ...prev,
@@ -341,7 +342,7 @@ const Settings = () => {
                 </p>
                 <div className="mt-4 space-y-3">
                   {paymentOptions.map((option) => {
-                    const selected = (tenantForm.payment_channels || []).includes(option.value);
+                    const selected = (tenantForm.payment_channels || []).map((c) => String(c).toLowerCase()).includes(option.value.toLowerCase());
                     return (
                       <button
                         key={option.value}
