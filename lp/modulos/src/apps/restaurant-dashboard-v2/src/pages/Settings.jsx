@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Button, Input } from '../../../../shared/components/ui';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
+import api from '../../../../shared/services/api';
 
 const paymentOptions = [
   { value: 'PIX', label: 'Pix', helper: 'Pagamento instantaneo' },
@@ -64,15 +65,54 @@ const Settings = () => {
   }, [tenant]);
 
   const onTenantChange = (field) => (e) => {
-    const value = e?.target?.type === 'checkbox' ? e.target.checked : e?.target?.value ?? e;
+    let value = e?.target?.type === 'checkbox' ? e.target.checked : e?.target?.value ?? e;
+    if (field === 'slug') {
+      const v = String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      value = v.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/-+/g, '-').replace(/^-+|-+$/g, '');
+    }
     setTenantForm((prev) => ({ ...prev, [field]: value }));
   };
 
+  const isReservedSlug = (s) => {
+    const r = ['app','dashboard','onboarding','login','admin','api','tenant','tenants','orders','menu','settings'];
+    return r.includes(s);
+  };
+
+  const validateSlug = (s) => {
+    if (!s) return 'Informe um slug válido.';
+    if (s.length < 3 || s.length > 30) return 'O slug deve ter entre 3 e 30 caracteres.';
+    if (!/^[a-z][a-z0-9-]*$/.test(s)) return 'Use letras minúsculas, números e hífen, começando por uma letra.';
+    if (/-{2,}/.test(s)) return 'Evite hífens consecutivos.';
+    if (s.endsWith('-')) return 'Não termine com hífen.';
+    if (isReservedSlug(s)) return 'Este slug é reservado. Escolha outro.';
+    return '';
+  };
+
   const saveTenantProfile = async () => {
+    const oldSlug = tenant?.slug || '';
+    let desiredSlug = (tenantForm.slug || '').trim();
+    desiredSlug = desiredSlug.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/-+/g, '-').replace(/^-+|-+$/g, '');
+    const slugError = validateSlug(desiredSlug);
+    if (slugError) {
+      showToast(slugError, 'error');
+      return;
+    }
+    if (desiredSlug !== tenantForm.slug) {
+      setTenantForm((prev) => ({ ...prev, slug: desiredSlug }));
+    }
+    if (desiredSlug && desiredSlug !== oldSlug) {
+      try {
+        const check = await api.get(`/onboarding/slug-available?slug=${desiredSlug}`);
+        if (check && check.available === false) {
+          showToast('Este slug já está em uso.', 'error');
+          return;
+        }
+      } catch (_) {}
+    }
     const success = await updateTenant({
       name: tenantForm.name,
       email: tenantForm.email,
-      slug: tenantForm.slug,
+      slug: desiredSlug,
       cnpj_cpf: tenantForm.cnpj_cpf,
       address: tenantForm.address,
       geo_lat: tenantForm.geo_lat,
@@ -81,8 +121,21 @@ const Settings = () => {
       photo_url: tenantForm.photo_url,
       main_color: tenantForm.main_color,
     });
-    if (success) showToast('Perfil salvo com sucesso!');
-    else showToast('Erro ao salvar perfil.', 'error');
+    if (success) {
+      if (oldSlug && desiredSlug && oldSlug !== desiredSlug && typeof window !== 'undefined') {
+        try { localStorage.setItem('tenantSlug', desiredSlug); } catch (_) {}
+        try { localStorage.setItem('authTenantSlug', desiredSlug); } catch (_) {}
+        const path = window.location.pathname || '';
+        const search = window.location.search || '';
+        const hash = window.location.hash || '';
+        const newPath = path.replace(new RegExp(`^/${oldSlug}(?=/|$)`), `/${desiredSlug}`);
+        window.location.replace(newPath + search + hash);
+        return;
+      }
+      showToast('Perfil salvo com sucesso!');
+    } else {
+      showToast('Erro ao salvar perfil.', 'error');
+    }
   };
 
   const saveTenantOps = async () => {
