@@ -81,16 +81,27 @@ export default function StartOnboarding() {
     })();
   }, []);
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md rounded-2xl bg-white p-6 shadow text-center space-y-3">
-        <h2 className="text-xl font-semibold text-gray-900">Iniciando onboarding</h2>
-        <p className="text-sm text-gray-600">{state.message}</p>
-        {state.status === 'error' && (
-          <button
-            className="inline-flex items-center justify-center rounded-xl bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-gray-800"
-            onClick={() => window.location.reload()}
-          >Tentar novamente</button>
-        )}
+    <div className="relative min-h-screen overflow-hidden">
+      <video
+        className="absolute inset-0 h-full w-full object-cover"
+        autoPlay
+        muted
+        loop
+        playsInline
+        src="/assets/images/lp/loading.mp4"
+      />
+      <div className="absolute inset-0 bg-black/40" />
+      <div className="relative z-10 flex min-h-screen items-center justify-center">
+        <div className="max-w-md rounded-2xl bg-white/90 p-6 shadow text-center space-y-3">
+          <h2 className="text-xl font-semibold text-gray-900">Iniciando onboarding</h2>
+          <p className="text-sm text-gray-600">{state.message}</p>
+          {state.status === 'error' && (
+            <button
+              className="inline-flex items-center justify-center rounded-xl bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-gray-800"
+              onClick={() => window.location.reload()}
+            >Tentar novamente</button>
+          )}
+        </div>
       </div>
     </div>
   );
