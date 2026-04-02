@@ -173,7 +173,12 @@ export async function loginWithRedirect(redirectUri) {
   try {
     const instance = ensureKeycloak(redirectUri);
     setLoginInProgress(true);
-    await instance.login({ redirectUri });
+    const url = await instance.createLoginUrl({ redirectUri, prompt: 'login' });
+    if (typeof window !== 'undefined' && url) {
+      window.location.assign(url);
+      return;
+    }
+    await instance.login({ redirectUri, prompt: 'login' });
   } catch (_) {
     setLoginInProgress(false);
   }
