@@ -1884,15 +1884,21 @@ export const StorefrontProvider = ({ children }) => {
           const isTempId = typeof neighborhood.id === 'string' && neighborhood.id.startsWith('nh-');
           const hasRealId = neighborhood.id && !isTempId && !isNaN(Number(neighborhood.id));
           if (hasRealId) {
-            dispatch({ type: actionMap.UPSERT_NEIGHBORHOOD, payload: neighborhood });
-            return neighborhood.id;
+            const payload = {
+              id: Number(neighborhood.id),
+              tenantId: Number(tenantId),
+              name: neighborhood.name,
+              price: Number(neighborhood.price) || 0,
+            };
+            await api.put(`/neighborhoods/${payload.id}`, payload);
+          } else {
+            const payload = {
+              tenantId: Number(tenantId),
+              name: neighborhood.name,
+              price: Number(neighborhood.price) || 0,
+            };
+            await api.post('/neighborhoods', payload);
           }
-          const payload = {
-            tenantId: Number(tenantId),
-            name: neighborhood.name,
-            price: Number(neighborhood.price) || 0,
-          };
-          const created = await api.post('/neighborhoods', payload);
           const list = await api.get(`/neighborhoods/by-tenant/${tenantId}`).catch(() => []);
           const neighborhoods = Array.isArray(list) ? list.map(n => ({
             id: n.id,
@@ -1901,11 +1907,11 @@ export const StorefrontProvider = ({ children }) => {
             price: n.price,
           })) : [];
           dispatch({ type: actionMap.SET_DATA, payload: { neighborhoods } });
-          return created?.id || null;
+          return true;
         } catch (e) {
           console.error('Error saving neighborhood', e);
           dispatch({ type: actionMap.UPSERT_NEIGHBORHOOD, payload: { ...neighborhood, tenant_id: state.tenant?.id } });
-          return neighborhood.id || null;
+          return false;
         }
       },
       deleteNeighborhood: async (neighborhoodId) => {
