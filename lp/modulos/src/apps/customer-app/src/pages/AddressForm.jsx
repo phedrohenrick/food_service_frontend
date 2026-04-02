@@ -17,6 +17,20 @@ const defaultForm = {
   isDefault: false,
 };
 
+const normalizeFormData = (address = {}) => ({
+  ...defaultForm,
+  ...address,
+  streetNumber: address.streetNumber ?? address.street_number ?? '',
+  neighborhoodName: address.neighborhoodName ?? address.neighborhood?.name ?? '',
+  zipCode: address.zipCode ?? address.zip_code ?? '',
+  isDefault: address.isDefault ?? address.is_default ?? false,
+  complement: address.complement ?? '',
+  city: address.city ?? '',
+  state: address.state ?? defaultForm.state,
+  label: address.label ?? '',
+  street: address.street ?? '',
+});
+
 const AddressForm = () => {
   const navigate = useNavigate();
   const { addressId } = useParams();
@@ -24,6 +38,7 @@ const AddressForm = () => {
   const [formData, setFormData] = useState(defaultForm);
   const [neighborhoods, setNeighborhoods] = useState([]);
   const [loading, setLoading] = useState(false);
+  const hydratedAddressIdRef = React.useRef(null);
 
   useEffect(() => {
     // Carregar bairros do tenant (assumindo tenant 1 para demo)
@@ -39,15 +54,21 @@ const AddressForm = () => {
 
   useEffect(() => {
     if (!addressId) {
-      setFormData(defaultForm);
+      if (hydratedAddressIdRef.current !== '__new__') {
+        setFormData(defaultForm);
+        hydratedAddressIdRef.current = '__new__';
+      }
       return;
     }
+
+    if (hydratedAddressIdRef.current === addressId) {
+      return;
+    }
+
     const current = (addresses || []).find((address) => address.id === addressId);
     if (current) {
-      setFormData({
-        ...current,
-        neighborhoodName: current.neighborhoodName || current.neighborhood?.name || ''
-      });
+      setFormData(normalizeFormData(current));
+      hydratedAddressIdRef.current = addressId;
     }
   }, [addressId, addresses]);
 
@@ -128,7 +149,7 @@ const AddressForm = () => {
             <input
               type="text"
               name="label"
-              value={formData.label}
+              value={formData.label ?? ''}
               onChange={handleChange}
               placeholder="Casa, trabalho..."
               className="mt-1 w-full rounded-2xl border border-gray-200 px-4 py-3 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
@@ -140,7 +161,7 @@ const AddressForm = () => {
             <input
               type="text"
               name="zipCode"
-              value={formData.zipCode}
+              value={formData.zipCode ?? ''}
               onChange={handleChange}
               placeholder="00000-000"
               className="mt-1 w-full rounded-2xl border border-gray-200 px-4 py-3 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
@@ -155,7 +176,7 @@ const AddressForm = () => {
             <input
               type="text"
               name="street"
-              value={formData.street}
+              value={formData.street ?? ''}
               onChange={handleChange}
               className="mt-1 w-full rounded-2xl border border-gray-200 px-4 py-3 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
               required
@@ -166,7 +187,7 @@ const AddressForm = () => {
             <input
               type="text"
               name="streetNumber"
-              value={formData.streetNumber}
+              value={formData.streetNumber ?? ''}
               onChange={handleChange}
               className="mt-1 w-full rounded-2xl border border-gray-200 px-4 py-3 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
               required
@@ -180,7 +201,7 @@ const AddressForm = () => {
             <input
               type="text"
               name="neighborhoodName"
-              value={formData.neighborhoodName}
+              value={formData.neighborhoodName ?? ''}
               onChange={handleChange}
               list="neighborhoods-list"
               className="mt-1 w-full rounded-2xl border border-gray-200 px-4 py-3 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
@@ -199,7 +220,7 @@ const AddressForm = () => {
             <input
               type="text"
               name="complement"
-              value={formData.complement}
+              value={formData.complement ?? ''}
               onChange={handleChange}
               className="mt-1 w-full rounded-2xl border border-gray-200 px-4 py-3 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
               placeholder="Bloco, apto..."
@@ -213,7 +234,7 @@ const AddressForm = () => {
             <input
               type="text"
               name="city"
-              value={formData.city}
+              value={formData.city ?? ''}
               onChange={handleChange}
               className="mt-1 w-full rounded-2xl border border-gray-200 px-4 py-3 focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
               required
@@ -224,7 +245,7 @@ const AddressForm = () => {
             <input
               type="text"
               name="state"
-              value={formData.state}
+              value={formData.state ?? ''}
               onChange={handleChange}
               className="mt-1 w-full rounded-2xl border border-gray-200 px-4 py-3 uppercase focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
               maxLength={2}
@@ -237,7 +258,7 @@ const AddressForm = () => {
           <input
             type="checkbox"
             name="isDefault"
-            checked={formData.isDefault}
+            checked={!!formData.isDefault}
             onChange={handleChange}
             className="h-4 w-4 rounded border-gray-300 text-[var(--accent-contrast)] focus:ring-[var(--accent)]"
           />
