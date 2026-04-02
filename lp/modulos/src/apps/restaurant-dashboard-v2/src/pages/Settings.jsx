@@ -2,6 +2,12 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { Button, Input } from '../../../../shared/components/ui';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
 
+const paymentOptions = [
+  { value: 'PIX', label: 'Pix', helper: 'Pagamento instantaneo' },
+  { value: 'CARD', label: 'Cartão', helper: 'Crédito e débito' },
+  { value: 'CASH', label: 'Dinheiro', helper: 'Pagamento na entrega' },
+];
+
 const Settings = () => {
   const {
     tenant,
@@ -26,6 +32,9 @@ const Settings = () => {
     working_hours: tenant?.working_hours || '',
     delivery_method: tenant?.delivery_method || 'own',
     service_fee_percentage: tenant?.service_fee_percentage ?? 0.08,
+    payment_channels: Array.isArray(tenant?.payment_channels) && tenant.payment_channels.length
+      ? tenant.payment_channels
+      : ['pix', 'card', ...(tenant?.accepts_cash ? ['cash'] : [])],
     accepts_cash: !!tenant?.accepts_cash,
   }));
 
@@ -46,6 +55,9 @@ const Settings = () => {
         working_hours: tenant.working_hours || '',
         delivery_method: tenant.delivery_method || 'own',
         service_fee_percentage: tenant.service_fee_percentage ?? 0.08,
+        payment_channels: Array.isArray(tenant.payment_channels) && tenant.payment_channels.length
+          ? tenant.payment_channels
+          : ['pix', 'card', ...(tenant.accepts_cash ? ['cash'] : [])],
         accepts_cash: !!tenant.accepts_cash,
       }));
     }
@@ -74,17 +86,35 @@ const Settings = () => {
   };
 
   const saveTenantOps = async () => {
+    const selectedPaymentChannels = Array.from(
+      new Set((tenantForm.payment_channels || []).filter(Boolean))
+    );
     const success = await updateTenant({
       working_hours: tenantForm.working_hours,
       delivery_method: tenantForm.delivery_method,
       service_fee_percentage: parseFloat(tenantForm.service_fee_percentage) || 0,
-      accepts_cash: !!tenantForm.accepts_cash,
+      payment_channels: selectedPaymentChannels,
+      accepts_cash: selectedPaymentChannels.includes('cash'),
     });
     if (success) showToast('Configurações salvas com sucesso!');
     else showToast('Erro ao salvar configurações.', 'error');
   };
 
   const toggleOpen = () => updateTenant({ is_open: !tenant.is_open });
+  const togglePaymentChannel = (channel) => {
+    setTenantForm((prev) => {
+      const currentChannels = Array.isArray(prev.payment_channels) ? prev.payment_channels : [];
+      const nextChannels = currentChannels.includes(channel)
+        ? currentChannels.filter((item) => item !== channel)
+        : [...currentChannels, channel];
+
+      return {
+        ...prev,
+        payment_channels: nextChannels,
+        accepts_cash: nextChannels.includes('cash'),
+      };
+    });
+  };
 
   // Neighborhoods
   const [newNeighborhood, setNewNeighborhood] = useState({ name: '', price: '' });
@@ -100,6 +130,8 @@ const Settings = () => {
     () => [...neighborhoods].sort((a, b) => a.name.localeCompare(b.name)),
     [neighborhoods]
   );
+  const surfaceClass = 'rounded-[28px] border border-slate-200/80 bg-white/95 shadow-[0_22px_55px_rgba(15,23,42,0.08)]';
+  const subtleCardClass = 'rounded-3xl border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] shadow-[0_12px_30px_rgba(15,23,42,0.06)]';
 
   const saveNewNeighborhood = () => {
     const price = parseFloat(String(newNeighborhood.price).replace(',', '.')) || 0;
@@ -117,21 +149,21 @@ const Settings = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.96),rgba(248,250,252,0.98)_40%,rgba(241,245,249,1))] pb-6">
       <div>
-        <p className="text-sm text-gray-500">Perfil e operação</p>
-        <h1 className="text-2xl font-bold text-gray-900">Ajustes com cara de app</h1>
+        <p className="text-sm font-medium text-slate-500">Perfil e operação</p>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Ajustes do sistema</h1>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-lg p-6 space-y-4">
+          <div className={`${surfaceClass} p-6 space-y-5`}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <p className="text-sm text-gray-500">Identidade</p>
-                <h2 className="text-xl font-semibold text-gray-900">Dados do restaurante</h2>
+                <p className="text-sm font-medium text-slate-500">Cadastro principal</p>
+                <h2 className="text-xl font-semibold tracking-tight text-slate-900">Dados do restaurante</h2>
               </div>
-              <Button variant="ghost" className="w-full lg:w-auto border border-gray-200 text-gray-700" onClick={saveTenantProfile}>
+              <Button className="w-full lg:w-auto shadow-[0_12px_30px_rgba(15,23,42,0.12)]" onClick={saveTenantProfile}>
                 Salvar perfil
               </Button>
             </div>
@@ -146,55 +178,156 @@ const Settings = () => {
               <Input label="Geo Lat" value={tenantForm.geo_lat} onChange={onTenantChange('geo_lat')} />
               <Input label="Geo Lng" value={tenantForm.geo_lng} onChange={onTenantChange('geo_lng')} />
               <Input label="Status" value={tenantForm.status} onChange={onTenantChange('status')} />
-              <Input label="Foto (URL)" value={tenantForm.photo_url} onChange={onTenantChange('photo_url')} />
-              <Input label="Cor principal (#hex)" value={tenantForm.main_color} onChange={onTenantChange('main_color')} />
             </div>
           </div>
 
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-lg p-6 space-y-4">
+          <div className={`${surfaceClass} p-6 space-y-5`}>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-medium text-slate-500">Marca e experiencia</p>
+                <h2 className="text-xl font-semibold tracking-tight text-slate-900">Identidade visual</h2>
+              </div>
+              <Button className="w-full lg:w-auto shadow-[0_12px_30px_rgba(15,23,42,0.12)]" onClick={saveTenantProfile}>
+                Salvar identidade
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.1fr_0.9fr]">
+              <div className={`${subtleCardClass} p-5`}>
+                <div className="flex items-start gap-4">
+                  <div
+                    className="flex h-20 w-20 shrink-0 items-center justify-center rounded-[22px] border border-slate-200 shadow-sm"
+                    style={{ backgroundColor: tenantForm.main_color || '#EA1D2C' }}
+                  >
+                    <span className="text-lg font-bold text-white/90">
+                      {(tenantForm.name || tenant?.name || 'R').slice(0, 1).toUpperCase()}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">Preview da marca</p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Ajuste a foto e a cor principal para padronizar dashboard e app do cliente.
+                    </p>
+                    <div className="mt-3 inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600">
+                      Cor ativa: {tenantForm.main_color || '#EA1D2C'}
+                    </div>
+                  </div>
+                </div>
+
+                {tenantForm.photo_url ? (
+                  <div className="mt-5 overflow-hidden rounded-[24px] border border-slate-200 bg-slate-100 shadow-sm">
+                    <img
+                      src={tenantForm.photo_url}
+                      alt={tenantForm.name || tenant?.name || 'Restaurante'}
+                      className="h-56 w-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="mt-5 rounded-[24px] border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center text-sm text-slate-500">
+                    Adicione uma foto para visualizar como sua identidade aparece no sistema.
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                <div className={`${subtleCardClass} p-5`}>
+                  <Input label="Foto (URL)" value={tenantForm.photo_url} onChange={onTenantChange('photo_url')} />
+                </div>
+                <div className={`${subtleCardClass} p-5`}>
+                  <p className="mb-3 text-sm font-medium text-slate-700">Cor principal do sistema</p>
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                    <input
+                      type="color"
+                      value={tenantForm.main_color || '#EA1D2C'}
+                      onChange={onTenantChange('main_color')}
+                      className="h-16 w-full cursor-pointer rounded-2xl border border-slate-200 bg-white p-2 sm:w-24"
+                    />
+                    <div className="flex-1">
+                      <Input label="Hex" value={tenantForm.main_color} onChange={onTenantChange('main_color')} className="uppercase" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className={`${surfaceClass} p-6 space-y-5`}>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-sm text-gray-500">Entrega e pedidos</p>
-                <h2 className="text-xl font-semibold text-gray-900">Parâmetros do delivery</h2>
+                <p className="text-sm font-medium text-slate-500">Entrega e pedidos</p>
+                <h2 className="text-xl font-semibold tracking-tight text-slate-900">Parâmetros do delivery</h2>
               </div>
-              <Button variant="ghost" className="w-full lg:w-auto border border-gray-200 text-gray-700" onClick={saveTenantOps}>
+              <Button className="w-full lg:w-auto shadow-[0_12px_30px_rgba(15,23,42,0.12)]" onClick={saveTenantOps}>
                 Salvar entrega & taxas
               </Button>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div>
+              <div className={`${subtleCardClass} p-4`}>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Método de entrega</label>
                 <select
                   value={tenantForm.delivery_method}
                   onChange={onTenantChange('delivery_method')}
-                  className="w-full rounded-2xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                 >
                   <option value="own">Própria</option>
                   <option value="pool">Parceiro</option>
                 </select>
               </div>
-              <Input
-                label="Taxa de serviço (%)"
-                value={String((tenantForm.service_fee_percentage ?? 0) * 100)}
-                onChange={(e) => onTenantChange('service_fee_percentage')(String(parseFloat(e.target.value) / 100))}
-              />
-              <div className="flex items-end">
-                <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-                  <input type="checkbox" checked={tenantForm.accepts_cash} onChange={onTenantChange('accepts_cash')} />
-                  Aceita dinheiro
-                </label>
+              <div className={`${subtleCardClass} p-4`}>
+                <Input
+                  label="Taxa de serviço (%)"
+                  value={String((tenantForm.service_fee_percentage ?? 0) * 100)}
+                  onChange={(e) => onTenantChange('service_fee_percentage')(String(parseFloat(e.target.value) / 100))}
+                />
+              </div>
+              <div className={`${subtleCardClass} p-4`}>
+                <p className="text-sm font-medium text-slate-700">Pagamento exibido no app</p>
+                <p className="mt-1 text-sm text-slate-500">
+                  Escolha os meios de pagamento que o cliente pode visualizar ao finalizar o pedido.
+                </p>
+                <div className="mt-4 space-y-3">
+                  {paymentOptions.map((option) => {
+                    const selected = (tenantForm.payment_channels || []).includes(option.value);
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => togglePaymentChannel(option.value)}
+                        className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition ${
+                          selected
+                            ? 'border-[var(--accent)] bg-[var(--accent)]/8 shadow-[0_10px_24px_rgba(15,23,42,0.08)]'
+                            : 'border-slate-200 bg-white hover:border-slate-300'
+                        }`}
+                      >
+                        <div>
+                          <p className={`text-sm font-semibold ${selected ? 'text-[var(--accent)]' : 'text-slate-900'}`}>{option.label}</p>
+                          <p className="text-xs text-slate-500">{option.helper}</p>
+                        </div>
+                        <span
+                          className={`inline-flex h-6 w-6 items-center justify-center rounded-full border text-xs font-bold ${
+                            selected
+                              ? 'border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-contrast)]'
+                              : 'border-slate-300 text-slate-400'
+                          }`}
+                        >
+                          {selected ? '✓' : ''}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="p-4 rounded-2xl bg-gray-50 border border-gray-100">
+              <div className={`${subtleCardClass} p-4`}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <p className="text-sm font-semibold text-gray-900">Funcionamento</p>
-                    <p className="text-sm text-gray-500">{tenant.is_open ? 'Loja aberta' : 'Loja fechada'}</p>
+                    <p className="text-sm font-semibold text-slate-900">Funcionamento</p>
+                    <p className="text-sm text-slate-500">{tenant.is_open ? 'Loja aberta' : 'Loja fechada'}</p>
                   </div>
-                  <Button size="sm" variant="ghost" className="w-full lg:w-auto border border-gray-200 text-gray-700" onClick={toggleOpen}>
+                  <Button size="sm" className="w-full lg:w-auto" onClick={toggleOpen}>
                     {tenant.is_open ? 'Fechar' : 'Abrir'}
                   </Button>
                 </div>
@@ -202,46 +335,46 @@ const Settings = () => {
                   <Input label="Horário de funcionamento" value={tenantForm.working_hours} onChange={onTenantChange('working_hours')} />
                 </div>
               </div>
-              <div className="p-4 rounded-2xl bg-gray-50 border border-gray-100">
-                <p className="text-sm font-semibold text-gray-900 mb-2">Áreas atendidas e taxa por bairro</p>
+              <div className={`${subtleCardClass} p-4`}>
+                <p className="text-sm font-semibold text-slate-900 mb-2">Áreas atendidas e taxa por bairro</p>
                 <div className="space-y-2">
                   {neighborhoodsSorted.map((n) => {
                     const edit = editingNeighborhood[n.id] ?? { name: n.name, price: n.price };
                     return (
-                      <div key={n.id} className="space-y-2">
+                      <div key={n.id} className="space-y-2 rounded-2xl border border-slate-200/80 bg-white p-3 shadow-sm">
                         <div className="flex flex-wrap items-center gap-2">
                           <input
-                            className="w-full lg:flex-1 rounded-2xl border border-gray-200 px-3 py-2 text-sm"
+                            className="w-full lg:flex-1 rounded-2xl border border-slate-200 px-3 py-2 text-sm"
                             value={edit.name}
                             onChange={(e) => setEditingNeighborhood((prev) => ({ ...prev, [n.id]: { ...edit, name: e.target.value } }))}
                           />
                           <input
-                            className="w-full lg:w-32 rounded-2xl border border-gray-200 px-3 py-2 text-sm"
+                            className="w-full lg:w-32 rounded-2xl border border-slate-200 px-3 py-2 text-sm"
                             value={String(edit.price)}
                             onChange={(e) => setEditingNeighborhood((prev) => ({ ...prev, [n.id]: { ...edit, price: e.target.value } }))}
                           />
                         </div>
-                        <div className="space-y-2">
-                          <Button size="sm" variant="ghost" className="w-full lg:w-auto border border-gray-200 text-gray-700" onClick={() => saveNeighborhoodEdit(n.id)}>Salvar</Button>
-                          <Button size="sm" variant="ghost" className="w-full lg:w-auto border border-red-200 text-red-700" onClick={() => deleteNeighborhood(n.id)}>Remover</Button>
+                        <div className="flex flex-wrap gap-2">
+                          <Button size="sm" className="w-full lg:w-auto" onClick={() => saveNeighborhoodEdit(n.id)}>Salvar</Button>
+                          <Button size="sm" variant="ghost" className="w-full lg:w-auto border border-red-200 text-red-700 hover:bg-red-50" onClick={() => deleteNeighborhood(n.id)}>Remover</Button>
                         </div>
                       </div>
                     );
                   })}
-                  <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-gray-100">
+                  <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-200">
                     <input
-                      className="w-full lg:flex-1 rounded-2xl border border-gray-200 px-3 py-2 text-sm"
+                      className="w-full lg:flex-1 rounded-2xl border border-slate-200 px-3 py-2 text-sm"
                       placeholder="Novo bairro"
                       value={newNeighborhood.name}
                       onChange={(e) => setNewNeighborhood((prev) => ({ ...prev, name: e.target.value }))}
                     />
                     <input
-                      className="w-full lg:w-32 rounded-2xl border border-gray-200 px-3 py-2 text-sm"
+                      className="w-full lg:w-32 rounded-2xl border border-slate-200 px-3 py-2 text-sm"
                       placeholder="Preço"
                       value={newNeighborhood.price}
                       onChange={(e) => setNewNeighborhood((prev) => ({ ...prev, price: e.target.value }))}
                     />
-                    <Button size="sm" variant="ghost" className="w-full lg:w-auto border border-gray-200 text-gray-700" onClick={saveNewNeighborhood}>Adicionar</Button>
+                    <Button size="sm" className="w-full lg:w-auto" onClick={saveNewNeighborhood}>Adicionar</Button>
                   </div>
                 </div>
               </div>
@@ -250,7 +383,7 @@ const Settings = () => {
         </div>
 
         <div className="space-y-4">
-          <div className="bg-gradient-to-br from-[var(--accent)] to-[var(--accent-hover)] text-[var(--accent-contrast)] rounded-3xl p-6 shadow-lg">
+          <div className="bg-gradient-to-br from-[var(--accent)] to-[var(--accent-hover)] text-[var(--accent-contrast)] rounded-[28px] p-6 shadow-[0_22px_55px_rgba(15,23,42,0.16)]">
             <p className="text-sm uppercase tracking-widest text-[var(--accent-contrast)]/80">experiência</p>
             <h3 className="text-2xl font-semibold mt-2">Seu restaurante como vitrine</h3>
             <p className="text-[var(--accent-contrast)]/80 mt-2">
@@ -258,7 +391,7 @@ const Settings = () => {
             </p>
             <Button
               variant="secondary"
-              className="mt-4 bg-white text-[var(--accent)] hover:bg-white/90"
+              className="mt-4 border border-white/50 bg-white text-[var(--accent)] shadow-[0_12px_30px_rgba(0,0,0,0.12)] hover:bg-white/92"
               onClick={() => {
                 const slug = tenant?.slug;
                 const path = slug ? `/${slug}/app` : '/app';
@@ -269,20 +402,20 @@ const Settings = () => {
             </Button>
           </div>
 
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-lg p-5 space-y-3">
+          <div className={`${surfaceClass} p-5 space-y-3`}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Equipe</p>
-                <h3 className="text-lg font-semibold text-gray-900">Acessos rápidos</h3>
+                <p className="text-sm text-slate-500">Equipe</p>
+                <h3 className="text-lg font-semibold tracking-tight text-slate-900">Acessos rápidos</h3>
               </div>
             </div>
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 rounded-2xl border border-gray-100">
+              <div className="flex items-center justify-between rounded-2xl border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] p-4 shadow-sm">
                 <div>
-                  <p className="font-semibold text-gray-900">{user?.name || 'Proprietário'}</p>
-                  <p className="text-sm text-gray-500">{user?.email}</p>
-                  <p className="text-sm text-gray-500">{user?.phone}</p>
-                  <p className="text-sm text-gray-500">Status: {user?.status}</p>
+                  <p className="font-semibold text-slate-900">{user?.name || 'Proprietário'}</p>
+                  <p className="text-sm text-slate-500">{user?.email}</p>
+                  <p className="text-sm text-slate-500">{user?.phone}</p>
+                  <p className="text-sm text-slate-500">Status: {user?.status}</p>
                 </div>
               </div>
             </div>

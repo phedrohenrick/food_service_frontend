@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { StorefrontProvider } from './shared/generalContext.jsx';
 
 // Landing Pages
@@ -19,6 +19,22 @@ const MerchantLoginPage = React.lazy(() => import('./features/auth/MerchantLogin
 const DeliveryLoginPage = React.lazy(() => import('./features/auth/DeliveryLogin'));
 const CustomerLoginPage = React.lazy(() => import('./features/auth/CustomerLogin'));
 const ForgotPasswordPage = React.lazy(() => import('./features/auth/ForgotPassword'));
+
+function DashboardFallbackRedirect() {
+  const storedSlug = (() => {
+    try {
+      return localStorage.getItem('authTenantSlug') || localStorage.getItem('tenantSlug');
+    } catch (_) {
+      return null;
+    }
+  })();
+
+  if (storedSlug) {
+    return <Navigate to={`/${storedSlug}/dashboard`} replace />;
+  }
+
+  return <Navigate to="/login/lojista" replace />;
+}
 
 function App() {
   return (
@@ -40,7 +56,7 @@ function App() {
             
             {/* Restaurant Dashboard Routes */}
             <Route path="/:slug/dashboard/*" element={<RestaurantDashboard />} />
-            <Route path="/dashboard/*" element={<RestaurantDashboard />} />
+            <Route path="/dashboard/*" element={<DashboardFallbackRedirect />} />
             
             {/* Customer App Routes */}
             <Route path="/:slug/app/*" element={<CustomerApp />} />

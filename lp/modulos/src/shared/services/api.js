@@ -34,7 +34,11 @@ class ApiService {
       try { return localStorage.getItem('tenantSlug'); } catch (_) { return null; }
     })();
     const finalSlug = urlSlug || storedSlug;
-    if (finalSlug && !config.headers['X-Tenant-Slug']) {
+    const endpointText = String(endpoint || '');
+    const shouldSkipTenantHeader =
+      /^\/tenants\/by-slug\/[^/]+/i.test(endpointText);
+
+    if (finalSlug && !shouldSkipTenantHeader && !config.headers['X-Tenant-Slug']) {
       config.headers['X-Tenant-Slug'] = finalSlug;
     }
 

@@ -220,6 +220,27 @@ const initialCart = {
   address_id: null,
 };
 
+const normalizeCartData = (rawCart, fallback = initialCart) => {
+  if (!rawCart || typeof rawCart !== 'object') {
+    return { ...fallback };
+  }
+
+  return {
+    ...fallback,
+    ...rawCart,
+    user_id: rawCart.userId ?? rawCart.user_id ?? fallback.user_id,
+    tenant_id: rawCart.tenantId ?? rawCart.tenant_id ?? fallback.tenant_id,
+    address_id: rawCart.addressId ?? rawCart.address_id ?? fallback.address_id,
+    payment_channel: rawCart.paymentChannel ?? rawCart.payment_channel ?? fallback.payment_channel,
+    change: rawCart.changeFor ?? rawCart.change ?? fallback.change ?? '',
+    delivery_fee: rawCart.deliveryFee ?? rawCart.delivery_fee ?? fallback.delivery_fee ?? 0,
+    notes: rawCart.notes ?? fallback.notes ?? '',
+    discount: rawCart.discount ?? fallback.discount ?? 0,
+    subtotal: rawCart.subtotal ?? fallback.subtotal ?? 0,
+    total: rawCart.total ?? fallback.total ?? 0,
+  };
+};
+
 // cart_item
 const initialCartItems = [];
 
@@ -397,7 +418,7 @@ const reducer = (state, action) => {
     case actionMap.SET_CART:
       return {
         ...state,
-        cart: { ...state.cart, ...action.payload },
+        cart: normalizeCartData(action.payload, state.cart),
       };
 
     case actionMap.ADD_TO_CART: {
@@ -488,13 +509,13 @@ const reducer = (state, action) => {
     case actionMap.SET_CART_CHANGE:
       return {
         ...state,
-        cart: { ...state.cart, change: action.payload },
+        cart: { ...state.cart, change: action.payload ?? '' },
       };
 
     case actionMap.SET_CART_NOTES:
       return {
         ...state,
-        cart: { ...state.cart, notes: action.payload },
+        cart: { ...state.cart, notes: action.payload ?? '' },
       };
 
     case actionMap.CLEAR_CART:
@@ -739,9 +760,14 @@ const reducer = (state, action) => {
     }
 
     case actionMap.SET_DATA: {
+      const nextCart = action.payload?.cart
+        ? normalizeCartData(action.payload.cart, state.cart)
+        : state.cart;
+
       return {
         ...state,
         ...action.payload,
+        cart: nextCart,
       };
     }
 
@@ -959,7 +985,8 @@ export const StorefrontProvider = ({ children }) => {
           working_hours: rawTenant.workingHours || rawTenant.working_hours,
           accepts_cash: rawTenant.acceptsCash || rawTenant.accepts_cash,
           photo_url: rawTenant.photoUrl || rawTenant.photo_url,
-          payment_channels: rawTenant.paymentChannels || rawTenant.payment_channels || (rawTenant.paymentChannel ? [rawTenant.paymentChannel] : []),
+          payment_channels: (rawTenant.paymentChannels || rawTenant.payment_channels || (rawTenant.paymentChannel ? [rawTenant.paymentChannel] : []))
+            .map((channel) => String(channel).toLowerCase()),
           is_open: rawTenant.isOpen !== undefined ? rawTenant.isOpen : rawTenant.is_open,
           delivery_estimate_min: rawTenant.deliveryEstimateMin || rawTenant.delivery_estimate_min,
           delivery_estimate_max: rawTenant.deliveryEstimateMax || rawTenant.delivery_estimate_max,
@@ -1031,17 +1058,7 @@ export const StorefrontProvider = ({ children }) => {
       let cartItemOptions = [];
 
       if (rawCart) {
-         cart = {
-             ...rawCart,
-             user_id: rawCart.userId || rawCart.user_id,
-             tenant_id: rawCart.tenantId || rawCart.tenant_id,
-             address_id: rawCart.addressId || rawCart.address_id,
-             payment_channel: rawCart.paymentChannel || rawCart.payment_channel,
-             change: rawCart.changeFor || rawCart.change,
-             delivery_fee: rawCart.deliveryFee || rawCart.delivery_fee,
-             notes: rawCart.notes,
-             discount: rawCart.discount || 0,
-         };
+         cart = normalizeCartData(rawCart);
 
          if (rawCart.items && Array.isArray(rawCart.items)) {
             cartItems = rawCart.items.map(ci => ({
@@ -1232,17 +1249,7 @@ export const StorefrontProvider = ({ children }) => {
       // Tenta buscar/criar o carrinho
       const res = await api.get(`/cart?userId=${state.user.id}&tenantId=${state.tenant.id}`);
       if (res && res.id) {
-        const normalizedCart = {
-           ...res,
-           user_id: res.userId || res.user_id,
-           tenant_id: res.tenantId || res.tenant_id,
-           address_id: res.addressId || res.address_id,
-           payment_channel: res.paymentChannel || res.payment_channel,
-           change: res.changeFor || res.change,
-           delivery_fee: res.deliveryFee || res.delivery_fee,
-           notes: res.notes,
-           discount: res.discount || 0,
-        };
+        const normalizedCart = normalizeCartData(res, state.cart);
         dispatch({ type: actionMap.SET_CART, payload: normalizedCart });
         return res.id;
       }
@@ -1280,19 +1287,7 @@ export const StorefrontProvider = ({ children }) => {
       });
       const data = res?.data ?? res;
       if (data && typeof data === 'object') {
-        const normalizedCart = {
-          id: data.id,
-          user_id: data.userId || data.user_id,
-          tenant_id: data.tenantId || data.tenant_id,
-          address_id: data.addressId || data.address_id,
-          subtotal: data.subtotal ?? 0,
-          delivery_fee: data.deliveryFee ?? data.delivery_fee ?? 0,
-          total: data.total ?? 0,
-          payment_channel: data.paymentChannel || data.payment_channel,
-          change: data.changeFor || data.change,
-          notes: data.notes ?? '',
-          discount: data.discount ?? 0,
-        };
+        const normalizedCart = normalizeCartData(data, state.cart);
         let cartItems = [];
         let cartItemOptions = [];
         if (Array.isArray(data.items)) {
@@ -1392,7 +1387,15 @@ export const StorefrontProvider = ({ children }) => {
       const cartId = await getEffectiveCartId();
       if (!cartId) return;
 
-      await api.put(`/cart/${cartId}/details`, { addressId });
+      const updatedCart = await api.put(`/cart/${cartId}/details`, {
+        addressId,
+        paymentChannel: state.cart.payment_channel ?? null,
+        changeFor: state.cart.change ?? '',
+        notes: state.cart.notes ?? '',
+      });
+      if (updatedCart) {
+        dispatch({ type: actionMap.SET_CART, payload: updatedCart });
+      }
     } catch (error) {
       console.error('Erro ao definir endereço do carrinho:', error);
     }
@@ -1407,38 +1410,64 @@ export const StorefrontProvider = ({ children }) => {
       const cartId = await getEffectiveCartId();
       if (!cartId) return;
 
-      await api.put(`/cart/${cartId}/details`, { paymentChannel: channel });
+      const updatedCart = await api.put(`/cart/${cartId}/details`, {
+        addressId: state.cart.address_id ?? null,
+        paymentChannel: channel,
+        changeFor: state.cart.change ?? '',
+        notes: state.cart.notes ?? '',
+      });
+      if (updatedCart) {
+        dispatch({ type: actionMap.SET_CART, payload: updatedCart });
+      }
     } catch (error) {
       console.error('Erro ao definir pagamento:', error);
     }
   };
 
   const setCartChangeFor = async (value) => {
+    const normalizedValue = value ?? '';
     dispatch({
       type: actionMap.SET_CART_CHANGE,
-      payload: value,
+      payload: normalizedValue,
     });
     // Debounce idealmente, mas direto por enquanto
     try {
       const cartId = await getEffectiveCartId();
       if (!cartId) return;
 
-      await api.put(`/cart/${cartId}/details`, { changeFor: value });
+      const updatedCart = await api.put(`/cart/${cartId}/details`, {
+        addressId: state.cart.address_id ?? null,
+        paymentChannel: state.cart.payment_channel ?? null,
+        changeFor: normalizedValue,
+        notes: state.cart.notes ?? '',
+      });
+      if (updatedCart) {
+        dispatch({ type: actionMap.SET_CART, payload: updatedCart });
+      }
     } catch (error) {
       console.error('Erro ao definir troco:', error);
     }
   };
 
   const setCartNotes = async (notes) => {
+    const normalizedNotes = notes ?? '';
     dispatch({
       type: actionMap.SET_CART_NOTES,
-      payload: notes,
+      payload: normalizedNotes,
     });
     try {
       const cartId = await getEffectiveCartId();
       if (!cartId) return;
 
-      await api.put(`/cart/${cartId}/details`, { notes });
+      const updatedCart = await api.put(`/cart/${cartId}/details`, {
+        addressId: state.cart.address_id ?? null,
+        paymentChannel: state.cart.payment_channel ?? null,
+        changeFor: state.cart.change ?? '',
+        notes: normalizedNotes,
+      });
+      if (updatedCart) {
+        dispatch({ type: actionMap.SET_CART, payload: updatedCart });
+      }
     } catch (error) {
       console.error('Erro ao definir observações:', error);
     }
@@ -1497,6 +1526,13 @@ export const StorefrontProvider = ({ children }) => {
     if (!state.cartItems.length) return null;
 
     try {
+      const parsedTenantId = Number(state.tenant?.id);
+      const parsedUserId = Number(state.user?.id);
+      const parsedAddressId =
+        state.cart.address_id != null && state.cart.address_id !== ''
+          ? Number(state.cart.address_id)
+          : null;
+
       // Construct OrderDTO compatible payload (camelCase)
       const orderItems = state.cartItems.map((ci) => {
         const item = maps.menuItemMap[ci.item_id];
@@ -1523,9 +1559,9 @@ export const StorefrontProvider = ({ children }) => {
       });
 
       const payload = {
-        tenantId: state.tenant?.id ? Number(state.tenant.id) : value.tenantId,
-        userId: state.user?.id ? Number(state.user.id) : value.userId,
-        addressId: state.cart.address_id ? Number(state.cart.address_id) : null,
+        tenantId: Number.isFinite(parsedTenantId) ? parsedTenantId : null,
+        userId: Number.isFinite(parsedUserId) ? parsedUserId : null,
+        addressId: Number.isFinite(parsedAddressId) ? parsedAddressId : null,
         subtotal: cartTotals.subtotal,
         serviceFee: cartTotals.serviceFee,
         deliveryFee: cartTotals.deliveryFee,
@@ -1625,7 +1661,9 @@ export const StorefrontProvider = ({ children }) => {
                 email: updated.email,
                 slug: updated.slug,
                 photoUrl: updated.photo_url,
-                paymentChannels: updated.payment_channels
+                paymentChannels: Array.isArray(updated.payment_channels)
+                    ? updated.payment_channels.map((channel) => String(channel).toUpperCase())
+                    : updated.payment_channels
             };
 
             if (updated.id) {

@@ -5,6 +5,11 @@ import { useStorefront } from '../../../shared/generalContext.jsx';
 const OrderEdit = () => {
   const { orderId } = useParams();
   const { tenant } = useStorefront();
+  const basePrefix = (() => {
+    const path = window.location?.pathname || '';
+    const match = /^\/([^/]+)\/dashboard(\/|$)/i.exec(path);
+    return match && match[1] ? `/${match[1]}/dashboard` : '/dashboard';
+  })();
 
   return (
     <div className="space-y-6">
@@ -13,7 +18,7 @@ const OrderEdit = () => {
           <h2 className="text-xl font-semibold">Editar pedido</h2>
           <p className="text-sm text-gray-600">Pedido #{orderId}</p>
         </div>
-        <Link to="/dashboard/orders" className="text-sm text-[var(--accent)] hover:underline">Voltar aos pedidos</Link>
+        <Link to={`${basePrefix}/orders`} className="text-sm text-[var(--accent)] hover:underline">Voltar aos pedidos</Link>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

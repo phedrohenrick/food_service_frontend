@@ -15,7 +15,14 @@ const LoginPage = () => {
     
     // Redirecionamento baseado no tipo de usuário
     if (formData.userType === 'restaurant') {
-      window.location.href = '/dashboard';
+      const storedSlug = (() => {
+        try {
+          return localStorage.getItem('authTenantSlug') || localStorage.getItem('tenantSlug');
+        } catch (_) {
+          return null;
+        }
+      })();
+      window.location.href = storedSlug ? `/${storedSlug}/dashboard` : '/dashboard';
     } else {
       window.location.href = '/app';
     }
