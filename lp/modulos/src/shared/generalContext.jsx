@@ -1877,10 +1877,48 @@ export const StorefrontProvider = ({ children }) => {
         }
       },
       // neighborhoods
-      saveNeighborhood: (neighborhood) =>
-        dispatch({ type: actionMap.UPSERT_NEIGHBORHOOD, payload: neighborhood }),
-      deleteNeighborhood: (neighborhoodId) =>
-        dispatch({ type: actionMap.DELETE_NEIGHBORHOOD, payload: neighborhoodId }),
+      saveNeighborhood: async (neighborhood) => {
+        try {
+          const tenantId = state.tenant?.id;
+          if (!tenantId) return null;
+          const isTempId = typeof neighborhood.id === 'string' && neighborhood.id.startsWith('nh-');
+          const hasRealId = neighborhood.id && !isTempId && !isNaN(Number(neighborhood.id));
+          if (hasRealId) {
+            dispatch({ type: actionMap.UPSERT_NEIGHBORHOOD, payload: neighborhood });
+            return neighborhood.id;
+          }
+          const payload = {
+            tenantId: Number(tenantId),
+            name: neighborhood.name,
+            price: Number(neighborhood.price) || 0,
+          };
+          const created = await api.post('/neighborhoods', payload);
+          const list = await api.get(`/neighborhoods/by-tenant/${tenantId}`).catch(() => []);
+          const neighborhoods = Array.isArray(list) ? list.map(n => ({
+            id: n.id,
+            tenant_id: n.tenantId || n.tenant_id,
+            name: n.name,
+            price: n.price,
+          })) : [];
+          dispatch({ type: actionMap.SET_DATA, payload: { neighborhoods } });
+          return created?.id || null;
+        } catch (e) {
+          console.error('Error saving neighborhood', e);
+          dispatch({ type: actionMap.UPSERT_NEIGHBORHOOD, payload: { ...neighborhood, tenant_id: state.tenant?.id } });
+          return neighborhood.id || null;
+        }
+      },
+      deleteNeighborhood: async (neighborhoodId) => {
+        try {
+          const isTemp = typeof neighborhoodId === 'string' && neighborhoodId.startsWith('nh-');
+          if (!isTemp) {
+            await api.delete(`/neighborhoods/${neighborhoodId}`);
+          }
+          dispatch({ type: actionMap.DELETE_NEIGHBORHOOD, payload: neighborhoodId });
+        } catch (e) {
+          console.error('Error deleting neighborhood', e);
+        }
+      },
     }),
     [
       state,
