@@ -31,6 +31,16 @@ const Settings = () => {
     photo_url: tenant?.photo_url || '',
     main_color: tenant?.main_color || '#EA1D2C',
     working_hours: tenant?.working_hours || '',
+    working_open: (() => {
+      const s = tenant?.working_hours || '';
+      const m = s.split(/-|até|às/).map(v => v.trim());
+      return m[0] && /^\d{2}:\d{2}$/.test(m[0]) ? m[0] : '';
+    })(),
+    working_close: (() => {
+      const s = tenant?.working_hours || '';
+      const m = s.split(/-|até|às/).map(v => v.trim());
+      return m[1] && /^\d{2}:\d{2}$/.test(m[1]) ? m[1] : '';
+    })(),
     delivery_method: tenant?.delivery_method || 'own',
     service_fee_percentage: tenant?.service_fee_percentage ?? 0.08,
     payment_channels: Array.isArray(tenant?.payment_channels) && tenant.payment_channels.length
@@ -54,6 +64,16 @@ const Settings = () => {
         photo_url: tenant.photo_url || '',
         main_color: tenant.main_color || '#EA1D2C',
         working_hours: tenant.working_hours || '',
+        working_open: (() => {
+          const s = tenant?.working_hours || '';
+          const m = s.split(/-|até|às/).map(v => v.trim());
+          return m[0] && /^\d{2}:\d{2}$/.test(m[0]) ? m[0] : '';
+        })(),
+        working_close: (() => {
+          const s = tenant?.working_hours || '';
+          const m = s.split(/-|até|às/).map(v => v.trim());
+          return m[1] && /^\d{2}:\d{2}$/.test(m[1]) ? m[1] : '';
+        })(),
         delivery_method: tenant.delivery_method || 'own',
         service_fee_percentage: tenant.service_fee_percentage ?? 0.08,
         payment_channels: Array.isArray(tenant.payment_channels) && tenant.payment_channels.length
@@ -154,6 +174,22 @@ const Settings = () => {
   };
 
   const toggleOpen = () => updateTenant({ is_open: !tenant.is_open });
+  const saveWorkingHours = async () => {
+    const open = (tenantForm.working_open || '').trim();
+    const close = (tenantForm.working_close || '').trim();
+    if (!/^\d{2}:\d{2}$/.test(open) || !/^\d{2}:\d{2}$/.test(close)) {
+      showToast('Informe horários válidos no formato HH:MM.', 'error');
+      return;
+    }
+    const text = `${open} - ${close}`;
+    const success = await updateTenant({ working_hours: text });
+    if (success) {
+      setTenantForm((prev) => ({ ...prev, working_hours: text }));
+      showToast('Horário salvo com sucesso!');
+    } else {
+      showToast('Erro ao salvar horário.', 'error');
+    }
+  };
   const togglePaymentChannel = (channel) => {
     const ch = String(channel).toLowerCase();
     setTenantForm((prev) => {
@@ -381,12 +417,30 @@ const Settings = () => {
                     <p className="text-sm font-semibold text-slate-900">Funcionamento</p>
                     <p className="text-sm text-slate-500">{tenant.is_open ? 'Loja aberta' : 'Loja fechada'}</p>
                   </div>
-                  <Button size="sm" className="w-full lg:w-auto" onClick={toggleOpen}>
-                    {tenant.is_open ? 'Fechar' : 'Abrir'}
-                  </Button>
+                <Button size="sm" className="w-full lg:w-auto" onClick={saveWorkingHours}>
+                  Salvar
+                </Button>
                 </div>
-                <div className="mt-3">
-                  <Input label="Horário de funcionamento" value={tenantForm.working_hours} onChange={onTenantChange('working_hours')} />
+              <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-end gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Aberto de</label>
+                  <input
+                    type="time"
+                    value={tenantForm.working_open}
+                    onChange={(e) => onTenantChange('working_open')(e)}
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                  />
+                </div>
+                <div className="pb-3 text-slate-500">até</div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Até</label>
+                  <input
+                    type="time"
+                    value={tenantForm.working_close}
+                    onChange={(e) => onTenantChange('working_close')(e)}
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                  />
+                </div>
                 </div>
               </div>
               <div className={`${subtleCardClass} p-4`}>
