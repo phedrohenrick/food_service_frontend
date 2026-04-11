@@ -71,7 +71,7 @@ const Home = () => {
       </div>
 
       <section
-        className={`grid gap-4 ${banners.length > 1 ? 'md:grid-cols-2' : 'md:grid-cols-1 md:max-w-4xl'} mx-auto`}
+        className={`mx-auto grid gap-4 ${banners.length > 1 ? 'xl:grid-cols-2' : 'max-w-4xl'}`}
       >
         {banners.map((banner) => (
           <Link
@@ -99,7 +99,7 @@ const Home = () => {
       </section>
 
       <section className="space-y-6">
-        <div className="flex flex-wrap items-center gap-3 md:justify-center">
+        <div className="flex flex-wrap items-center gap-3 xl:justify-center">
           <button
             type="button"
             onClick={() => setCategoryFilter('todos')}
@@ -136,7 +136,7 @@ const Home = () => {
                   <p className="text-sm text-gray-500">{category.description}</p>
                 )}
               </div>
-              <div className="grid gap-5 md:grid-cols-2">
+              <div className="grid gap-5 xl:grid-cols-2">
                 {category.items.map((item) => (
                   <Link
                     key={item.id}

@@ -3,6 +3,8 @@ import { Button, Input, Modal } from '../../../../shared/components/ui';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
 
 const money = (n) => (n || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const productImageFallback =
+  'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80';
 
 const Menu = () => {
   const {
@@ -247,43 +249,78 @@ const Menu = () => {
     setTimeout(() => setIsSyncing(false), 800); // Visual feedback
   };
 
+  const statsCardClass =
+    ' overflow-hidden rounded-[28px] border border-slate-200/80 bg-white p-5 shadow-[0_18px_45px_-30px_rgba(15,23,42,0.45)]';
+  const sectionCardClass =
+    'rounded-[30px] border border-slate-200/80 bg-white/95 shadow-[0_28px_70px_-34px_rgba(15,23,42,0.35)] backdrop-blur-sm';
+  const subtleButtonClass =
+    'border border-slate-200 bg-white text-slate-700 shadow-sm hover:border-slate-300 hover:bg-slate-50';
+  const plusTileClass =
+    'group flex aspect-[2/1] items-center justify-center rounded-[26px] border border-dashed border-slate-300 bg-slate-100/85 transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--accent)] hover:bg-slate-50 hover:shadow-[0_18px_45px_-28px_rgba(15,23,42,0.4)]';
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <p className="text-sm text-gray-500">Curadoria do cardápio</p>
-          <h1 className="text-2xl font-bold text-gray-900">Categorias de Produtos</h1>
+    <div className="space-y-6 rounded-[32px] bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.96),_rgba(241,245,249,0.92)_44%,_rgba(226,232,240,0.95)_100%)] bg-fixed p-1">
+      <div className="rounded-[32px] border border-slate-200/80 bg-white/90 px-6 py-6 shadow-[0_24px_70px_-36px_rgba(15,23,42,0.45)] backdrop-blur-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium tracking-[0.18em] text-slate-500 uppercase">Curadoria do cardápio</p>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">Categorias de Produtos</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+              Organize a vitrine do restaurante, refine a apresentação dos itens e mantenha os banners do app em destaque.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            {/* <Button
+              variant="ghost"
+              className={`flex items-center gap-2 ${subtleButtonClass}`}
+              onClick={handleSync}
+              disabled={isSyncing}
+            >
+              {isSyncing ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-600 border-t-transparent"></div>
+                  Sincronizando...
+                </>
+              ) : (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+                  Sincronizar
+                </>
+              )}
+            </Button> */}
+            <Button onClick={openNewCategory}>Adicionar Categoria</Button>
+          </div>
         </div>
-        <Button onClick={openNewCategory}>Adicionar Categoria</Button>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
         {sortedCategories.map((category, idx) => {
           const activeCount = menuItems.filter((mi) => mi.category_id === category.id && mi.is_available).length;
           return (
-            <div key={category.id} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm group relative">
-              <div className="flex justify-between items-start">
-                  <div className="inline-flex px-3 py-1 rounded-full text-xs font-semibold bg-gray-50 text-gray-700">
+            <div key={category.id} className={`${statsCardClass} group`}>
+              <div className="pointer-events-none absolute inset-x-5 top-0 h-20 rounded-b-[28px] bg-gradient-to-b from-slate-100 to-transparent" />
+              <div className="relative flex justify-between items-start">
+                  <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
                     {category.name}
                   </div>
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => openEditCategory(category)} className="text-gray-400 hover:text-blue-600">
+                      <button onClick={() => openEditCategory(category)} className="rounded-full border border-transparent p-2 text-slate-600 transition-colors hover:border-sky-200 hover:bg-sky-50 hover:text-sky-600">
                           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
                       </button>
-                      <button onClick={() => handleRemoveCategory(category.id)} className="text-gray-400 hover:text-red-600">
+                      <button onClick={() => handleRemoveCategory(category.id)} className="rounded-full border border-transparent p-2 text-slate-600 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600">
                           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                       </button>
                   </div>
               </div>
-              <div className="mt-2 flex gap-2">
-                <Button size="sm" variant="ghost" className="border border-gray-200" disabled={idx===0} onClick={() => {
+              <div className="relative mt-4 flex gap-2">
+                <Button size="sm" variant="ghost" className={subtleButtonClass} disabled={idx===0} onClick={() => {
                   const ids = sortedCategories.map((c) => c.id);
                   if (idx>0) {
                     [ids[idx-1], ids[idx]] = [ids[idx], ids[idx-1]];
                     reorderMenuCategories(ids);
                   }
                 }}>↑</Button>
-                <Button size="sm" variant="ghost" className="border border-gray-200" disabled={idx===sortedCategories.length-1} onClick={() => {
+                <Button size="sm" variant="ghost" className={subtleButtonClass} disabled={idx===sortedCategories.length-1} onClick={() => {
                   const ids = sortedCategories.map((c) => c.id);
                   if (idx<sortedCategories.length-1) {
                     [ids[idx+1], ids[idx]] = [ids[idx], ids[idx+1]];
@@ -291,8 +328,8 @@ const Menu = () => {
                   }
                 }}>↓</Button>
               </div>
-              <p className="mt-3 text-2xl font-bold text-gray-900">{activeCount}</p>
-              <p className="text-sm text-gray-500">itens ativos</p>
+              <p className="relative mt-6 text-3xl font-bold tracking-tight text-slate-950">{activeCount}</p>
+              <p className="relative text-sm font-medium text-slate-500">itens ativos</p>
             </div>
           );
         })}
@@ -300,56 +337,48 @@ const Menu = () => {
 
 
 
-      <div className="bg-white rounded-3xl border border-gray-100 shadow-lg p-6 space-y-4">
+      <div className={`${sectionCardClass} p-6 space-y-5`}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-sm text-gray-500">Itens ao vivo</p>
-            <h2 className="text-xl font-semibold text-gray-900">Lista pronta para o cliente</h2>
+            <p className="text-sm font-medium tracking-[0.16em] text-slate-500 uppercase">Itens ao vivo</p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Lista pronta para o cliente</h2>
+            <p className="mt-2 text-sm text-slate-600">Visualize o que o cliente enxerga no app, com mídia, categoria e status operacional.</p>
           </div>
         <div className="flex gap-2">
-          <Button 
-            variant="ghost" 
-            className="border border-gray-200 text-gray-700 flex items-center gap-2"
-            onClick={handleSync}
-            disabled={isSyncing}
-          >
-            {isSyncing ? (
-              <>
-                <div className="w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin"></div>
-                Sincronizando...
-              </>
-            ) : (
-              <>
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-refresh-cw"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
-                Sincronizar
-              </>
-            )}
-          </Button>
           <Button onClick={openNewItem}>Adicionar item</Button>
         </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {itemsSorted.map((item) => (
-            <div key={item.id} className="rounded-2xl border border-gray-100 p-4 bg-gray-50/60 space-y-3">
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <p className="text-xs uppercase tracking-wide text-gray-500">{maps.categoryMap[item.category_id]?.name || '—'}</p>
-                  <h3 className="text-lg font-semibold text-gray-900">{item.name}</h3>
-                  <p className="text-sm text-gray-500 leading-relaxed">{item.description}</p>
+            <div key={item.id} className="group rounded-[28px] border border-slate-200/80 bg-[linear-gradient(180deg,_rgba(255,255,255,0.98),_rgba(248,250,252,0.98))] p-4 shadow-[0_18px_50px_-34px_rgba(15,23,42,0.45)]">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0 flex-1 space-y-1">
+                  <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{maps.categoryMap[item.category_id]?.name || '—'}</p>
+                  <h3 className="text-lg font-semibold text-slate-950">{item.name}</h3>
+                  <p className="line-clamp-3 text-sm leading-relaxed text-slate-600">{item.description}</p>
+                  <p className="text-xl font-bold text-[var(--accent)]">{money(item.price)}</p>
                 </div>
-                <span className={`text-xs px-3 py-1 rounded-full ${item.is_available ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
+                <div className="flex shrink-0 flex-col items-end gap-3">
+                  <span className={`text-xs px-3 py-1 rounded-full border ${item.is_available ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-slate-100 text-slate-500'}`}>
                   {item.is_available ? 'Ativo' : 'Pausado'}
-                </span>
+                  </span>
+                  <div className="h-20 w-20 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-inner">
+                    <img
+                      src={item.photo_url || productImageFallback}
+                      alt={item.name}
+                      className="h-full w-full object-cover transition-transform duration-300"
+                    />
+                  </div>
+                </div>
               </div>
-              <div>
-                <p className="text-xl font-bold text-[var(--accent)]">{money(item.price)}</p>
-                <div className="mt-2 w-full flex flex-wrap gap-2 justify-start">
-                  <Button size="sm" variant="ghost" className="min-w-[120px] border border-gray-200 text-gray-700" onClick={() => openEditItem(item)}>Editar</Button>
-                  <Button size="sm" variant="ghost" className="min-w-[120px] border border-gray-200 text-gray-700" onClick={() => handleToggleAvailability(item.id)}>
+              <div className="rounded-2xl border border-slate-200/80 bg-white/85 p-3 shadow-sm">
+                <div className="mt-3 w-full flex flex-wrap gap-2 justify-start">
+                  <Button size="sm" variant="ghost" className={`min-w-[120px] ${subtleButtonClass}`} onClick={() => openEditItem(item)}>Editar</Button>
+                  <Button size="sm" variant="ghost" className={`min-w-[120px] ${subtleButtonClass}`} onClick={() => handleToggleAvailability(item.id)}>
                     {item.is_available ? 'Ocultar' : 'Ativar'}
                   </Button>
-                  <Button size="sm" variant="ghost" className="border border-gray-200 text-red-600" onClick={() => handleRemoveItem(item.id)}>Remover</Button>
+                  <Button size="sm" variant="ghost" className="border border-red-200 bg-white text-red-600 shadow-sm hover:bg-red-50" onClick={() => handleRemoveItem(item.id)}>Remover</Button>
                 </div>
               </div>
             </div>
@@ -357,11 +386,12 @@ const Menu = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-3xl border border-gray-100 shadow-lg p-6 space-y-4">
+      <div className={`${sectionCardClass} p-6 space-y-5`}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-sm text-gray-500">Marketing e Destaques</p>
-            <h2 className="text-xl font-semibold text-gray-900">Banners do App</h2>
+            <p className="text-sm font-medium tracking-[0.16em] text-slate-500 uppercase">Marketing e Destaques</p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Banners do App</h2>
+            <p className="mt-2 text-sm text-slate-600">Mantenha campanhas e destaques visuais do cardápio sempre atualizados para o cliente.</p>
           </div>
           <Button onClick={() => setIsBannerModalOpen(true)}>
             Novo Banner
@@ -370,26 +400,46 @@ const Menu = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {banners.map((banner) => (
-            <div key={banner.id} className="group relative rounded-2xl overflow-hidden border border-gray-200 aspect-[2/1] bg-gray-50">
+            <div key={banner.id} className="group relative overflow-hidden rounded-[26px] border border-slate-200 bg-slate-100 shadow-[0_18px_45px_-30px_rgba(15,23,42,0.4)] aspect-[2/1]">
               <img src={banner.banner_image} alt="Banner" className="w-full h-full object-cover" />
-              <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute bottom-2 right-2">
-                  <button type="button" onClick={() => deleteBanner(banner.id)} className="pointer-events-auto px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs font-semibold shadow hover:bg-red-700">Excluir</button>
+              <div className="pointer-events-none absolute inset-0 bg-slate-950/0 opacity-0 backdrop-blur-none transition-all duration-200 group-hover:bg-slate-950/20 group-hover:opacity-100 group-hover:backdrop-blur-[3px]">
+                <div className="absolute bottom-2 right-2 translate-y-2 opacity-0 transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100">
+                  <button type="button" onClick={() => deleteBanner(banner.id)} className="pointer-events-auto px-3 py-1.5 rounded-lg bg-red-600 text-white text-xls font-semibold shadow hover:bg-red-700">Excluir</button>
                 </div>
               </div>
               {banner.product_link && (
                 <div className="absolute bottom-2 left-2 right-2">
-                   <div className="bg-white/90 backdrop-blur px-3 py-1.5 rounded-xl text-xs font-medium shadow-sm truncate">
+                   <div className="bg-white/92 backdrop-blur px-3 py-1.5 rounded-xl text-xs font-medium shadow-sm truncate text-slate-700">
                     Ref: {menuItems.find(i => i.id === banner.product_link)?.name || 'Produto indisponível'}
                    </div>
                 </div>
               )}
             </div>
           ))}
+          <button
+            type="button"
+            onClick={() => setIsBannerModalOpen(true)}
+            className={plusTileClass}
+          >
+            <div className="flex flex-col items-center gap-4 px-6 text-center">
+              <div className="grid w-full grid-cols-3 gap-2">
+                <div className="h-14 rounded-2xl border border-slate-200 bg-slate-200/90" />
+                <div className="h-14 rounded-2xl border border-slate-200 bg-slate-200/80" />
+                <div className="h-14 rounded-2xl border border-slate-200 bg-slate-200/70" />
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-2xl font-semibold text-[var(--accent)] shadow-[0_14px_35px_-20px_rgba(15,23,42,0.55)]">+</span>
+                <div className="text-left">
+                  <p className="text-sm font-semibold text-slate-800">Adicionar novo banner</p>
+                  <p className="text-xs text-slate-500">Clique para abrir o cadastro</p>
+                </div>
+              </div>
+            </div>
+          </button>
           {banners.length === 0 && (
-            <div className="col-span-full py-12 text-center rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/50">
-              <p className="text-gray-500 font-medium">Nenhum banner ativo</p>
-              <p className="text-sm text-gray-400 mt-1">Adicione banners para destacar promoções e pratos.</p>
+            <div className="col-span-full py-12 text-center rounded-[26px] border-2 border-dashed border-slate-200 bg-slate-50/70">
+              <p className="font-medium text-slate-600">Nenhum banner ativo</p>
+              <p className="mt-1 text-sm text-slate-400">Adicione banners para destacar promoções e pratos.</p>
               <Button variant="link" className="mt-2 text-[var(--accent)]" onClick={() => setIsBannerModalOpen(true)}>
                 Adicionar agora
               </Button>
@@ -425,7 +475,7 @@ const Menu = () => {
               <select
                 value={itemForm.category_id}
                 onChange={(e) => setItemForm({ ...itemForm, category_id: e.target.value })}
-                className="w-full rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
               >
                 <option value="">Selecione</option>
                 {sortedCategories.map((cat) => (
@@ -453,7 +503,7 @@ const Menu = () => {
               <Button
                 size="sm"
                 variant="ghost"
-                className="border border-gray-200"
+                className={subtleButtonClass}
                 onClick={() =>
                   setGroupsForm([
                     ...groupsForm,
@@ -465,7 +515,7 @@ const Menu = () => {
               </Button>
             </div>
             {groupsForm.map((grp, gi) => (
-              <div key={gi} className="border border-gray-200 rounded-xl p-4 space-y-3">
+              <div key={gi} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-3 shadow-sm">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                   <div className="flex-1">
                     <Input
@@ -568,7 +618,7 @@ const Menu = () => {
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="border border-gray-200"
+                      className={subtleButtonClass}
                       onClick={() => {
                         const next = [...groupsForm];
                         next[gi].options = [
@@ -690,7 +740,7 @@ const Menu = () => {
             <select
               value={newBanner.product_link}
               onChange={(e) => setNewBanner({ ...newBanner, product_link: e.target.value })}
-              className="w-full rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
             >
               <option value="">Sem vínculo</option>
               {itemsSorted.map((item) => (

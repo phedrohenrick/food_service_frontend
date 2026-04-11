@@ -77,7 +77,7 @@ const OrderDetails = () => {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div>
           <p className="text-sm uppercase tracking-[0.3em] text-gray-400">
             Pedido #{order.id}
@@ -97,8 +97,8 @@ const OrderDetails = () => {
         </Link>
       </div>
 
-      <section className="grid gap-6 lg:grid-cols-3">
-        <article className="lg:col-span-2 rounded-3xl bg-white p-6 shadow space-y-6">
+      <section className="grid gap-6 xl:grid-cols-3">
+        <article className="rounded-3xl bg-white p-6 shadow space-y-6 xl:col-span-2">
           <header>
             <h2 className="text-xl font-semibold text-gray-900">Linha do tempo</h2>
             <p className="text-sm text-gray-500">
@@ -178,7 +178,7 @@ const OrderDetails = () => {
         </article>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-2">
+      <section className="grid gap-6 xl:grid-cols-2">
         <article className="rounded-3xl bg-white p-6 shadow space-y-4">
           <h2 className="text-xl font-semibold text-gray-900">Itens do pedido</h2>
           <div className="space-y-3 text-sm text-gray-600">

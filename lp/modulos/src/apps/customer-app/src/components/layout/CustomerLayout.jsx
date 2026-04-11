@@ -65,10 +65,12 @@ const CustomerLayout = ({ children }) => {
     { label: 'Endereços', to: `${basePrefix}/enderecos`, icon: <IoIosPin /> },
     { label: 'Pedidos', to: `${basePrefix}/pedidos`, icon: <GrRestaurant />},
   ];
+  const shellClassName = 'mx-auto w-full max-w-[680px] xl:max-w-[760px]';
+  const shellSurfaceClassName = 'md:bg-white';
 
   return (
     <div
-      className="min-h-screen bg-gray-50 text-gray-1000 pb-32"
+      className="min-h-screen flex flex-col bg-gray-50 text-gray-1000 md:bg-gray-300"
       style={{
         '--accent': accent,
         '--accent-hover': accentHover,
@@ -76,10 +78,10 @@ const CustomerLayout = ({ children }) => {
       }}
     >
       {!isProductPage && (
-        <header className="sticky top-0 z-40 border-b border-gray-100 bg-[var(--accent)]/80 backdrop-blur">
-        <div className="max-w-6xl mx-auto px-4 py-6 space-y-4">
+        <header className="sticky top-0 z-40 border-b border-white/60 bg-white/72 backdrop-blur-xl supports-[backdrop-filter]:bg-white/68">
+        <div className={`${shellClassName} px-4 py-6 space-y-4`}>
           {showCardapioHeader ? (
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
               <div className="flex items-center gap-4">
                 <div>
                   <div className="flex items-center gap-3 flex-wrap">
@@ -89,7 +91,7 @@ const CustomerLayout = ({ children }) => {
                   </div>
                 </div>
               </div>
-              <div className="w-full md:w-auto md:min-w-[320px] flex items-center gap-3 w-full">
+              <div className="flex w-full items-center gap-3 xl:w-auto xl:min-w-[320px]">
                 <form
                   className="flex flex-1 items-center rounded-2xl border border-gray-200 bg-white px-4 py-2 focus-within:border-[var(--accent)] focus-within:ring-2 focus-within:ring-[var(--accent)]/10"
                   onSubmit={(event) => event.preventDefault()}
@@ -130,10 +132,17 @@ const CustomerLayout = ({ children }) => {
         </header>
       )}
 
-      <main className="max-w-6xl mx-auto px-4 py-8 pb-20">{children}</main>
+      <main
+        className={`${shellClassName} ${shellSurfaceClassName} flex-1 min-h-0 overflow-auto px-4 py-8 pb-24 md:shadow-[0_20px_80px_rgba(15,23,42,0.16)]`}
+      >
+        {children}
+      </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-[var(--accent)]/30 bg-[var(--accent)] text-[var(--accent-contrast)] shadow-[-10px_-10px_30px_rgba(0,0,0,0.15)]">
-        <div className="mx-auto grid max-w-4xl grid-cols-4 text-xs font-medium">
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-50 h-16 border-t border-[var(--accent)]/30 bg-[var(--accent)] text-[var(--accent-contrast)] shadow-[-10px_-10px_30px_rgba(0,0,0,0.15)] md:left-1/2 md:w-full md:max-w-[680px] md:-translate-x-1/2 md:rounded-t-3xl md:border-x xl:max-w-[760px]"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        <div className="mx-auto grid grid-cols-4 text-xs font-medium">
           {navigation.map((item) => {
             const active = item.exact
               ? location.pathname === item.to

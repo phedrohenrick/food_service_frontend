@@ -180,7 +180,7 @@ const Product = () => {
   }
 
   return (
-    <div className="relative grid gap-8 lg:grid-cols-[1.5fr_1fr]">
+    <div className="relative grid gap-8 xl:grid-cols-[1.5fr_1fr]">
       {validationError && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">

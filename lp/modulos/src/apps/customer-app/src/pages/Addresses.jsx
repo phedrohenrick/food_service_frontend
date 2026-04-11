@@ -131,7 +131,7 @@ const Addresses = () => {
         </div>
       )}
 
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div>
           <p className="text-sm uppercase tracking-[0.3em] text-gray-400">Endereços</p>
           <h1 className="text-3xl font-semibold text-gray-900">Locais de entrega</h1>
@@ -144,7 +144,7 @@ const Addresses = () => {
         </Link>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 xl:grid-cols-2">
         {(addresses || []).map((address) => (
           <article
             key={address.id}

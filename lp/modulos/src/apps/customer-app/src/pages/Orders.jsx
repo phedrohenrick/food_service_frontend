@@ -64,7 +64,7 @@ const Orders = () => {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div>
           <p className="text-sm uppercase tracking-[0.3em] text-gray-400">Pedidos</p>
           <h1 className="text-3xl font-semibold text-gray-900">Histórico recente</h1>
@@ -120,7 +120,7 @@ const Orders = () => {
                     }).format(new Date(order.created_at))}
                   </span>
                 </div>
-                <div className="grid gap-4 md:grid-cols-3">
+                <div className="grid gap-4 xl:grid-cols-3">
                   <div>
                     <p className="text-sm text-gray-400 uppercase tracking-[0.3em]">Resumo</p>
                     <p className="text-lg font-semibold text-gray-900">

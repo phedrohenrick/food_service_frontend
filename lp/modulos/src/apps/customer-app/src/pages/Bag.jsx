@@ -185,7 +185,7 @@ const Bag = () => {
         </div>
       )}
 
-      <div className="grid gap-8 lg:grid-cols-[1.7fr_1fr]">
+      <div className="grid gap-8 xl:grid-cols-[1.7fr_1fr]">
       <section className="space-y-6">
         <article className="rounded-3xl bg-white p-6 shadow">
           <header className="flex items-center justify-between">
@@ -270,7 +270,7 @@ const Bag = () => {
             <p className="text-sm text-gray-400 uppercase tracking-[0.3em]">Pagamento</p>
             <h2 className="text-xl font-semibold text-gray-900">Escolha a forma de pagamento</h2>
           </header>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 xl:grid-cols-3">
             {tenant.payment_channels.map((channel) => (
               <button
                 key={channel}

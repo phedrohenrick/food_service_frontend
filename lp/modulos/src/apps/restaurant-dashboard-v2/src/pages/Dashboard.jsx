@@ -126,7 +126,7 @@ const Dashboard = () => {
       accent: 'border-[var(--accent)]-200/80 bg-gradient-to-br from-white via-sky-50 to-[var(--accent)]-100/70 text-gray-900',
     },
     {
-      label: 'Ticket médio',
+      label: 'Ticket médio Hoje',
       value: formatCurrency(ticketMedio),
       helper: 'Hoje',
       accent: 'border-[var(--accent)]-200/80 bg-gradient-to-br from-white via-sky-50 to-[var(--accent)]-100/70 text-gray-900',
@@ -142,7 +142,7 @@ const Dashboard = () => {
   const openText = tenant.is_open ? 'Loja aberta' : 'Loja fechada';
   const toggleOpen = () => updateTenant({ is_open: !tenant.is_open });
   const panelClass = 'rounded-[28px] border border-slate-200/80 bg-white/90 shadow-[0_20px_50px_rgba(15,23,42,0.08)] backdrop-blur-sm';
-  const innerCardClass = 'rounded-2xl border border-slate-200/80 bg-white/75 shadow-[0_10px_30px_rgba(15,23,42,0.06)] transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_18px_36px_rgba(15,23,42,0.10)]';
+  const innerCardClass = 'rounded-2xl border border-slate-200/80 bg-white/75 shadow-[0_10px_30px_rgba(15,23,42,0.06)] transition-all duration-200 hover:border-slate-300 hover:shadow-[0_18px_36px_rgba(15,23,42,0.10)]';
   const badgeClass = 'inline-flex items-center rounded-full border border-white/15 bg-white/12 px-3 py-1.5 text-xs font-medium tracking-[0.01em] text-[var(--accent-contrast)] backdrop-blur-sm';
   const statusBadgeClass = 'inline-flex items-center rounded-full border border-[var(--accent)]/15 bg-[var(--accent)]/8 px-3 py-1 text-xs font-semibold tracking-[0.01em] text-[var(--accent)]';
   const basePrefix = (() => {
@@ -216,7 +216,7 @@ const Dashboard = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className={`lg:col-span-3 p-6 ${panelClass}`}>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4 ">
             <div>
               <p className="text-sm font-medium text-slate-500">Status das entregas</p>
               <h2 className="text-xl font-semibold tracking-tight text-slate-900">Fila em tempo real</h2>

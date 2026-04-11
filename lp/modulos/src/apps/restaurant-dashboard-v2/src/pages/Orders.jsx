@@ -175,28 +175,32 @@ const Orders = () => {
 
   const canAct = (status) => !(status === 'COMPLETED' || status === 'CANCELED');
   const isClosed = (status) => status === 'COMPLETED' || status === 'CANCELED' || status === 'DELIVERED';
+  const sectionCardClass =
+    'rounded-[30px] border border-slate-200/80 bg-white/95 shadow-[0_28px_70px_-34px_rgba(15,23,42,0.35)] backdrop-blur-sm';
+  const subtleButtonClass =
+    'border border-slate-200 bg-white text-slate-700 shadow-sm hover:border-slate-300 hover:bg-slate-50';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.96),_rgba(241,245,249,0.92)_44%,_rgba(226,232,240,0.95)_100%)] p-1 rounded-[30px] ">
       {/* Banner de Status da Loja */}
       <div
-        className={`rounded-2xl border p-4 flex flex-wrap items-center justify-between gap-4 transition-colors ${
+        className={`rounded-[30px] border px-6 py-5 flex flex-wrap items-center justify-between gap-4 shadow-[0_24px_70px_-36px_rgba(15,23,42,0.45)] backdrop-blur-sm transition-colors ${
           tenant?.is_open
-            ? 'bg-green-50 border-green-200'
-            : 'bg-red-50 border-red-200'
+            ? 'bg-emerald-50/95 border-emerald-200'
+            : 'bg-rose-50/95 border-rose-200'
         }`}
       >
         <div>
           <h2
-            className={`text-lg font-semibold ${
-              tenant?.is_open ? 'text-green-800' : 'text-red-800'
+            className={`text-xl font-semibold tracking-tight ${
+              tenant?.is_open ? 'text-emerald-900' : 'text-rose-900'
             }`}
           >
             {tenant?.is_open ? 'Loja aberta' : 'Loja fechada'}
           </h2>
           <p
-            className={`text-sm ${
-              tenant?.is_open ? 'text-green-600' : 'text-red-600'
+            className={`mt-1 text-sm ${
+              tenant?.is_open ? 'text-emerald-700' : 'text-rose-700'
             }`}
           >
             {tenant?.is_open
@@ -208,8 +212,8 @@ const Orders = () => {
           variant="ghost"
           className={`border ${
             tenant?.is_open
-              ? 'border-green-200 text-green-700 hover:bg-green-100'
-              : 'border-red-200 text-red-700 hover:bg-red-100'
+              ? 'border-emerald-200 bg-white text-emerald-700 shadow-sm hover:bg-emerald-100'
+              : 'border-rose-200 bg-white text-rose-700 shadow-sm hover:bg-rose-100'
           }`}
           onClick={() => updateTenant({ is_open: !tenant?.is_open })}
         >
@@ -217,33 +221,38 @@ const Orders = () => {
         </Button>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <p className="text-sm text-gray-500">Pedidos em andamento</p>
-          <h1 className="text-2xl font-bold text-gray-900">Trilha de preparação do dia</h1>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="ghost" className="border border-gray-200 text-gray-700" onClick={() => setExportOpen(true)}>Exportar</Button>
-          <Button
-            variant={dayClosed ? 'ghost' : undefined}
-            className={dayClosed ? 'border border-gray-200 text-gray-700' : ''}
-            onClick={handleCloseDayClick}
-          >
-            Fechar expediente (limpar hoje)
-          </Button>
+      <div className={`${sectionCardClass} px-6 py-6`}>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium tracking-[0.18em] text-slate-500 uppercase">Pedidos em andamento</p>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">Trilha de preparação do dia</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+              Acompanhe a operação por etapa, priorize novos pedidos e mantenha a equipe alinhada no ritmo do expediente.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="ghost" className={subtleButtonClass} onClick={() => setExportOpen(true)}>Exportar</Button>
+            <Button
+              variant={dayClosed ? 'ghost' : undefined}
+              className={dayClosed ? subtleButtonClass : ''}
+              onClick={handleCloseDayClick}
+            >
+              Fechar expediente (limpar hoje)
+            </Button>
+          </div>
         </div>
       </div>
 
       {confirmClose && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-          <p className="text-sm text-amber-800">
+        <div className="rounded-[26px] border border-amber-200 bg-amber-50/95 p-4 shadow-[0_18px_45px_-30px_rgba(15,23,42,0.3)]">
+          <p className="text-sm font-medium text-amber-900">
             Há {openOrdersCount} pedidos em aberto (não entregues). Deseja limpar mesmo a aba?
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             <Button size="sm" onClick={() => { setDayClosed(true); setConfirmClose(false); }}>
               Limpar mesmo
             </Button>
-            <Button size="sm" variant="ghost" className="border border-gray-200 text-gray-700" onClick={() => setConfirmClose(false)}>
+            <Button size="sm" variant="ghost" className={subtleButtonClass} onClick={() => setConfirmClose(false)}>
               Cancelar
             </Button>
           </div>
@@ -264,7 +273,7 @@ const Orders = () => {
             <Button onClick={handleConfirmExport} disabled={exportSending}>
               {exportSending ? 'Enviando…' : 'Confirmar envio'}
             </Button>
-            <Button variant="ghost" className="border border-gray-200 text-gray-700" onClick={() => { setExportOpen(false); setExportMessage(''); }}>
+            <Button variant="ghost" className={subtleButtonClass} onClick={() => { setExportOpen(false); setExportMessage(''); }}>
               Cancelar
             </Button>
           </div>
@@ -276,10 +285,10 @@ const Orders = () => {
           <button
             key={key}
             onClick={() => setFilter(key)}
-            className={`px-4 py-2 rounded-full border text-sm font-medium transition ${
+            className={`px-4 py-2 rounded-full border text-sm font-medium shadow-sm transition ${
               filter === key
               ? 'bg-[var(--accent)] text-[var(--accent-contrast)] border-[var(--accent)]'
-                : 'bg-white text-gray-700 border-gray-200 hover:border-[var(--accent)]/50'
+                : 'bg-white text-slate-700 border-slate-200 hover:border-[var(--accent)]/50 hover:bg-slate-50'
             }`}
           >
             {key === 'todos' ? 'Todos' : key.charAt(0).toUpperCase() + key.slice(1)}
@@ -289,13 +298,13 @@ const Orders = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
         {columns.map((column) => (
-          <div key={column.key} className="bg-white rounded-3xl border border-gray-100 shadow-lg p-4 space-y-3">
-            <div className="flex items-center justify-between">
+          <div key={column.key} className="rounded-[30px] border border-slate-200/80 bg-white/95 p-4 shadow-[0_24px_60px_-34px_rgba(15,23,42,0.35)] space-y-4">
+            <div className="flex items-center justify-between rounded-[24px] border border-slate-200 bg-slate-50/80 px-4 py-3">
               <div>
-                <p className="text-sm text-gray-500">{column.helper}</p>
-                <h3 className="text-lg font-semibold text-gray-900">{column.title}</h3>
+                <p className="text-xs font-medium tracking-[0.16em] text-slate-500 uppercase">{column.helper}</p>
+                <h3 className="mt-1 text-lg font-semibold text-slate-950">{column.title}</h3>
               </div>
-              <span className="text-xs px-3 py-1 rounded-full bg-gray-100 text-gray-700">
+              <span className={`text-xs px-3 py-1 rounded-full ${pipelineStyles[column.key]}`}>
                 {countByColumn(column.key)}
               </span>
             </div>
@@ -310,27 +319,28 @@ const Orders = () => {
                 const isExpanded = expanded === order.id;
 
                 return (
-                  <div key={order.id} className="rounded-2xl border border-gray-100 p-4 shadow-sm space-y-3">
+                  <div key={order.id} className="rounded-[26px] border border-slate-500 bg-[linear-gradient(180deg,_rgba(255,255,255,0.98),_rgba(248,250,252,0.98))] p-4 shadow-[0_18px_45px_-34px_rgba(15,23,42,0.4)] space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-xs text-gray-500">Pedido #{order.id}</p>
-                        <p className="font-semibold text-gray-900">{user?.name || 'Cliente'}</p>
-                        <p className="text-xs text-gray-500">{user?.phone}</p>
+                        <p className="text-xs font-medium tracking-[0.12em] text-slate-500 uppercase">Pedido #{order.id}</p>
+                        <p className="mt-1 font-semibold text-slate-950">{user?.name || 'Cliente'}</p>
+                        <p className="text-xs text-slate-500">{user?.phone}</p>
                       </div>
                       <div className="text-right">
                         <div className="relative inline-flex items-center justify-center">
                           {lastStatus === 'CREATED' && (
                             <span className="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-60 animate-ping"></span>
                           )}
-                          <span className={`relative text-xs px-3 py-1 rounded-full ${statusClass}`}>
+                          <span className={`relative text-xs px-3 py-1 rounded-full border ${statusClass}`}>
                             {lastStatus}
                           </span>
                         </div>
-                        <p className="text-[10px] text-gray-500 mt-1">{lastAt ? fmtDate(lastAt) : ''}</p>
+                        <p className="mt-1 text-[10px] text-slate-500">{lastAt ? fmtDate(lastAt) : ''}</p>
                       </div>
                     </div>
 
-                    <div className="text-sm text-gray-600">
+                    <div className="rounded-2xl border border-slate-200/80 bg-white/80 p-3 text-sm text-slate-600 shadow-sm">
+                      <p>Endereço:</p>
                       <p className="truncate">
                         {address
                           ? `${address.street}, ${address.street_number} · ${neighborhood?.name} (${money(neighborhood?.price)})`
@@ -344,65 +354,65 @@ const Orders = () => {
                       )}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3 pt-1">
-                      <div className="text-xs text-gray-600">
+                    <div className="grid grid-cols-2 gap-3 rounded-2xl border border-slate-200/80 bg-slate-50/70 p-3">
+                      <div className="text-xs text-slate-600">
                         <p>Criado</p>
-                        <p className="font-medium text-gray-900">{fmtDate(order.created_at)}</p>
+                        <p className="font-medium text-slate-900">{fmtDate(order.created_at)}</p>
                       </div>
-                      <div className="text-xs text-gray-600 text-right">
+                      <div className="text-xs text-slate-600 text-right">
                         <p>Total</p>
-                        <p className="font-semibold text-gray-900">{money(order.total)}</p>
+                        <p className="font-semibold text-slate-900">{money(order.total)}</p>
                       </div>
-                      <div className="text-xs text-gray-600">
+                      <div className="text-xs text-slate-600">
                         <p>Subtotal</p>
                         <p>{money(order.subtotal)}</p>
                       </div>
-                      <div className="text-xs text-gray-600">
+                      <div className="text-xs text-slate-600">
                         <p>Taxa serviço</p>
                         <p>{money(serviceFee)}</p>
                       </div>
-                      <div className="text-xs text-gray-600">
+                      <div className="text-xs text-slate-600">
                         <p>Entrega</p>
                         <p>{money(order.delivery_fee)}</p>
                       </div>
-                      <div className="text-xs text-gray-600">
+                      <div className="text-xs text-slate-600">
                         <p>Desconto</p>
                         <p>{money(order.discount)}</p>
                       </div>
-                      <div className="text-xs text-gray-600">
+                      <div className="text-xs text-slate-600">
                         <p>Pagamento</p>
                         <p className="uppercase">{order.payment_channel}</p>
                       </div>
-                      <div className="text-xs text-gray-600">
+                      <div className="text-xs text-slate-600">
                         <p>Troco</p>
                         <p>{order.change || '-'}</p>
                       </div>
                     </div>
 
                     {isExpanded && (
-                      <div className="pt-2 border-t border-gray-100 space-y-3">
+                      <div className="space-y-3 border-t border-slate-200 pt-3">
                         <div>
-                          <p className="text-xs text-gray-500">Itens do pedido</p>
+                          <p className="text-xs font-medium tracking-[0.14em] text-slate-500 uppercase">Itens do pedido</p>
                           <div className="mt-2 space-y-2">
                             {(detailed?.items || []).map((item) => (
-                              <div key={item.id} className="rounded-xl border border-gray-100 p-3">
+                              <div key={item.id} className="rounded-2xl border border-slate-200 bg-white/85 p-3 shadow-sm">
                                 <div className="flex items-center justify-between">
-                                  <p className="text-sm font-medium text-gray-900">
+                                  <p className="text-sm font-medium text-slate-900">
                                     {item.item_name_snapshot}
                                   </p>
-                                  <p className="text-sm text-gray-700">{item.quantity} × {money(item.unit_price)}</p>
+                                  <p className="text-sm text-slate-700">{item.quantity} × {money(item.unit_price)}</p>
                                 </div>
                                 {item?.highlights?.length > 0 && (
                                   <p className="text-[10px] text-amber-700">{item.highlights.join(', ')}</p>
                                 )}
                                 {item.notes && (
-                                  <p className="text-xs text-gray-700 mt-1">Observação: {item.notes}</p>
+                                  <p className="mt-1 text-xs text-slate-700">Observação: {item.notes}</p>
                                 )}
                                 {(item.options || []).length > 0 && (
-                                  <div className="mt-2 text-xs text-gray-600 space-y-1">
+                                  <div className="mt-2 space-y-1 text-xs text-slate-600">
                                     {item.options.map((opt) => (
                                       <div key={opt.id} className="flex items-center justify-between">
-                                        <span className="text-sm font-medium text-gray-800">
+                                        <span className="text-sm font-medium text-slate-800">
                                           + {opt.groupName ? `${opt.groupName}: ` : ''}
                                           {opt.option?.name || opt.option_name_snapshot}
                                         </span>
@@ -417,12 +427,12 @@ const Orders = () => {
                         </div>
 
                         <div>
-                          <p className="text-xs text-gray-500">Timeline de status</p>
+                          <p className="text-xs font-medium tracking-[0.14em] text-slate-500 uppercase">Timeline de status</p>
                           <div className="mt-2 space-y-1">
                             {(detailed?.timeline || []).map((st) => (
                               <div key={st.id} className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                                <span className={`px-2 py-1 rounded ${statusPills[st.status] || 'bg-gray-100 text-gray-700'}`}>{st.status}</span>
-                                <span className="text-gray-600 w-full sm:w-auto text-right">{fmtDate(st.created_at)}</span>
+                                <span className={`px-2 py-1 rounded border ${statusPills[st.status] || 'bg-gray-100 text-gray-700'}`}>{st.status}</span>
+                                <span className="w-full text-right text-slate-600 sm:w-auto">{fmtDate(st.created_at)}</span>
                               </div>
                             ))}
                           </div>
@@ -434,7 +444,7 @@ const Orders = () => {
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="border border-gray-200 text-gray-700"
+                        className={subtleButtonClass}
                         onClick={() => setExpanded((prev) => (prev === order.id ? null : order.id))}
                       >
                         {isExpanded ? 'Ocultar' : 'Detalhes'}
@@ -451,7 +461,7 @@ const Orders = () => {
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="border border-gray-200 text-gray-700 w-full sm:w-auto"
+                            className={`${subtleButtonClass} w-full sm:w-auto`}
                             onClick={() => updateOrderStatus(order.id, 'DELIVERED')}
                           >
                             Entregue
@@ -459,7 +469,7 @@ const Orders = () => {
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="text-red-700 border border-red-200 w-full sm:w-auto"
+                            className="w-full border border-red-200 bg-white text-red-700 shadow-sm hover:bg-red-50 sm:w-auto"
                             onClick={() => updateOrderStatus(order.id, 'CANCELED')}
                           >
                             Cancelar
