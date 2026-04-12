@@ -27,14 +27,14 @@ export function Header30() {
         <picture className="block h-full w-full">
           <source
             media="(max-width: 640px)"
-            srcSet="assets/images/lp/restaurante.png"
+            src="assets/images/lp/priatoo_restaurantes.png"
           />
           <img
-            src="assets/images/lp/1.png"
+            src="assets/images/lp/priatoo_restaurantes.png"
             className="h-full w-full object-cover object-center"
-            srcSet="assets/images/lp/1.png 300w,
-                    assets/images/lp/1.png 600w,
-                    assets/images/lp/1.png 900w"
+            srcSet="assets/images/lp/priatoo_restaurantes.png 300w,
+                    assets/images/lp/priatoo_restaurantes.png 600w,
+                    assets/images/lp/priatoo_restaurantes.png 900w"
             sizes="(max-width: 640px) 100vw,
                    (max-width: 1024px) 80vw,
                    1200px"
@@ -43,7 +43,7 @@ export function Header30() {
           />
         </picture>
         {/* Gradient overlay usando as cores do projeto */}
-        <div className="absolute inset-0 bg-gradient-to-br from-background-orange/90 via-background-hero/90 to-foreground/85" />
+        <div className="absolute inset-0 bg-gradient-to-br from-background-orange/80 via-background-hero/to-foreground/" />
       </div>
 
       <div className="relative z-10 container">
@@ -53,9 +53,6 @@ export function Header30() {
             {/* Coluna esquerda - Conteúdo principal */}
             <div className="text-center lg:text-left space-y-6 lg:space-y-8 animate-fade-in-up">
               <div className="space-y-4 lg:space-y-6">
-                <div className="inline-flex items-center px-3 sm:px-4 py-2 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 animate-slide-in-left">
-                  <span className="text-white text-xs sm:text-sm font-semibold">🚀 Plataforma em Beta</span>
-                </div>
                 
                 <h1 className="text-white text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight animate-slide-in-left delay-200">
                   Transforme seu

@@ -21,7 +21,7 @@ export function Header92() {
         <div className="grid auto-cols-fr grid-cols-1 lg:grid-cols-2 bg-white rounded-3xl shadow-lg overflow-hidden">
           <div className="flex items-center justify-center">
             <img
-              src="/assets/images/lp/restaurante.png"
+              src="/assets/images/lp/priatoo_restaurantes.png"
               className="w-full object-cover"
               alt="Relume placeholder image"
             />

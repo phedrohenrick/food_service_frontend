@@ -57,12 +57,12 @@ export function Navbar1() {
       className="z-[999] flex w-full items-center border-b border-border-primary bg-background-hero lg:min-h-18 lg:px-[5%]"
     >
       <div className="size-full lg:flex lg:items-center lg:justify-between">
-        <div className="flex min-h-16 items-center justify-between px-[5%] md:min-h-18 lg:min-h-full lg:px-0">
-          <a href="#">
+        <div className="flex h-16 items-center justify-between px-[5%] md:h-18 lg:h-16 lg:px-0">
+          <a href="#" className="flex items-center h-full">
             <img
               src="assets/images/lp/pede,uai_lateral.png"
               alt="Logo image"
-              className="h-24 object-contain"
+              className="h-40 object-contain"
             />
           </a>
           <button
