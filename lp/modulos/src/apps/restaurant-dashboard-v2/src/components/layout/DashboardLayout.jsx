@@ -15,7 +15,7 @@ const navItems = [
   { label: 'Configurações', suffix: 'settings', icon: <MdOutlineSettings /> },
 ];
 
-const DashboardLayoutv2 = ({ children }) => {
+const DashboardLayoutv2 = ({ children, onHelp }) => {
   const { tenant } = useStorefront();
   // normaliza cor para formato hex #RRGGBB
   // aceita: #RGB, #RRGGBB, #RRGGBBAA, RGB/RGBA
@@ -97,7 +97,7 @@ const DashboardLayoutv2 = ({ children }) => {
   return (
     
     <div
-      className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100"
+      className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-10"
       style={{
         '--accent': accent,
         '--accent-hover': accentHover,
@@ -177,6 +177,15 @@ const DashboardLayoutv2 = ({ children }) => {
               </div>
 
               <div className="flex items-center gap-4">
+                {onHelp && (
+                  <button
+                    type="button"
+                    onClick={onHelp}
+                    className="hidden sm:inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                  >
+                    Ajuda
+                  </button>
+                )}
                 <div className="hidden sm:flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-xl">
                   <span className="text-sm text-gray-500">Tempo médio</span>
                   <span className="text-sm font-semibold text-gray-900">32 min</span>

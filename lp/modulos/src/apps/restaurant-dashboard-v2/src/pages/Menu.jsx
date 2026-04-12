@@ -4,7 +4,26 @@ import { useStorefront } from '../../../../shared/generalContext.jsx';
 
 const money = (n) => (n || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const productImageFallback =
-  'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80';
+  'https://i.postimg.cc/JnVpHr75/Nenhuma-Imagem-adicionada-(2).png';
+
+const getTenantStoreBaseUrl = (tenantSlug) => {
+  if (typeof window === 'undefined') return '';
+  const origin = window.location.origin;
+  return tenantSlug ? `${origin}/${tenantSlug}/app` : `${origin}/app`;
+};
+
+const buildBannerProductLink = (tenantSlug, productId) => {
+  if (!productId) return '';
+  return `${getTenantStoreBaseUrl(tenantSlug)}/produto/${productId}`;
+};
+
+const extractProductIdFromBannerLink = (productLink) => {
+  if (!productLink) return '';
+  const value = String(productLink).trim();
+  const match = value.match(/\/produto\/([^/?#]+)/i);
+  if (match?.[1]) return match[1];
+  return value;
+};
 
 const Menu = () => {
   const {
@@ -39,6 +58,14 @@ const Menu = () => {
   
   // Alert modal state
   const [alertModal, setAlertModal] = useState({ isOpen: false, title: '', message: '', items: [] });
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmLabel: 'Confirmar',
+    tone: 'danger',
+    onConfirm: null,
+  });
   
   const [isSyncing, setIsSyncing] = useState(false);
   const [editingItemId, setEditingItemId] = useState(null);
@@ -98,21 +125,61 @@ const Menu = () => {
     setEditingCategoryId(null);
   };
 
-  const handleRemoveCategory = (id) => {
+  const showValidationAlert = (title, message, items = []) => {
+    setAlertModal({ isOpen: true, title, message, items });
+  };
+
+  const showConfirmModal = ({ title, message, confirmLabel = 'Confirmar', tone = 'danger', onConfirm }) => {
+    setConfirmModal({
+      isOpen: true,
+      title,
+      message,
+      confirmLabel,
+      tone,
+      onConfirm,
+    });
+  };
+
+  const closeConfirmModal = () => {
+    setConfirmModal({
+      isOpen: false,
+      title: '',
+      message: '',
+      confirmLabel: 'Confirmar',
+      tone: 'danger',
+      onConfirm: null,
+    });
+  };
+
+  const handleConfirmAction = async () => {
+    const action = confirmModal.onConfirm;
+    closeConfirmModal();
+    if (typeof action === 'function') {
+      await action();
+    }
+  };
+
+  const handleRemoveCategory = async (id) => {
       // Check for associated items
       const associatedItems = menuItems.filter(item => item.category_id === id);
       
       if (associatedItems.length > 0) {
-          setAlertModal({
-            isOpen: true,
-            title: 'Não é possível remover no momento',
-            message: `Esta categoria possui itens vinculados. Remova-os ou altere a categoria deles antes de excluir.`,
-            items: associatedItems
-          });
+          showValidationAlert(
+            'Não é possível remover no momento',
+            'Esta categoria possui itens vinculados. Remova-os ou altere a categoria deles antes de excluir.',
+            associatedItems
+          );
           return;
       }
 
-            deleteMenuCategory(id);
+      showConfirmModal({
+        title: 'Excluir categoria',
+        message: 'Essa categoria será removida permanentemente. Essa ação não poderá ser desfeita.',
+        confirmLabel: 'Excluir categoria',
+        onConfirm: async () => {
+          await deleteMenuCategory(id);
+        },
+      });
 
   };
 
@@ -144,11 +211,53 @@ const Menu = () => {
       options: getOptionsForGroup(g.id).map((o) => ({ id: o.id, name: o.name, additional_charge: o.additional_charge ?? 0 })),
     }));
     setGroupsForm(existingGroups);
-    setBannerForm({ banner_image: '', enabled: false });
+    const existingBanner = banners.find((banner) => extractProductIdFromBannerLink(banner.product_link) === String(item.id));
+    setBannerForm({
+      banner_image: existingBanner?.banner_image || '',
+      enabled: !!existingBanner,
+    });
     setIsModalOpen(true);
   };
 
   const handleSaveItem = async () => {
+    const normalizedGroups = groupsForm
+      .map((grp) => ({
+        ...grp,
+        name: (grp.name || '').trim(),
+        options: (grp.options || []).map((opt) => ({
+          ...opt,
+          name: (opt.name || '').trim(),
+        })),
+      }))
+      .filter((grp) => grp.name || grp.options.length > 0 || grp.id);
+
+    const invalidGroup = normalizedGroups.find((grp) => !grp.name);
+    if (invalidGroup) {
+      showValidationAlert(
+        'Grupo de opções incompleto',
+        'Todo grupo de opções precisa ter um nome antes de salvar o produto.'
+      );
+      return;
+    }
+
+    const groupWithoutOptions = normalizedGroups.find((grp) => grp.options.length === 0);
+    if (groupWithoutOptions) {
+      showValidationAlert(
+        'Grupo sem opções',
+        `O grupo "${groupWithoutOptions.name}" precisa ter pelo menos uma opção antes de salvar o produto.`
+      );
+      return;
+    }
+
+    const optionWithoutName = normalizedGroups.find((grp) => grp.options.some((opt) => !opt.name));
+    if (optionWithoutName) {
+      showValidationAlert(
+        'Opção incompleta',
+        `Todas as opções do grupo "${optionWithoutName.name}" precisam ter nome antes de salvar o produto.`
+      );
+      return;
+    }
+
     const payload = {
       id: editingItemId || undefined,
       name: itemForm.name,
@@ -174,18 +283,12 @@ const Menu = () => {
     // Recommended fix: Update generalContext to return the response from saveMenuItem.
     
     const savedItem = await saveMenuItem(payload);
-    // If savedItem is null/undefined (void return), we fallback to editingItemId if it exists.
-    // If it was a NEW item, we are in trouble without the ID.
-    // Let's assume for now the user is editing or we need to fix context to return ID.
-    
-    // (Self-correction: I updated context to call API but it returns void for menu item. I should have made it return the response/ID.)
-    // Let's proceed assuming we can get the ID or it's an update.
     
     const itemIdFinal = editingItemId || (savedItem && savedItem.id); 
 
     if (itemIdFinal) {
         // persist option groups and options
-        for (const grp of groupsForm) {
+        for (const grp of normalizedGroups) {
           const grpPayload = {
             id: grp.id,
             item_id: itemIdFinal,
@@ -210,7 +313,11 @@ const Menu = () => {
 
         // optional banner
         if (bannerForm.enabled && bannerForm.banner_image) {
-          saveBanner({ banner_image: bannerForm.banner_image, product_link: itemIdFinal, tenant_id: tenant.id });
+          await saveBanner({
+            banner_image: bannerForm.banner_image,
+            product_link: buildBannerProductLink(tenant?.slug, itemIdFinal),
+            tenant_id: tenant.id
+          });
         }
     } else {
         console.warn("Could not save groups/banner because Item ID is missing (new item creation limitation)");
@@ -224,8 +331,15 @@ const Menu = () => {
     setBannerForm({ banner_image: '', enabled: false });
   };
 
-  const handleRemoveItem = (id) => {
-    deleteMenuItem(id);
+  const handleRemoveItem = async (id) => {
+    showConfirmModal({
+      title: 'Excluir produto',
+      message: 'Esse produto será removido permanentemente do cardápio.',
+      confirmLabel: 'Excluir produto',
+      onConfirm: async () => {
+        await deleteMenuItem(id);
+      },
+    });
   };
 
   const handleToggleAvailability = (id) => {
@@ -234,9 +348,10 @@ const Menu = () => {
 
   const handleSaveNewBanner = () => {
     if (!newBanner.banner_image) return;
+    const selectedProductId = newBanner.product_link ? String(newBanner.product_link) : '';
     saveBanner({
       banner_image: newBanner.banner_image,
-      product_link: newBanner.product_link,
+      product_link: selectedProductId ? buildBannerProductLink(tenant?.slug, selectedProductId) : '',
       tenant_id: tenant.id
     });
     setNewBanner({ banner_image: '', product_link: '' });
@@ -260,9 +375,9 @@ const Menu = () => {
 
   return (
     <div className="space-y-6 rounded-[32px] bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.96),_rgba(241,245,249,0.92)_44%,_rgba(226,232,240,0.95)_100%)] bg-fixed p-1">
-      <div className="rounded-[32px] border border-slate-200/80 bg-white/90 px-6 py-6 shadow-[0_24px_70px_-36px_rgba(15,23,42,0.45)] backdrop-blur-sm">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
+      <div className="rounded-[32px] border border-slate-200/80 bg-white/90 px-6 py-6 shadow-[0_24px_70px_-36px_rgba(15,23,42,0.45)] backdrop-blur-sm" >
+        <div className="flex flex-wrap items-center justify-between gap-4" >
+          <div data-wizard="menu-start">
             <p className="text-sm font-medium tracking-[0.18em] text-slate-500 uppercase">Curadoria do cardápio</p>
             <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">Categorias de Produtos</h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
@@ -270,6 +385,17 @@ const Menu = () => {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              className="border border-slate-200 bg-white text-slate-700 shadow-sm hover:border-[var(--accent)] hover:text-[var(--accent)]"
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new Event('restaurant-dashboard:wizard-restart'));
+                }
+              }}
+            >
+              Ajuda
+            </Button>
             {/* <Button
               variant="ghost"
               className={`flex items-center gap-2 ${subtleButtonClass}`}
@@ -293,7 +419,7 @@ const Menu = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4" data-wizard="menu-categories">
         {sortedCategories.map((category, idx) => {
           const activeCount = menuItems.filter((mi) => mi.category_id === category.id && mi.is_available).length;
           return (
@@ -337,7 +463,7 @@ const Menu = () => {
 
 
 
-      <div className={`${sectionCardClass} p-6 space-y-5`}>
+      <div className={`${sectionCardClass} p-6 space-y-5`} data-wizard="menu-overview">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-sm font-medium tracking-[0.16em] text-slate-500 uppercase">Itens ao vivo</p>
@@ -345,7 +471,7 @@ const Menu = () => {
             <p className="mt-2 text-sm text-slate-600">Visualize o que o cliente enxerga no app, com mídia, categoria e status operacional.</p>
           </div>
         <div className="flex gap-2">
-          <Button onClick={openNewItem}>Adicionar item</Button>
+          <Button onClick={openNewItem} data-wizard="menu-add-item">Adicionar item</Button>
         </div>
         </div>
 
@@ -386,7 +512,7 @@ const Menu = () => {
         </div>
       </div>
 
-      <div className={`${sectionCardClass} p-6 space-y-5`}>
+      <div className={`${sectionCardClass} p-6 space-y-5`} data-wizard="menu-banners">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-sm font-medium tracking-[0.16em] text-slate-500 uppercase">Marketing e Destaques</p>
@@ -404,13 +530,28 @@ const Menu = () => {
               <img src={banner.banner_image} alt="Banner" className="w-full h-full object-cover" />
               <div className="pointer-events-none absolute inset-0 bg-slate-950/0 opacity-0 backdrop-blur-none transition-all duration-200 group-hover:bg-slate-950/20 group-hover:opacity-100 group-hover:backdrop-blur-[3px]">
                 <div className="absolute bottom-2 right-2 translate-y-2 opacity-0 transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100">
-                  <button type="button" onClick={() => deleteBanner(banner.id)} className="pointer-events-auto px-3 py-1.5 rounded-lg bg-red-600 text-white text-xls font-semibold shadow hover:bg-red-700">Excluir</button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      showConfirmModal({
+                        title: 'Excluir banner',
+                        message: 'Esse banner deixará de aparecer no app do cliente.',
+                        confirmLabel: 'Excluir banner',
+                        onConfirm: async () => {
+                          await deleteBanner(banner.id);
+                        },
+                      });
+                    }}
+                    className="pointer-events-auto px-3 py-1.5 rounded-lg bg-red-600 text-white text-xls font-semibold shadow hover:bg-red-700"
+                  >
+                    Excluir
+                  </button>
                 </div>
               </div>
               {banner.product_link && (
                 <div className="absolute bottom-2 left-2 right-2">
                    <div className="bg-white/92 backdrop-blur px-3 py-1.5 rounded-xl text-xs font-medium shadow-sm truncate text-slate-700">
-                    Ref: {menuItems.find(i => i.id === banner.product_link)?.name || 'Produto indisponível'}
+                    Ref: {menuItems.find(i => String(i.id) === extractProductIdFromBannerLink(banner.product_link))?.name || 'indisponível'}
                    </div>
                 </div>
               )}
@@ -489,6 +630,12 @@ const Menu = () => {
           <div className="flex items-center gap-2">
             <input id="available" type="checkbox" checked={!!itemForm.is_available} onChange={(e) => setItemForm({ ...itemForm, is_available: e.target.checked })} />
             <label htmlFor="available" className="text-sm text-gray-700">Disponível para venda</label>
+          </div>
+          <div className="h-80 w-80 align-middle overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-inner">
+            <img
+              src={itemForm.photo_url || productImageFallback}
+              className="h-full w-full object-cover transition-transform duration-300"
+            />
           </div>
           <Input
             label="URL da foto"
@@ -586,12 +733,19 @@ const Menu = () => {
                       type="button"
                       className="ml-1 inline-flex items-center justify-center h-9 w-9 rounded-full border border-gray-200 text-gray-400 hover:text-red-600 hover:border-red-200 transition-colors"
                       onClick={async () => {
-                        if (grp.id) {
-                          await deleteOptionGroup(grp.id);
-                        }
-                        const next = [...groupsForm];
-                        next.splice(gi, 1);
-                        setGroupsForm(next);
+                        showConfirmModal({
+                          title: 'Excluir grupo de opções',
+                          message: 'Esse grupo e as opções associadas serão removidos do produto.',
+                          confirmLabel: 'Excluir grupo',
+                          onConfirm: async () => {
+                            if (grp.id) {
+                              await deleteOptionGroup(grp.id);
+                            }
+                            const next = [...groupsForm];
+                            next.splice(gi, 1);
+                            setGroupsForm(next);
+                          },
+                        });
                       }}
                     >
                       <svg
@@ -784,6 +938,29 @@ const Menu = () => {
                     Entendi
                 </Button>
             </div>
+        </div>
+      </Modal>
+
+      <Modal isOpen={confirmModal.isOpen} onClose={closeConfirmModal} title={confirmModal.title}>
+        <div className="space-y-5">
+          <div className="rounded-2xl border border-[color:var(--accent)]/15 bg-[color:var(--accent)]/5 px-4 py-4">
+            <p className="text-sm leading-6 text-slate-700">{confirmModal.message}</p>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button variant="ghost" className="border border-slate-200 text-slate-700" onClick={closeConfirmModal}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleConfirmAction}
+              className={
+                confirmModal.tone === 'danger'
+                  ? 'bg-red-600 text-white hover:bg-red-700'
+                  : ''
+              }
+            >
+              {confirmModal.confirmLabel}
+            </Button>
+          </div>
         </div>
       </Modal>
     </div>

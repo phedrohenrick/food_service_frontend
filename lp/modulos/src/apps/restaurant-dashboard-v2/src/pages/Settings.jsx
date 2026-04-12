@@ -240,9 +240,22 @@ const Settings = () => {
 
   return (
     <div className="space-y-6 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.96),rgba(248,250,252,0.98)_40%,rgba(241,245,249,1))] pb-6">
-      <div>
-        <p className="text-sm font-medium text-slate-500">Perfil e operação</p>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Ajustes do sistema</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium text-slate-500">Perfil e operação</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Ajustes do sistema</h1>
+        </div>
+        <Button
+          variant="ghost"
+          className="border border-slate-200 bg-white text-slate-700 shadow-sm hover:border-[var(--accent)] hover:text-[var(--accent)]"
+          onClick={() => {
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new Event('restaurant-dashboard:wizard-restart'));
+            }
+          }}
+        >
+          Ajuda
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -253,17 +266,21 @@ const Settings = () => {
                 <p className="text-sm font-medium text-slate-500">Cadastro principal</p>
                 <h2 className="text-xl font-semibold tracking-tight text-slate-900">Dados do restaurante</h2>
               </div>
-              <Button className="w-full lg:w-auto shadow-[0_12px_30px_rgba(15,23,42,0.12)]" onClick={saveTenantProfile}>
+              <Button
+                className="w-full lg:w-auto shadow-[0_12px_30px_rgba(15,23,42,0.12)]"
+                onClick={saveTenantProfile}
+                data-wizard="store-save"
+              >
                 Salvar perfil
               </Button>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <Input label="ID" value={tenant?.id || ''} disabled />
-              <Input label="Nome" value={tenantForm.name} onChange={onTenantChange('name')} />
+              <Input label="Nome" value={tenantForm.name} onChange={onTenantChange('name')} wrapperProps={{ 'data-wizard': 'store-name' }} />
               <Input label="Email" value={tenantForm.email} onChange={onTenantChange('email')} />
-              <Input label="Slug" value={tenantForm.slug} onChange={onTenantChange('slug')} />
-              <Input label="CNPJ/CPF" value={tenantForm.cnpj_cpf} onChange={onTenantChange('cnpj_cpf')} />
+              <Input label="Slug" value={tenantForm.slug} onChange={onTenantChange('slug')} wrapperProps={{ 'data-wizard': 'store-slug' }} />
+              <Input label="CNPJ/CPF" value={tenantForm.cnpj_cpf} onChange={onTenantChange('cnpj_cpf')} wrapperProps={{ 'data-wizard': 'store-document' }} />
               <Input label="Endereço" value={tenantForm.address} onChange={onTenantChange('address')} />
               <Input label="Geo Lat" value={tenantForm.geo_lat} onChange={onTenantChange('geo_lat')} />
               <Input label="Geo Lng" value={tenantForm.geo_lng} onChange={onTenantChange('geo_lng')} />
@@ -271,13 +288,13 @@ const Settings = () => {
             </div>
           </div>
 
-          <div className={`${surfaceClass} p-6 space-y-5`}>
+          <div className={`${surfaceClass} p-6 space-y-5`} data-wizard="brand-identity">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <p className="text-sm font-medium text-slate-500">Marca e experiencia</p>
                 <h2 className="text-xl font-semibold tracking-tight text-slate-900">Identidade visual</h2>
               </div>
-              <Button className="w-full lg:w-auto shadow-[0_12px_30px_rgba(15,23,42,0.12)]" onClick={saveTenantProfile}>
+              <Button className="w-full lg:w-auto shadow-[0_12px_30px_rgba(15,23,42,0.12)]" onClick={saveTenantProfile}  wrapperProps={{ 'data-wizard': 'store-save' }} >
                 Salvar identidade
               </Button>
             </div>
@@ -341,7 +358,7 @@ const Settings = () => {
             </div>
           </div>
 
-          <div className={`${surfaceClass} p-6 space-y-5`}>
+          <div className={`${surfaceClass} p-6 space-y-5`} data-wizard="delivery-settings">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-medium text-slate-500">Entrega e pedidos</p>

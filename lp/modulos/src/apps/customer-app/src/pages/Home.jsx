@@ -2,6 +2,21 @@ import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
 
+const resolveBannerTarget = (productLink, basePrefix) => {
+  if (!productLink) {
+    return basePrefix;
+  }
+  if (/^https?:\/\//i.test(productLink)) {
+    try {
+      const url = new URL(productLink);
+      return `${url.pathname}${url.search}${url.hash}`;
+    } catch (_) {
+      return basePrefix;
+    }
+  }
+  return `${basePrefix}/produto/${productLink}`;
+};
+
 const Home = () => {
   const { tenant, banners, menuCategories, getMenuItemsByCategory } = useStorefront();
   const [searchTerm] = useState('');
@@ -76,7 +91,7 @@ const Home = () => {
         {banners.map((banner) => (
           <Link
             key={banner.id}
-            to={banner.product_link ? `${basePrefix}/produto/${banner.product_link}` : basePrefix}
+            to={resolveBannerTarget(banner.product_link, basePrefix)}
             className="relative overflow-hidden rounded-2xl border border-gray-100 bg-white shadow transition hover:-translate-y-1 hover:shadow-lg"
           >
             <div className="absolute inset-0">

@@ -390,6 +390,7 @@ const actionMap = {
   ADD_ORDER_STATUS: 'ADD_ORDER_STATUS',
   UPSERT_MENU_CATEGORY: 'UPSERT_MENU_CATEGORY',
   REORDER_MENU_CATEGORIES: 'REORDER_MENU_CATEGORIES',
+  DELETE_MENU_CATEGORY: 'DELETE_MENU_CATEGORY',
   UPSERT_MENU_ITEM: 'UPSERT_MENU_ITEM',
   DELETE_MENU_ITEM: 'DELETE_MENU_ITEM',
   TOGGLE_MENU_ITEM_AVAILABILITY: 'TOGGLE_MENU_ITEM_AVAILABILITY',
@@ -647,6 +648,11 @@ const reducer = (state, action) => {
         ...c,
         order: orderMap.get(c.id) ?? c.order,
       }));
+      return { ...state, menuCategories };
+    }
+    case actionMap.DELETE_MENU_CATEGORY: {
+      const categoryId = action.payload;
+      const menuCategories = state.menuCategories.filter((c) => c.id !== categoryId);
       return { ...state, menuCategories };
     }
 
@@ -1704,13 +1710,27 @@ export const StorefrontProvider = ({ children }) => {
           
           // Determine if create or update
           // Currently backend only shows /create, assuming upsert or create only for now
-          await api.post('/menu-categories/create', payload);
-          
-          // Reload data or optimistic update (simplified: reload for consistency)
-          // For now, dispatch optimistic
-          dispatch({ type: actionMap.UPSERT_MENU_CATEGORY, payload: category });
+          const savedDto = await api.post('/menu-categories/create', payload);
+          const savedCategory = {
+            ...category,
+            id: savedDto.id,
+            tenant_id: savedDto.tenantId || category.tenant_id || state.tenant.id,
+            order: savedDto.displayOrder ?? category.order ?? category.display_order,
+            name: savedDto.name ?? category.name,
+          };
+          dispatch({ type: actionMap.UPSERT_MENU_CATEGORY, payload: savedCategory });
+          return savedCategory;
         } catch (e) {
           console.error("Error saving category", e);
+          return null;
+        }
+      },
+      deleteMenuCategory: async (categoryId) => {
+        try {
+          await api.delete(`/menu-categories/${categoryId}`);
+          dispatch({ type: actionMap.DELETE_MENU_CATEGORY, payload: categoryId });
+        } catch (e) {
+          console.error('Error deleting category', e);
         }
       },
       reorderMenuCategories: (ids) =>

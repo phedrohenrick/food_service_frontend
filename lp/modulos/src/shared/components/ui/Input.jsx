@@ -10,6 +10,7 @@ const Input = ({
   required = false,
   disabled = false,
   className = '',
+  wrapperProps = {},
   ...props 
 }) => {
   const inputClasses = `
@@ -20,7 +21,7 @@ const Input = ({
   `;
 
   return (
-    <div className="mb-4">
+    <div className="mb-4" {...wrapperProps}>
       {label && (
         <label className="block text-sm font-medium text-gray-700 mb-2">
           {label}
