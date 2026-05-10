@@ -1,222 +1,142 @@
 "use client";
 
-import { Button, useMediaQuery } from "@relume_io/relume-ui";
+import React, { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import React, { useState } from "react";
-import { RxChevronDown } from "react-icons/rx";
-
-const useRelume = () => {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const isMobile = useMediaQuery("(max-width: 991px)");
-  const toggleMobileMenu = () => setIsMobileMenuOpen((prev) => !prev);
-  const openOnMobileDropdownMenu = () => {
-    setIsDropdownOpen((prev) => !prev);
-  };
-  const openOnDesktopDropdownMenu = () => {
-    !isMobile && setIsDropdownOpen(true);
-  };
-  const closeOnDesktopDropdownMenu = () => {
-    !isMobile && setIsDropdownOpen(false);
-  };
-  const animateMobileMenu = isMobileMenuOpen ? "open" : "close";
-  const animateMobileMenuButtonSpan = isMobileMenuOpen
-    ? ["open", "rotatePhase"]
-    : "closed";
-  const animateDropdownMenu = isDropdownOpen ? "open" : "close";
-  const animateDropdownMenuIcon = isDropdownOpen ? "rotated" : "initial";
-  return {
-    toggleMobileMenu,
-    openOnDesktopDropdownMenu,
-    closeOnDesktopDropdownMenu,
-    openOnMobileDropdownMenu,
-    animateMobileMenu,
-    animateMobileMenuButtonSpan,
-    animateDropdownMenu,
-    animateDropdownMenuIcon,
-  };
-};
 
 export function Navbar1() {
-  const scrollToForm = (type) => {
-    const target = document.getElementById("pre-cadastro");
+  const [scrolled, setScrolled] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-    if (target) {
-      target.scrollIntoView({ behavior: "smooth", block: "start" });
-      if (type) {
-        target.dispatchEvent(
-          new CustomEvent("lead:type", { detail: { type }, bubbles: true })
-        );
-      }
-    }
+  useEffect(() => {
+    const handler = () => setScrolled(window.scrollY > 24);
+    window.addEventListener("scroll", handler, { passive: true });
+    return () => window.removeEventListener("scroll", handler);
+  }, []);
+
+  const scrollTo = (id) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+    setMobileOpen(false);
   };
-  const useActive = useRelume();
+
+  const links = [
+    { label: "Recursos", target: "funcionalidades" },
+    { label: "Planos", target: "planos" },
+    { label: "Como funciona", target: "como-funciona" },
+  ];
+
   return (
-    <section
-      id="relume"
-      className="z-[999] flex w-full items-center border-b border-border-primary bg-background-hero lg:min-h-18 lg:px-[5%]"
+    <nav
+      className="fixed top-0 left-0 right-0 z-[999] transition-all duration-300"
+      style={
+        scrolled
+          ? { background: "rgba(26,14,13,0.92)", backdropFilter: "blur(12px)", boxShadow: "0 1px 0 rgba(255,255,255,0.06)" }
+          : { background: "transparent" }
+      }
     >
-      <div className="size-full lg:flex lg:items-center lg:justify-between">
-        <div className="flex h-16 items-center justify-between px-[5%] md:h-18 lg:h-16 lg:px-0">
-          <a href="#" className="flex items-center h-full">
-            <img
-              src="assets/images/lp/pede,uai_lateral.png"
-              alt="Logo image"
-              className="h-40 object-contain"
-            />
-          </a>
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 lg:px-8">
+        <a
+          href="#inicio"
+          onClick={(e) => { e.preventDefault(); scrollTo("inicio"); }}
+          className="flex-shrink-0"
+        >
+          <img
+            src="assets/images/lp/brand-assets/logo.png"
+            alt="Priatoo"
+            className="h-11 object-contain"
+          />
+        </a>
+
+        <div className="hidden items-center gap-8 lg:flex">
+          {links.map((l) => (
+            <button
+              key={l.label}
+              onClick={() => scrollTo(l.target)}
+              className="text-sm font-medium text-white/70 transition hover:text-white"
+            >
+              {l.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="hidden items-center gap-3 lg:flex">
           <button
-            className="-mr-2 flex size-12 flex-col items-center justify-center lg:hidden"
-            onClick={useActive.toggleMobileMenu}
+            onClick={() => { try { window.location.assign("/login"); } catch (_) {} }}
+            className="rounded-full border border-white/30 px-5 py-2 text-sm font-semibold text-white/80 transition hover:border-white/60 hover:text-white hover:bg-white/8"
           >
-            <motion.span
-              className="my-[3px] h-0.5 w-6 bg-black"
-              animate={useActive.animateMobileMenuButtonSpan}
-              variants={{
-                open: { translateY: 8, transition: { delay: 0.1 } },
-                rotatePhase: { rotate: -45, transition: { delay: 0.2 } },
-                closed: {
-                  translateY: 0,
-                  rotate: 0,
-                  transition: { duration: 0.2 },
-                },
-              }}
-            />
-            <motion.span
-              className="my-[3px] h-0.5 w-6 bg-black"
-              animate={useActive.animateMobileMenu}
-              variants={{
-                open: { width: 0, transition: { duration: 0.1 } },
-                closed: {
-                  width: "1.5rem",
-                  transition: { delay: 0.3, duration: 0.2 },
-                },
-              }}
-            />
-            <motion.span
-              className="my-[3px] h-0.5 w-6 bg-black"
-              animate={useActive.animateMobileMenuButtonSpan}
-              variants={{
-                open: { translateY: -8, transition: { delay: 0.1 } },
-                rotatePhase: { rotate: 45, transition: { delay: 0.2 } },
-                closed: {
-                  translateY: 0,
-                  rotate: 0,
-                  transition: { duration: 0.2 },
-                },
-              }}
-            />
+            Entrar
+          </button>
+          <button
+            onClick={() => { try { window.location.assign("/onboarding/start"); } catch (_) {} }}
+            className="rounded-full px-5 py-2 text-sm font-bold text-white transition hover:opacity-90 hover:scale-[1.02]"
+            style={{ background: "#FF7F27", boxShadow: "0 4px 16px rgba(255,127,39,0.35)" }}
+          >
+            Testar grátis
           </button>
         </div>
-        <motion.div
-          variants={{
-            open: { height: "var(--height-open, 100dvh)" },
-            close: { height: "var(--height-closed, 0)" },
-          }}
-          initial="close"
-          exit="close"
-          animate={useActive.animateMobileMenu}
-          transition={{ duration: 0.4 }}
-          className="overflow-hidden px-[5%] lg:flex lg:items-center lg:px-0 lg:[--height-closed:auto] lg:[--height-open:auto]"
+
+        <button
+          className="flex flex-col gap-1.5 p-1 lg:hidden"
+          onClick={() => setMobileOpen((v) => !v)}
+          aria-label="Abrir menu"
         >
-          <a
-            href="#"
-            className="text-white block py-3 text-md first:pt-7 lg:px-4 lg:py-2 lg:text-base first:lg:pt-2"
-          >
-            Início
-          </a>
-          <a
-            href="#"
-            className="text-white block py-3 text-md first:pt-7 lg:px-4 lg:py-2 lg:text-base first:lg:pt-2"
-          >
-            Recursos
-          </a>
-          {/* <a
-            href="#"
-            className="block py-3 text-md first:pt-7 lg:px-4 lg:py-2 lg:text-base first:lg:pt-2"
-          >
-            Preços
-          </a> */}
-          <div
-            onMouseEnter={useActive.openOnDesktopDropdownMenu}
-            onMouseLeave={useActive.closeOnDesktopDropdownMenu}
-          >
-            <button
-              className="text-white flex w-full items-center justify-between gap-2 py-3 text-left text-md lg:flex-none lg:justify-start lg:px-4 lg:py-2 lg:text-base"
-              onClick={useActive.openOnMobileDropdownMenu}
-            >
-              <span>Mais</span>
-              <motion.span
-                variants={{ rotated: { rotate: 180 }, initial: { rotate: 0 } }}
-                animate={useActive.animateDropdownMenuIcon}
-                transition={{ duration: 0.3 }}
-              >
-                <RxChevronDown />
-              </motion.span>
-            </button>
-            <AnimatePresence>
-              <motion.nav
-                variants={{
-                  open: {
-                    visibility: "visible",
-                    opacity: "var(--opacity-open, 100%)",
-                    display: "block",
-                    y: 0,
-                  },
-                  close: {
-                    visibility: "hidden",
-                    opacity: "var(--opacity-close, 0)",
-                    display: "none",
-                    y: "var(--y-close, 0%)",
-                  },
-                }}
-                animate={useActive.animateDropdownMenu}
-                initial="close"
-                exit="close"
-                transition={{ duration: 0.2 }}
-                className="bg-background-primary lg:absolute lg:z-50 lg:border lg:border-border-primary lg:p-2 lg:[--y-close:25%]"
-              >
-                <a
-                  href="#"
-                  className="block py-3 pl-[5%] text-md lg:px-4 lg:py-2 lg:text-base"
-                >
-                  Restaurantes
-                </a>
-                <a
-                  href="#"
-                  className="block py-3 pl-[5%] text-md lg:px-4 lg:py-2 lg:text-base"
-                >
-                  Entregadores
-                </a>
-                <a
-                  href="#"
-                  className="block py-3 pl-[5%] text-md lg:px-4 lg:py-2 lg:text-base"
-                >
-                  Suporte
-                </a>
-              </motion.nav>
-            </AnimatePresence>
-          </div>
-          <div className="mt-6 flex flex-col items-center gap-4 lg:mt-0 lg:ml-4 lg:flex-row">
-            <Button
-              title="Entrar"
-              variant="secondary"
-              size="sm"
-              onClick={() => scrollToForm("lojista")}
-              className="text-black font-bold py-2 px-4 rounded-full"
-            >
-              Entrar
-            </Button>
-            <Button 
-            title="Cadastrar" 
-            size="sm" 
-            className="bg-black text-white font-bold py-2 px-4 rounded-full"
-            onClick={() => scrollToForm("lojista")}>
-              Cadastrar
-            </Button>
-          </div>
-        </motion.div>
+          <motion.span
+            className="block h-0.5 w-6 bg-white origin-center rounded-full"
+            animate={mobileOpen ? { rotate: 45, y: 8 } : { rotate: 0, y: 0 }}
+            transition={{ duration: 0.2 }}
+          />
+          <motion.span
+            className="block h-0.5 w-6 bg-white rounded-full"
+            animate={mobileOpen ? { opacity: 0, scaleX: 0 } : { opacity: 1, scaleX: 1 }}
+            transition={{ duration: 0.15 }}
+          />
+          <motion.span
+            className="block h-0.5 w-6 bg-white origin-center rounded-full"
+            animate={mobileOpen ? { rotate: -45, y: -8 } : { rotate: 0, y: 0 }}
+            transition={{ duration: 0.2 }}
+          />
+        </button>
       </div>
-    </section>
+
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.div
+            key="mobile-menu"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.28, ease: "easeInOut" }}
+            className="overflow-hidden lg:hidden"
+            style={{ background: "rgba(15,7,5,0.97)", backdropFilter: "blur(12px)" }}
+          >
+            <div className="flex flex-col gap-0 px-5 pb-6 pt-2">
+              {links.map((l) => (
+                <button
+                  key={l.label}
+                  onClick={() => scrollTo(l.target)}
+                  className="py-4 text-left text-base font-medium text-white/75 border-b border-white/8 last:border-0 hover:text-white transition"
+                >
+                  {l.label}
+                </button>
+              ))}
+              <div className="mt-5 flex flex-col gap-3">
+                <button
+                  onClick={() => { try { window.location.assign("/login"); } catch (_) {} }}
+                  className="w-full rounded-xl border border-white/30 py-3 text-sm font-semibold text-white/80"
+                >
+                  Entrar
+                </button>
+                <button
+                  onClick={() => { try { window.location.assign("/onboarding/start"); } catch (_) {} }}
+                  className="w-full rounded-xl py-3 text-sm font-bold text-white"
+                  style={{ background: "#FF7F27" }}
+                >
+                  Testar grátis
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </nav>
   );
 }

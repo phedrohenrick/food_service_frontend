@@ -188,7 +188,8 @@ export function PreCadastroSection() {
 
       setStatus({
         state: "success",
-        message: "Recebemos seu interesse! Nossa equipe vai chamar você para as condições especiais de lançamento.",
+        message:
+          "Recebemos seu interesse! Nossa equipe vai chamar você para as condições especiais de lançamento.",
       });
       setFormData(getInitialFormState(userType));
     } catch (error) {
@@ -206,147 +207,221 @@ export function PreCadastroSection() {
   return (
     <section
       id="pre-cadastro"
-      className="relative px-[5%] py-20 md:py-28 bg-gradient-to-b from-foreground via-background-primary to-background-primary"
+      className="px-[5%] py-20 md:py-28"
+      style={{ background: "#fafaf8" }}
     >
-      <div className="container grid gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
-        <div className="max-w-2xl space-y-6 text-white">
-          <span className="inline-flex items-center gap-2 rounded-full bg-black/80 px-4 py-2 text-sm font-semibold uppercase tracking-wide">
-            <HiOutlineSparkles className="text-lg" /> Pré-cadastro VIP
-          </span>
-          <h2 className="text-foreground text-5xl font-bold md:text-6xl">
-           Recebe os pedidos, facilita para o cliente, conecta com o entregador.<div className="text-shadow-outline text-background-hero"> Agora em Niquelândia</div>
+      <div className="mx-auto max-w-7xl">
+        <div className="mb-10 text-center">
+          <p
+            className="text-xs font-bold uppercase tracking-[0.18em]"
+            style={{ color: "#A52A2A" }}
+          >
+            Contato
+          </p>
+          <h2
+            className="mt-3 text-3xl font-extrabold text-[#1a0e0d] sm:text-4xl lg:text-5xl"
+            style={{
+              fontFamily: "'Helvetica Neue', 'Segoe UI', Arial, sans-serif",
+              letterSpacing: "-0.02em",
+            }}
+          >
+            Fale com a gente antes de começar
           </h2>
-          {/* <div className="rounded-3xl border border-white/10 bg-black/80 p-6 backdrop-blur">
-            <p className="text-white text-lg md:text-xl">
-              Estamos abrindo uma lista exclusiva para restaurantes visionários e entregadores parceiros que querem sair na frente e testar o Food Service OS com condições comerciais imbatíveis.
-            </p>
-          </div> */}
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-2xl border border-foreground/40 bg-foreground/80 p-5 backdrop-blur">
-              <div className="flex items-start gap-3">
-                <BsShieldCheck className="mt-1 text-2xl text-white" />
-                <div>
-                  <h3 className="font-semibold text-lg">Não existe taxa sobre os pedidos</h3>
-                  <p className="text-white/70 text-sm">
-                    Valor mensal fixo e justo, repasses rápidos e suporte dedicado para cada operação.
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="rounded-2xl border border-foreground/100 bg-foreground/80 p-5 backdrop-blur">
-              <div className="flex items-start gap-3">
-                <HiOutlineChatBubbleLeftRight className="mt-1 text-2xl text-white" />
-                <div>
-                  <h3 className="font-semibold text-lg">Atendimento que converte</h3>
-                  <p className="text-white/70 text-sm">
-                    Treinamentos, campanhas personalizadas e jornadas pensadas para retenção.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-          {/* <div className="rounded-3xl border border-white/100 bg-black/80 p-6 backdrop-blur">
-            <p className="text-sm uppercase tracking-wide text-white/60">Números do beta</p>
-            <div className="mt-3 flex flex-wrap gap-6 md:gap-10">
-              <div>
-                <p className="text-4xl font-bold text-white">+180</p>
-                <p className="text-white/60 text-sm">restaurantes na fila de espera</p>
-              </div>
-              <div>
-                <p className="text-4xl font-bold text-white">9.2</p>
-                <p className="text-white/60 text-sm">nota média de atendimento</p>
-              </div>
-              <div>
-                <p className="text-4xl font-bold text-white">72h</p>
-                <p className="text-white/60 text-sm">para ativar sua operação</p>
-              </div>
-            </div>
-          </div> */}
         </div>
 
-        <div className="rounded-3xl bg-white p-8 shadow-2xl md:p-10">
-          <div className=" flex items-center justify-between gap-2">
-            <h3 className="text-2xl font-bold text-background-hero">
-              Quero ser avisado primeiro
-            </h3>
-            <span className="rounded-full bg-foreground/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-foreground">
-              vagas limitadas
-            </span>
-          </div>
-          <p className="mt-3 text-foreground/70 text-sm">
-            Preencha o formulário em 30 segundos e receba o contato do nosso time com as tarifas especiais de lançamento.
-          </p>
-
-          <div className="mt-6 grid grid-cols-2 gap-3 rounded-full bg-background-red2/5 p-2">
-            {["lojista", "entregador"].map((type) => {
-              const isActive = userType === type;
-              const labels = {
-                lojista: "Sou logista",
-                entregador: "Sou entregador",
-              };
-
-              return (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => setUserType(type)}
-                  className={`rounded-full py-2 text-sm font-semibold transition ${
-                    isActive
-                      ? "bg-background-hero text-white shadow-lg"
-                      : "text-foreground/60 hover:text-foreground"
-                  }`}
-                  data-segment={type}
+        <div className="grid gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-start lg:gap-16">
+          {/* Left: arguments */}
+          <div className="space-y-6">
+            <div className="space-y-4">
+              {[
+                {
+                  icon: <BsShieldCheck className="text-xl" style={{ color: "#FF7F27" }} />,
+                  title: "Sem contrato de fidelidade",
+                  desc: "Cancele quando quiser, sem multa e sem burocracia.",
+                },
+                {
+                  icon: <HiOutlineChatBubbleLeftRight className="text-xl" style={{ color: "#FF7F27" }} />,
+                  title: "Suporte em português",
+                  desc: "Time brasileiro disponível por WhatsApp e chat. Sem chatbot.",
+                },
+                {
+                  icon: <HiOutlineSparkles className="text-xl" style={{ color: "#FF7F27" }} />,
+                  title: "Onboarding incluído",
+                  desc: "Configuramos tudo com você no primeiro acesso. Sem custo extra.",
+                },
+              ].map((item) => (
+                <div
+                  key={item.title}
+                  className="flex items-start gap-4 rounded-2xl p-5"
+                  style={{
+                    background: "white",
+                    border: "1px solid #f0ece8",
+                  }}
                 >
-                  {labels[type]}
-                </button>
-              );
-            })}
+                  <div
+                    className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl"
+                    style={{ background: "rgba(255,127,39,0.08)" }}
+                  >
+                    {item.icon}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-[#1a0e0d]" style={{ fontSize: 15 }}>
+                      {item.title}
+                    </h3>
+                    <p className="mt-0.5 text-sm" style={{ color: "#6b7280" }}>
+                      {item.desc}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* WhatsApp alternative */}
+            <div
+              className="flex items-center gap-4 rounded-2xl p-5"
+              style={{
+                background: "rgba(37,211,102,0.06)",
+                border: "1px solid rgba(37,211,102,0.2)",
+              }}
+            >
+              <div
+                className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl"
+                style={{ background: "rgba(37,211,102,0.12)" }}
+              >
+                <HiOutlineChatBubbleLeftRight className="h-5 w-5" style={{ color: "#16a34a" }} />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-[#1a0e0d]">
+                  Prefere pelo WhatsApp?
+                </p>
+                <a
+                  href="https://wa.me/5500000000000"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium transition hover:underline"
+                  style={{ color: "#16a34a" }}
+                >
+                  Chamar no WhatsApp →
+                </a>
+              </div>
+            </div>
+
+            <p className="text-xs" style={{ color: "#9ca3af" }}>
+              Respondemos em até 2 horas nos dias úteis. Zero spam.
+            </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-            {activeFields.map((field) => (
-              <div key={field.name} className="space-y-2">
-                <label htmlFor={field.name} className="text-sm font-semibold text-foreground">
-                  {field.label}
-                </label>
-                <input
-                  id={field.name}
-                  name={field.name}
-                  required={Boolean(field.required)}
-                  placeholder={field.placeholder}
-                  value={formData[field.name] ?? ""}
-                  onChange={handleFieldChange}
-                  className="w-full rounded-2xl border border-foreground/10 bg-foreground/5 px-4 py-3 text-base text-foreground outline-none transition focus:border-foreground focus:bg-white"
-                  inputMode={field.inputMode}
-                />
+          {/* Right: form */}
+          <div
+            className="rounded-3xl p-8 shadow-sm md:p-10"
+            style={{ background: "white", border: "1px solid #f0ece8" }}
+          >
+            <h3 className="text-xl font-bold text-[#1a0e0d]">
+              Quero saber mais
+            </h3>
+            <p className="mt-1 text-sm" style={{ color: "#9ca3af" }}>
+              Preencha em 30 segundos e nosso time entra em contato.
+            </p>
+
+            {/* Segment toggle */}
+            <div
+              className="mt-6 grid grid-cols-2 gap-2 rounded-full p-1.5"
+              style={{ background: "#f5f0ee" }}
+            >
+              {["lojista", "entregador"].map((type) => {
+                const isActive = userType === type;
+                const labels = {
+                  lojista: "Sou lojista",
+                  entregador: "Sou entregador",
+                };
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setUserType(type)}
+                    data-segment={type}
+                    className="rounded-full py-2 text-sm font-semibold transition-all duration-200"
+                    style={
+                      isActive
+                        ? { background: "#EA1D2C", color: "white", boxShadow: "0 2px 8px rgba(234,29,44,0.3)" }
+                        : { color: "#6b7280" }
+                    }
+                  >
+                    {labels[type]}
+                  </button>
+                );
+              })}
+            </div>
+
+            <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+              {activeFields.map((field) => (
+                <div key={field.name} className="space-y-1.5">
+                  <label
+                    htmlFor={field.name}
+                    className="block text-sm font-semibold"
+                    style={{ color: "#374151" }}
+                  >
+                    {field.label}
+                  </label>
+                  <input
+                    id={field.name}
+                    name={field.name}
+                    required={Boolean(field.required)}
+                    placeholder={field.placeholder}
+                    value={formData[field.name] ?? ""}
+                    onChange={handleFieldChange}
+                    inputMode={field.inputMode}
+                    className="w-full rounded-xl px-4 py-3 text-base outline-none transition-all"
+                    style={{
+                      border: "1.5px solid #e5e0dc",
+                      color: "#1a0e0d",
+                      background: "#fafaf8",
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = "#EA1D2C";
+                      e.target.style.background = "white";
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = "#e5e0dc";
+                      e.target.style.background = "#fafaf8";
+                    }}
+                  />
+                </div>
+              ))}
+
+              <div className="space-y-3 pt-1">
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  data-form-type={userType}
+                  className="w-full rounded-xl py-3.5 text-base font-bold text-white transition-all hover:opacity-90 disabled:opacity-60"
+                  style={{ background: "#EA1D2C", boxShadow: "0 4px 16px rgba(234,29,44,0.28)" }}
+                >
+                  {isSubmitting ? "Enviando..." : "Quero saber mais"}
+                </Button>
+                <p className="text-center text-xs" style={{ color: "#9ca3af" }}>
+                  Prometemos zero spam. Usaremos seus dados apenas para contato.
+                </p>
               </div>
-            ))}
+            </form>
 
-            <div className="space-y-3">
-              <Button
-                type="submit"
-                className="bg-background-hero text-white font-semibold w-full rounded-2xl py-3 text-base shadow-lg hover:shadow-xl transition"
-                disabled={isSubmitting}
-                data-form-type={userType}
+            {status.state === "success" && (
+              <div
+                className="mt-4 rounded-xl p-4 text-sm font-medium"
+                style={{ background: "#f0fdf4", color: "#15803d" }}
               >
-                {isSubmitting ? "Enviando..." : "Quero as condições especiais"}
-              </Button>
-              <p className="text-xs text-foreground/60 text-center">
-                Prometemos zero spam. Usaremos seus dados apenas para o contato do pré-lançamento.
-              </p>
-            </div>
-          </form>
-
-          {status.state === "success" && (
-            <div className="mt-4 rounded-2xl bg-emerald-50 p-4 text-emerald-700">
-              {status.message}
-            </div>
-          )}
-          {status.state === "error" && (
-            <div className="mt-4 rounded-2xl bg-rose-50 p-4 text-rose-600">
-              {status.message}
-            </div>
-          )}
+                {status.message}
+              </div>
+            )}
+            {status.state === "error" && (
+              <div
+                className="mt-4 rounded-xl p-4 text-sm font-medium"
+                style={{ background: "#fff1f2", color: "#be123c" }}
+              >
+                {status.message}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </section>
