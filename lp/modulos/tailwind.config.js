@@ -13,6 +13,7 @@ module.exports = {
           primary: '#ffffff',
           secondary: '#FFC300',
           hero: '#EA1D2C',
+          priatoo_brown: '#502420',
           orange: '#FF7F27',
           red2:'#DD3F0C',
           gray: '#F5F5F5',
