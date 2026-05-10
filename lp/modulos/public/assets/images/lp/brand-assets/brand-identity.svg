@@ -1,0 +1,236 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <!-- Background gradient: dark brown → maroon → orange-red -->
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#3D1A18"/>
+      <stop offset="42%"  stop-color="#7B2020"/>
+      <stop offset="100%" stop-color="#C42C16"/>
+    </linearGradient>
+
+    <!-- Soft orange glow – top-left -->
+    <radialGradient id="glow1" cx="180" cy="158" r="380" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#FF7F27" stop-opacity="0.38"/>
+      <stop offset="100%" stop-color="#FF7F27" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Soft gold glow – bottom-right -->
+    <radialGradient id="glow2" cx="1020" cy="472" r="320" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#FFC300" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#FFC300" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Blue accent glow – top-right -->
+    <radialGradient id="glow3" cx="1060" cy="120" r="260" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#38BDF8" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#38BDF8" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Text shadow -->
+    <filter id="textShadow" x="-5%" y="-5%" width="110%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="10" flood-color="rgba(0,0,0,0.50)"/>
+    </filter>
+  </defs>
+
+  <!-- ── BACKGROUND ─────────────────────────────────────────── -->
+  <rect width="1200" height="630" fill="url(#bgGrad)"/>
+  <rect width="1200" height="630" fill="url(#glow1)"/>
+  <rect width="1200" height="630" fill="url(#glow2)"/>
+  <rect width="1200" height="630" fill="url(#glow3)"/>
+
+  <!-- Architectural rings -->
+  <circle cx="60"   cy="630" r="340" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1.5"/>
+  <circle cx="60"   cy="630" r="255" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
+  <circle cx="1140" cy="0"   r="400" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1.5"/>
+  <circle cx="1140" cy="0"   r="300" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1"/>
+
+  <!-- Dot grid – top-left -->
+  <g fill="rgba(255,255,255,0.13)">
+    <circle cx="46" cy="46" r="2.5"/>  <circle cx="70" cy="46" r="2.5"/>  <circle cx="94" cy="46" r="2.5"/>  <circle cx="118" cy="46" r="2.5"/>  <circle cx="142" cy="46" r="2.5"/>  <circle cx="166" cy="46" r="2.5"/>
+    <circle cx="46" cy="70" r="2.5"/>  <circle cx="70" cy="70" r="2.5"/>  <circle cx="94" cy="70" r="2.5"/>  <circle cx="118" cy="70" r="2.5"/>  <circle cx="142" cy="70" r="2.5"/>  <circle cx="166" cy="70" r="2.5"/>
+    <circle cx="46" cy="94" r="2.5"/>  <circle cx="70" cy="94" r="2.5"/>  <circle cx="94" cy="94" r="2.5"/>  <circle cx="118" cy="94" r="2.5"/>  <circle cx="142" cy="94" r="2.5"/>  <circle cx="166" cy="94" r="2.5"/>
+    <circle cx="46" cy="118" r="2.5"/> <circle cx="70" cy="118" r="2.5"/> <circle cx="94" cy="118" r="2.5"/> <circle cx="118" cy="118" r="2.5"/> <circle cx="142" cy="118" r="2.5"/> <circle cx="166" cy="118" r="2.5"/>
+    <circle cx="46" cy="142" r="2.5"/> <circle cx="70" cy="142" r="2.5"/> <circle cx="94" cy="142" r="2.5"/> <circle cx="118" cy="142" r="2.5"/> <circle cx="142" cy="142" r="2.5"/> <circle cx="166" cy="142" r="2.5"/>
+  </g>
+
+  <!-- Dot grid – bottom-right -->
+  <g fill="rgba(255,255,255,0.13)">
+    <circle cx="1034" cy="488" r="2.5"/> <circle cx="1058" cy="488" r="2.5"/> <circle cx="1082" cy="488" r="2.5"/> <circle cx="1106" cy="488" r="2.5"/> <circle cx="1130" cy="488" r="2.5"/> <circle cx="1154" cy="488" r="2.5"/>
+    <circle cx="1034" cy="512" r="2.5"/> <circle cx="1058" cy="512" r="2.5"/> <circle cx="1082" cy="512" r="2.5"/> <circle cx="1106" cy="512" r="2.5"/> <circle cx="1130" cy="512" r="2.5"/> <circle cx="1154" cy="512" r="2.5"/>
+    <circle cx="1034" cy="536" r="2.5"/> <circle cx="1058" cy="536" r="2.5"/> <circle cx="1082" cy="536" r="2.5"/> <circle cx="1106" cy="536" r="2.5"/> <circle cx="1130" cy="536" r="2.5"/> <circle cx="1154" cy="536" r="2.5"/>
+    <circle cx="1034" cy="560" r="2.5"/> <circle cx="1058" cy="560" r="2.5"/> <circle cx="1082" cy="560" r="2.5"/> <circle cx="1106" cy="560" r="2.5"/> <circle cx="1130" cy="560" r="2.5"/> <circle cx="1154" cy="560" r="2.5"/>
+    <circle cx="1034" cy="584" r="2.5"/> <circle cx="1058" cy="584" r="2.5"/> <circle cx="1082" cy="584" r="2.5"/> <circle cx="1106" cy="584" r="2.5"/> <circle cx="1130" cy="584" r="2.5"/> <circle cx="1154" cy="584" r="2.5"/>
+  </g>
+
+  <!-- ── WORDMARK ─────────────────────────────────────────────── -->
+  <text
+    x="600" y="262"
+    text-anchor="middle"
+    font-family="'Helvetica Neue','Segoe UI',Arial,sans-serif"
+    font-size="96"
+    font-weight="800"
+    fill="white"
+    letter-spacing="-3"
+    filter="url(#textShadow)"
+  >priatoo</text>
+
+  <!-- Tagline -->
+  <text
+    x="600" y="306"
+    text-anchor="middle"
+    font-family="'Helvetica Neue','Segoe UI',Arial,sans-serif"
+    font-size="15"
+    font-weight="400"
+    fill="rgba(255,255,255,0.55)"
+    letter-spacing="4"
+  >SISTEMA PARA RESTAURANTES</text>
+
+  <!-- Ornamental divider -->
+  <line x1="436" y1="334" x2="572" y2="334" stroke="rgba(255,255,255,0.18)" stroke-width="1"/>
+  <circle cx="600" cy="334" r="4" fill="none" stroke="rgba(255,255,255,0.30)" stroke-width="1.5"/>
+  <line x1="628" y1="334" x2="764" y2="334" stroke="rgba(255,255,255,0.18)" stroke-width="1"/>
+
+  <!-- ── COLOR PALETTE ────────────────────────────────────────── -->
+  <text
+    x="600" y="368"
+    text-anchor="middle"
+    font-family="'Helvetica Neue','Segoe UI',Arial,sans-serif"
+    font-size="10"
+    font-weight="700"
+    fill="rgba(255,255,255,0.35)"
+    letter-spacing="3"
+  >PALETA DE CORES</text>
+
+  <!--
+    8 swatches × 42px + 7 gaps × 10px = 336 + 70 = 406px
+    start x = 600 − 203 = 397   |   step = 52px
+  -->
+
+  <!-- #3D1A18 – Marrom Profundo -->
+  <rect x="397" y="382" width="42" height="42" rx="9" fill="#3D1A18" stroke="rgba(255,255,255,0.22)" stroke-width="1.5"/>
+  <text x="418" y="440" text-anchor="middle" font-family="monospace" font-size="9" fill="rgba(255,255,255,0.40)">#3D1A18</text>
+  <text x="418" y="452" text-anchor="middle" font-family="'Helvetica Neue',Arial,sans-serif" font-size="8" fill="rgba(255,255,255,0.28)">Marrom Profundo</text>
+
+  <!-- #502420 – Marrom Priatoo -->
+  <rect x="449" y="382" width="42" height="42" rx="9" fill="#502420" stroke="rgba(255,255,255,0.14)" stroke-width="1"/>
+  <text x="470" y="440" text-anchor="middle" font-family="monospace" font-size="9" fill="rgba(255,255,255,0.40)">#502420</text>
+  <text x="470" y="452" text-anchor="middle" font-family="'Helvetica Neue',Arial,sans-serif" font-size="8" fill="rgba(255,255,255,0.28)">Marrom Priatoo</text>
+
+  <!-- #A52A2A – Vermelho Escuro -->
+  <rect x="501" y="382" width="42" height="42" rx="9" fill="#A52A2A"/>
+  <text x="522" y="440" text-anchor="middle" font-family="monospace" font-size="9" fill="rgba(255,255,255,0.40)">#A52A2A</text>
+  <text x="522" y="452" text-anchor="middle" font-family="'Helvetica Neue',Arial,sans-serif" font-size="8" fill="rgba(255,255,255,0.28)">Vermelho Escuro</text>
+
+  <!-- #EA1D2C – Vermelho Hero -->
+  <rect x="553" y="382" width="42" height="42" rx="9" fill="#EA1D2C"/>
+  <text x="574" y="440" text-anchor="middle" font-family="monospace" font-size="9" fill="rgba(255,255,255,0.40)">#EA1D2C</text>
+  <text x="574" y="452" text-anchor="middle" font-family="'Helvetica Neue',Arial,sans-serif" font-size="8" fill="rgba(255,255,255,0.28)">Vermelho Hero</text>
+
+  <!-- #DD3F0C – Laranja-Vermelho -->
+  <rect x="605" y="382" width="42" height="42" rx="9" fill="#DD3F0C"/>
+  <text x="626" y="440" text-anchor="middle" font-family="monospace" font-size="9" fill="rgba(255,255,255,0.40)">#DD3F0C</text>
+  <text x="626" y="452" text-anchor="middle" font-family="'Helvetica Neue',Arial,sans-serif" font-size="8" fill="rgba(255,255,255,0.28)">Laranja-Vermelho</text>
+
+  <!-- #FF7F27 – Laranja Primário -->
+  <rect x="657" y="382" width="42" height="42" rx="9" fill="#FF7F27"/>
+  <text x="678" y="440" text-anchor="middle" font-family="monospace" font-size="9" fill="rgba(255,255,255,0.40)">#FF7F27</text>
+  <text x="678" y="452" text-anchor="middle" font-family="'Helvetica Neue',Arial,sans-serif" font-size="8" fill="rgba(255,255,255,0.28)">Laranja Primário</text>
+
+  <!-- #FFC300 – Amarelo Ouro -->
+  <rect x="709" y="382" width="42" height="42" rx="9" fill="#FFC300"/>
+  <text x="730" y="440" text-anchor="middle" font-family="monospace" font-size="9" fill="rgba(255,255,255,0.40)">#FFC300</text>
+  <text x="730" y="452" text-anchor="middle" font-family="'Helvetica Neue',Arial,sans-serif" font-size="8" fill="rgba(255,255,255,0.28)">Amarelo Ouro</text>
+
+  <!-- #38BDF8 – Azul Complementar -->
+  <rect x="761" y="382" width="42" height="42" rx="9" fill="#38BDF8"/>
+  <!-- Small "complementar" badge on the swatch -->
+  <text x="782" y="440" text-anchor="middle" font-family="monospace" font-size="9" fill="rgba(255,255,255,0.40)">#38BDF8</text>
+  <text x="782" y="452" text-anchor="middle" font-family="'Helvetica Neue',Arial,sans-serif" font-size="8" fill="rgba(56,189,248,0.70)">Azul Complementar</text>
+
+  <!-- ── TYPOGRAPHY SHOWCASE ─────────────────────────────────── -->
+  <!-- Left column -->
+  <text x="120" y="218"
+    font-family="'Helvetica Neue','Segoe UI',Arial,sans-serif"
+    font-size="10" font-weight="700"
+    fill="rgba(255,255,255,0.35)" letter-spacing="2.5"
+  >TIPOGRAFIA</text>
+
+  <!-- Heading sample -->
+  <text x="120" y="252"
+    font-family="'Helvetica Neue','Segoe UI',Arial,sans-serif"
+    font-size="34" font-weight="800"
+    fill="rgba(255,255,255,0.90)" letter-spacing="-0.5"
+  >Heading</text>
+  <text x="120" y="266"
+    font-family="'Helvetica Neue','Segoe UI',Arial,sans-serif"
+    font-size="9" font-weight="400"
+    fill="rgba(255,255,255,0.38)" letter-spacing="0.3"
+  >(Helvetica Neue · ExtraBold 800 · -0.5 tracking)</text>
+
+  <!-- Body sample -->
+  <text x="120" y="286"
+    font-family="'Helvetica Neue','Segoe UI',Arial,sans-serif"
+    font-size="16" font-weight="400"
+    fill="rgba(255,255,255,0.55)"
+  >Body / Regular</text>
+  <text x="120" y="298"
+    font-family="'Helvetica Neue','Segoe UI',Arial,sans-serif"
+    font-size="9" font-weight="400"
+    fill="rgba(255,255,255,0.38)" letter-spacing="0.3"
+  >(Segoe UI · Regular 400 · line-height 1.6)</text>
+
+  <!-- Label sample -->
+  <text x="120" y="316"
+    font-family="'Helvetica Neue','Segoe UI',Arial,sans-serif"
+    font-size="11" font-weight="700"
+    fill="rgba(255,255,255,0.38)" letter-spacing="2"
+  >LABEL / SEMIBOLD</text>
+  <text x="120" y="328"
+    font-family="'Helvetica Neue','Segoe UI',Arial,sans-serif"
+    font-size="9" font-weight="400"
+    fill="rgba(255,255,255,0.38)" letter-spacing="0.3"
+  >(System UI · SemiBold 700 · uppercase · +2 tracking)</text>
+
+  <!-- Vertical divider left -->
+  <line x1="300" y1="210" x2="300" y2="342" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>
+
+  <!-- ── CTA PREVIEW ──────────────────────────────────────────── -->
+  <!-- Right column -->
+  <text x="1080" y="220"
+    text-anchor="middle"
+    font-family="'Helvetica Neue','Segoe UI',Arial,sans-serif"
+    font-size="10" font-weight="700"
+    fill="rgba(255,255,255,0.35)" letter-spacing="2.5"
+  >BOTÕES</text>
+
+  <!-- Primary CTA (orange) -->
+  <rect x="976" y="232" width="208" height="46" rx="11" fill="#FF7F27"/>
+  <text x="1080" y="261"
+    text-anchor="middle"
+    font-family="'Helvetica Neue','Segoe UI',Arial,sans-serif"
+    font-size="14" font-weight="700"
+    fill="white" letter-spacing="0.2"
+  >Começar grátis</text>
+
+  <!-- Secondary CTA (blue accent) -->
+  <rect x="976" y="288" width="208" height="42" rx="11" fill="#38BDF8" fill-opacity="0.15" stroke="#38BDF8" stroke-width="1.5" stroke-opacity="0.60"/>
+  <text x="1080" y="314"
+    text-anchor="middle"
+    font-family="'Helvetica Neue','Segoe UI',Arial,sans-serif"
+    font-size="13" font-weight="400"
+    fill="rgba(255,255,255,0.80)"
+  >Ver como funciona</text>
+
+  <!-- Vertical divider right -->
+  <line x1="900" y1="210" x2="900" y2="342" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>
+
+  <!-- ── FOOTER ───────────────────────────────────────────────── -->
+  <text
+    x="600" y="596"
+    text-anchor="middle"
+    font-family="'Helvetica Neue','Segoe UI',Arial,sans-serif"
+    font-size="12" font-weight="300"
+    fill="rgba(255,255,255,0.20)"
+    letter-spacing="0.6"
+  >priatoo.com.br  ·  Identidade Visual 2025</text>
+
+</svg>
