@@ -1,22 +1,25 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useStorefront } from '../../../../../shared/generalContext.jsx';
+import { getKeycloak } from '../../../../../shared/auth/keycloak';
 import { RiDashboardHorizontalFill } from "react-icons/ri";
 import { GrRestaurant } from "react-icons/gr";
 import { MdMenuBook } from "react-icons/md";
 import { MdOutlineSettings } from "react-icons/md";
 import { IoSearch } from "react-icons/io5";
 import { MdOutlineRestaurantMenu } from "react-icons/md";
+import { IoBarChartOutline } from "react-icons/io5";
 
 const navItems = [
   { label: 'Visão geral', suffix: '', icon: <RiDashboardHorizontalFill /> },
   { label: 'Pedidos', suffix: 'orders', icon: <MdMenuBook /> },
   { label: 'Cardápio', suffix: 'menu', icon: <MdOutlineRestaurantMenu /> },
+  { label: 'Métricas', suffix: 'metricas', icon: <IoBarChartOutline /> },
   { label: 'Configurações', suffix: 'settings', icon: <MdOutlineSettings /> },
 ];
 
 const DashboardLayoutv2 = ({ children, onHelp }) => {
-  const { tenant } = useStorefront();
+  const { tenant, user } = useStorefront();
   // normaliza cor para formato hex #RRGGBB
   // aceita: #RGB, #RRGGBB, #RRGGBBAA, RGB/RGBA
   function normalizeHex(input) {
@@ -66,6 +69,35 @@ const DashboardLayoutv2 = ({ children, onHelp }) => {
   const accentHover = toRgba(accent, 0.90);
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const dropdownRef = useRef(null);
+
+  const initials = useMemo(() => {
+    const name = tenant?.name || '';
+    const words = name.trim().split(/\s+/).filter(Boolean);
+    if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+    if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+    return 'RS';
+  }, [tenant?.name]);
+
+  useEffect(() => {
+    if (!showUserDropdown) return;
+    const handleClick = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setShowUserDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showUserDropdown]);
+
+  const handleLogout = () => {
+    try { localStorage.removeItem('authToken'); } catch (_) {}
+    try { localStorage.removeItem('tenantSlug'); } catch (_) {}
+    try { localStorage.removeItem('authTenantSlug'); } catch (_) {}
+    getKeycloak().logout({ redirectUri: window.location.origin });
+  };
 
   function getContrast(hex) {
     const normalized = (hex || '').replace('#', '');
@@ -190,12 +222,83 @@ const DashboardLayoutv2 = ({ children, onHelp }) => {
                   <span className="text-sm text-gray-500">Tempo médio</span>
                   <span className="text-sm font-semibold text-gray-900">32 min</span>
                 </div>
-                <div className="w-11 h-11 rounded-2xl bg-[var(--accent)] text-[var(--accent-contrast)] flex items-center justify-center font-bold shadow-lg">
-                  RS
+                <div ref={dropdownRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowUserDropdown((v) => !v)}
+                    className="w-11 h-11 rounded-2xl bg-[var(--accent)] text-[var(--accent-contrast)] flex items-center justify-center font-bold shadow-lg hover:opacity-90 transition-opacity"
+                    aria-label="Menu do usuário"
+                  >
+                    {initials}
+                  </button>
+
+                  {showUserDropdown && (
+                    <div className="absolute right-0 top-full mt-2 w-64 rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/10 overflow-hidden z-50">
+                      <div className="px-4 py-3 border-b border-slate-100">
+                        <p className="text-sm font-semibold text-slate-900 truncate">{tenant?.name || 'Restaurante'}</p>
+                        <p className="text-xs text-slate-500 truncate mt-0.5">{user?.email || tenant?.email || ''}</p>
+                      </div>
+                      <div className="p-2">
+                        <button
+                          type="button"
+                          onClick={() => { setShowUserDropdown(false); setShowLogoutModal(true); }}
+                          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                        >
+                          <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                          </svg>
+                          Encerrar sessão
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           </header>
+
+          {showLogoutModal && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+              onClick={() => setShowLogoutModal(false)}
+            >
+              <div
+                className="w-full max-w-sm rounded-3xl bg-white p-8 shadow-2xl space-y-5"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-red-100">
+                    <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-900">Encerrar sessão</h2>
+                    <p className="text-sm text-slate-500 mt-0.5">Você sairá do painel agora.</p>
+                  </div>
+                </div>
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  Tem certeza que deseja sair? Você precisará fazer login novamente para acessar o painel do restaurante.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowLogoutModal(false)}
+                    className="flex-1 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="flex-1 rounded-2xl bg-red-600 px-4 py-3 text-sm font-semibold text-white hover:bg-red-700 transition-colors shadow-lg shadow-red-600/25"
+                  >
+                    Sair
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           <main className="p-6 space-y-6">{children}</main>
         </div>

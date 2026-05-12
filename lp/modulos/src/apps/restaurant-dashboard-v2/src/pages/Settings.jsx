@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Button, Input } from '../../../../shared/components/ui';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
+import { getKeycloak } from '../../../../shared/auth/keycloak';
 import api from '../../../../shared/services/api';
 
 const paymentOptions = [
@@ -208,8 +209,16 @@ const Settings = () => {
 
   // Neighborhoods
   const [newNeighborhood, setNewNeighborhood] = useState({ name: '', price: '' });
-  const [editingNeighborhood, setEditingNeighborhood] = useState({}); // id -> {name, price}
+  const [editingNeighborhood, setEditingNeighborhood] = useState({});
   const [toast, setToast] = useState({ message: '', type: '', visible: false });
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  const handleLogout = () => {
+    try { localStorage.removeItem('authToken'); } catch (_) {}
+    try { localStorage.removeItem('tenantSlug'); } catch (_) {}
+    try { localStorage.removeItem('authTenantSlug'); } catch (_) {}
+    getKeycloak().logout({ redirectUri: window.location.origin });
+  };
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type, visible: true });
@@ -545,8 +554,78 @@ const Settings = () => {
               </div>
             </div>
           </div>
+
+          <div className={`${surfaceClass} p-5 space-y-4`}>
+            <div>
+              <p className="text-sm text-slate-500">Conta</p>
+              <h3 className="text-lg font-semibold tracking-tight text-slate-900">Sessão</h3>
+            </div>
+            <div className="rounded-2xl border border-red-100 bg-red-50 p-4 space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-100">
+                  <svg className="h-4 w-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-red-900">Encerrar sessão</p>
+                  <p className="text-xs text-red-600 mt-0.5">Você será desconectado do sistema.</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowLogoutModal(true)}
+                className="w-full rounded-xl border border-red-200 bg-white px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors shadow-sm"
+              >
+                Sair da conta
+              </button>
+            </div>
+          </div>
         </div>
       </div>
+
+      {showLogoutModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+          onClick={() => setShowLogoutModal(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-3xl bg-white p-8 shadow-2xl space-y-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-red-100">
+                <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">Encerrar sessão</h2>
+                <p className="text-sm text-slate-500 mt-0.5">Você sairá do painel agora.</p>
+              </div>
+            </div>
+            <p className="text-sm text-slate-600 leading-relaxed">
+              Tem certeza que deseja sair? Você precisará fazer login novamente para acessar o painel do restaurante.
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowLogoutModal(false)}
+                className="flex-1 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex-1 rounded-2xl bg-red-600 px-4 py-3 text-sm font-semibold text-white hover:bg-red-700 transition-colors shadow-lg shadow-red-600/25"
+              >
+                Sair
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Toast Notification */}
       {toast.visible && (
         <div

@@ -6,6 +6,7 @@ import { Dashboard } from './src/pages';
 import Orders from './src/pages/Orders';
 import Menu from './src/pages/Menu';
 import Settings from './src/pages/Settings';
+import Metricas from './src/pages/Metricas';
 import { initKeycloak, getKeycloak } from '../../shared/auth/keycloak';
 import api from '../../shared/services/api';
 import { useStorefront } from '../../shared/generalContext.jsx';
@@ -276,6 +277,7 @@ const RestaurantDashboard = () => {
         <Route index element={wizardReady && wizardActive ? <Navigate to="settings" replace /> : <Dashboard />} />
         <Route path="orders" element={<Orders />} />
         <Route path="menu" element={<Menu />} />
+        <Route path="metricas" element={<Metricas />} />
         <Route path="settings" element={<Settings />} />
         <Route path="*" element={<Navigate to="." replace />} />
       </Routes>

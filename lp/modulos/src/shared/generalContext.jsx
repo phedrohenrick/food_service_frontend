@@ -998,6 +998,8 @@ export const StorefrontProvider = ({ children }) => {
           delivery_estimate_min: rawTenant.deliveryEstimateMin || rawTenant.delivery_estimate_min,
           delivery_estimate_max: rawTenant.deliveryEstimateMax || rawTenant.delivery_estimate_max,
           owner_user_id: rawTenant.ownerUserId || rawTenant.owner_user_id,
+          subscription_status: rawTenant.subscriptionStatus || rawTenant.subscription_status || null,
+          plan_code: rawTenant.planCode || rawTenant.plan_code || null,
       } : initialTenant;
 
       // Normalize Menu Items
