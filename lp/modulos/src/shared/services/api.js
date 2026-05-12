@@ -23,7 +23,7 @@ class ApiService {
       try {
         if (typeof window !== 'undefined' && window.location) {
           const p = window.location.pathname || '';
-          const m = /^\/([^/]+)\/(dashboard|app)(\/|$)/i.exec(p);
+          const m = /^\/([^/]+)\/(dashboard|app|garcom)(\/|$)/i.exec(p);
           if (m && m[1]) return m[1];
         }
       } catch (_) {}
@@ -43,7 +43,8 @@ class ApiService {
     }
 
     const publicGetPrefixes = [
-      '/tenants', '/menu-items', '/menu-categories', '/options', '/option-groups', '/banners', '/neighborhoods'
+      '/tenants', '/menu-items', '/menu-categories', '/options', '/option-groups', '/banners', '/neighborhoods',
+      '/tables', '/tabs'
     ];
     const isGet = !config.method || config.method.toUpperCase() === 'GET';
     const isPublicGet = isGet && publicGetPrefixes.some(p => String(endpoint || '').startsWith(p));

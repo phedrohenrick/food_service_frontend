@@ -9,17 +9,19 @@ import { MdOutlineSettings } from "react-icons/md";
 import { IoSearch } from "react-icons/io5";
 import { MdOutlineRestaurantMenu } from "react-icons/md";
 import { IoBarChartOutline } from "react-icons/io5";
+import { MdTableRestaurant } from "react-icons/md";
 
 const navItems = [
   { label: 'Visão geral', suffix: '', icon: <RiDashboardHorizontalFill /> },
   { label: 'Pedidos', suffix: 'orders', icon: <MdMenuBook /> },
+  { label: 'Mesas', suffix: 'mesas', icon: <MdTableRestaurant /> },
   { label: 'Cardápio', suffix: 'menu', icon: <MdOutlineRestaurantMenu /> },
   { label: 'Métricas', suffix: 'metricas', icon: <IoBarChartOutline /> },
   { label: 'Configurações', suffix: 'settings', icon: <MdOutlineSettings /> },
 ];
 
 const DashboardLayoutv2 = ({ children, onHelp }) => {
-  const { tenant, user } = useStorefront();
+  const { tenant, user, updateTenant } = useStorefront();
   // normaliza cor para formato hex #RRGGBB
   // aceita: #RGB, #RRGGBB, #RRGGBBAA, RGB/RGBA
   function normalizeHex(input) {
@@ -174,11 +176,26 @@ const DashboardLayoutv2 = ({ children, onHelp }) => {
           </nav>
 
           <div className="mt-auto px-6 py-6 border-t border-gray-100">
-            <div className="bg-gradient-to-br from-[var(--accent)] to-[var(--accent-hover)] text-[var(--accent-contrast)] rounded-2xl p-4 shadow-lg">
-              <p className="text-xs uppercase tracking-wide opacity-80">status</p>
-              <p className="text-lg font-semibold">Loja aberta</p>
-              <p className="text-sm opacity-90 mt-1">Recebendo pedidos em tempo real</p>
-            </div>
+            <button
+              type="button"
+              onClick={() => updateTenant({ is_open: !tenant?.is_open })}
+              className={`w-full rounded-2xl p-4 shadow-lg text-left transition-colors ${
+                tenant?.is_open
+                  ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white'
+                  : 'bg-gradient-to-br from-gray-400 to-gray-500 text-white'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-xs uppercase tracking-wide opacity-80">status</p>
+                <span className={`w-2 h-2 rounded-full ${tenant?.is_open ? 'bg-white animate-pulse' : 'bg-white/50'}`} />
+              </div>
+              <p className="text-lg font-semibold mt-1">
+                {tenant?.is_open ? 'Loja aberta' : 'Loja fechada'}
+              </p>
+              <p className="text-sm opacity-90 mt-1">
+                {tenant?.is_open ? 'Toque para fechar' : 'Toque para abrir'}
+              </p>
+            </button>
           </div>
         </aside>
 

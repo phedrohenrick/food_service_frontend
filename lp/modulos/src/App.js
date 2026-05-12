@@ -13,6 +13,9 @@ const RestaurantDashboard = React.lazy(() => import('./apps/restaurant-dashboard
 // Customer App (lazy loading)
 const CustomerApp = React.lazy(() => import('./apps/customer-app/CustomerApp'));
 
+// Garçom App (lazy loading)
+const GarcomApp = React.lazy(() => import('./apps/garcom/GarcomApp'));
+
 // Auth Pages
 const LoginPage = React.lazy(() => import('./features/auth'));
 const MerchantLoginPage = React.lazy(() => import('./features/auth/MerchantLogin'));
@@ -61,6 +64,9 @@ function App() {
             {/* Customer App Routes */}
             <Route path="/:slug/app/*" element={<CustomerApp />} />
             <Route path="/app/*" element={<CustomerApp />} />
+
+            {/* Garçom Routes */}
+            <Route path="/:slug/garcom/*" element={<GarcomApp />} />
           </Routes>
         </React.Suspense>
       </Router>
