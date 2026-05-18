@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useStorefront } from '../../../../../shared/generalContext.jsx';
 import { getKeycloak } from '../../../../../shared/auth/keycloak';
+import api from '../../../../../shared/services/api';
 import { RiDashboardHorizontalFill } from "react-icons/ri";
 import { GrRestaurant } from "react-icons/gr";
 import { MdMenuBook } from "react-icons/md";
@@ -22,6 +23,26 @@ const navItems = [
 
 const DashboardLayoutv2 = ({ children, onHelp }) => {
   const { tenant, user, updateTenant } = useStorefront();
+  const navigate = useNavigate();
+  const [pendingNeighborhoodsCount, setPendingNeighborhoodsCount] = useState(0);
+
+  useEffect(() => {
+    if (!tenant?.id) return;
+    api.get(`/unrecognized-neighborhoods/by-tenant/${tenant.id}`)
+      .then(data => {
+        const count = Array.isArray(data) ? data.filter(n => n.status === 'PENDING').length : 0;
+        setPendingNeighborhoodsCount(count);
+      })
+      .catch(() => {});
+  }, [tenant?.id]);
+
+  const goToNeighborhoodAlert = () => {
+    setShowUserDropdown(false);
+    navigate(`${basePrefix}/settings`);
+    setTimeout(() => {
+      document.getElementById('delivery-alert')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+  };
   // normaliza cor para formato hex #RRGGBB
   // aceita: #RGB, #RRGGBB, #RRGGBBAA, RGB/RGBA
   function normalizeHex(input) {
@@ -173,17 +194,28 @@ const DashboardLayoutv2 = ({ children, onHelp }) => {
                 {item.label}
               </Link>
             )})}
+            {onHelp && (
+              <button
+                type="button"
+                onClick={() => { onHelp(); setIsOpen(false); }}
+                className="flex w-full items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-100 transition-all duration-200"
+              >
+                <span className="text-lg flex h-5 w-5 items-center justify-center rounded-full border border-gray-300 text-xs font-bold text-gray-400">?</span>
+                Tour guiado
+              </button>
+            )}
           </nav>
 
           <div className="mt-auto px-6 py-6 border-t border-gray-100">
             <button
               type="button"
               onClick={() => updateTenant({ is_open: !tenant?.is_open })}
-              className={`w-full rounded-2xl p-4 shadow-lg text-left transition-colors ${
+              className="w-full rounded-2xl p-4 shadow-lg text-left transition-all"
+              style={
                 tenant?.is_open
-                  ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white'
-                  : 'bg-gradient-to-br from-gray-400 to-gray-500 text-white'
-              }`}
+                  ? { background: 'var(--accent)', color: 'var(--accent-contrast)' }
+                  : { background: 'linear-gradient(135deg, #9ca3af, #6b7280)', color: '#ffffff' }
+              }
             >
               <div className="flex items-center justify-between">
                 <p className="text-xs uppercase tracking-wide opacity-80">status</p>
@@ -230,7 +262,7 @@ const DashboardLayoutv2 = ({ children, onHelp }) => {
                   <button
                     type="button"
                     onClick={onHelp}
-                    className="hidden sm:inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                    className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
                   >
                     Ajuda
                   </button>
@@ -243,18 +275,50 @@ const DashboardLayoutv2 = ({ children, onHelp }) => {
                   <button
                     type="button"
                     onClick={() => setShowUserDropdown((v) => !v)}
-                    className="w-11 h-11 rounded-2xl bg-[var(--accent)] text-[var(--accent-contrast)] flex items-center justify-center font-bold shadow-lg hover:opacity-90 transition-opacity"
+                    className="relative w-11 h-11 rounded-2xl bg-[var(--accent)] text-[var(--accent-contrast)] flex items-center justify-center font-bold shadow-lg hover:opacity-90 transition-opacity"
                     aria-label="Menu do usuário"
                   >
                     {initials}
+                    {pendingNeighborhoodsCount > 0 && (
+                      <span className="absolute -top-1 -right-1">
+                        <span className="absolute inline-flex h-3.5 w-3.5 rounded-full bg-orange-400 opacity-75 animate-ping" />
+                        <span className="relative flex h-3.5 w-3.5 rounded-full bg-orange-500 border-2 border-white" />
+                      </span>
+                    )}
                   </button>
 
                   {showUserDropdown && (
-                    <div className="absolute right-0 top-full mt-2 w-64 rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/10 overflow-hidden z-50">
+                    <div className="absolute right-0 top-full mt-2 w-72 rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/10 overflow-hidden z-50">
                       <div className="px-4 py-3 border-b border-slate-100">
                         <p className="text-sm font-semibold text-slate-900 truncate">{tenant?.name || 'Restaurante'}</p>
                         <p className="text-xs text-slate-500 truncate mt-0.5">{user?.email || tenant?.email || ''}</p>
                       </div>
+
+                      {pendingNeighborhoodsCount > 0 && (
+                        <button
+                          type="button"
+                          onClick={goToNeighborhoodAlert}
+                          className="w-full text-left px-3 py-2.5 border-b border-slate-100 hover:bg-orange-50 transition-colors group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="relative flex-shrink-0">
+                              <span className="absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-60 animate-ping" />
+                              <span className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-orange-500">
+                                <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z" />
+                                </svg>
+                              </span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-orange-700">
+                                {pendingNeighborhoodsCount} bairro{pendingNeighborhoodsCount > 1 ? 's' : ''} sem taxa de entrega
+                              </p>
+                              <p className="text-xs text-orange-500 mt-0.5">Clique para configurar →</p>
+                            </div>
+                          </div>
+                        </button>
+                      )}
+
                       <div className="p-2">
                         <button
                           type="button"

@@ -4,6 +4,7 @@ import { Button } from '../../../../shared/components/ui';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
 import { GoClock } from "react-icons/go";
 import { loginWithRedirect } from '../../../../shared/auth/keycloak';
+import { formatOrderStatus } from '../../../../shared/utils/orderStatus';
 
 const statusPills = {
   CREATED: 'bg-gray-100 text-gray-700',
@@ -19,32 +20,81 @@ const statusPills = {
 };
 
 const Orders = () => {
-  const { orders, getOrderDetailed, reloadOrders } = useStorefront();
-  const isAuthenticated = (() => {
-    let hasToken = false;
-    try { hasToken = !!localStorage.getItem('authToken'); } catch (_) {}
-    return hasToken;
+  const { orders, getOrderDetailed, reloadOrders, user } = useStorefront();
+  const hasToken = (() => {
+    try { return !!localStorage.getItem('authToken'); } catch (_) { return false; }
   })();
+  const hasUser = !!user?.id;
+  const isAuthenticated = hasToken;
+  const isAuthLoading = hasToken && !hasUser;
   const basePrefix = (() => {
     const p = window.location?.pathname || '';
     const m = /^\/([^/]+)\/app(\/|$)/i.exec(p);
     return m && m[1] ? `/${m[1]}/app` : '/app';
   })();
 
+  const reloadOrdersRef = React.useRef(reloadOrders);
   React.useEffect(() => {
-    if (!isAuthenticated) return;
-    reloadOrders();
-    const intervalId = setInterval(() => {
-      reloadOrders();
-    }, 10000);
-    return () => clearInterval(intervalId);
-  }, [reloadOrders, isAuthenticated]);
+    reloadOrdersRef.current = reloadOrders;
+  }, [reloadOrders]);
+
+  React.useEffect(() => {
+    if (!isAuthenticated) return undefined;
+    let cancelled = false;
+    let inFlight = false;
+
+    const tick = async () => {
+      if (cancelled || inFlight) return;
+      inFlight = true;
+      try {
+        await reloadOrdersRef.current?.();
+      } finally {
+        inFlight = false;
+      }
+    };
+
+    tick();
+    const intervalId = setInterval(tick, 10000);
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+    };
+  }, [isAuthenticated]);
 
   const sortedOrders = React.useMemo(() => {
     return [...orders].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   }, [orders]);
 
-  if (!isAuthenticated) {
+  const [statusByOrder, setStatusByOrder] = React.useState({});
+
+  React.useEffect(() => {
+    setStatusByOrder((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const order of orders) {
+        const detailed = getOrderDetailed(order.id);
+        const timeline = detailed?.timeline || [];
+        if (timeline.length === 0) continue;
+        const last = timeline[timeline.length - 1];
+        const prior = prev[order.id];
+        if (
+          !prior ||
+          timeline.length > prior.length ||
+          (timeline.length === prior.length && last.status !== prior.status)
+        ) {
+          next[order.id] = {
+            status: last.status,
+            length: timeline.length,
+            timestamp: last.timestamp || last.created_at,
+          };
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [orders, getOrderDetailed]);
+
+  if (!hasToken) {
     return (
       <div className="rounded-3xl bg-white p-10 text-center shadow flex flex-col items-center">
         <GoClock className="text-4xl text-gray-900 mb-3" />
@@ -58,6 +108,15 @@ const Orders = () => {
             <Button variant="outline">Voltar ao cardápio</Button>
           </Link>
         </div>
+      </div>
+    );
+  }
+
+  if (isAuthLoading) {
+    return (
+      <div className="rounded-3xl bg-white p-10 text-center shadow flex flex-col items-center">
+        <GoClock className="text-4xl text-gray-900 mb-3 animate-pulse" />
+        <h2 className="text-2xl font-semibold text-gray-900 mb-2">Carregando seus pedidos...</h2>
       </div>
     );
   }
@@ -93,9 +152,11 @@ const Orders = () => {
         <div className="space-y-5">
           {sortedOrders.map((order) => {
             const detailed = getOrderDetailed(order.id);
-            const lastStatus = detailed?.timeline?.[detailed.timeline.length - 1]?.status;
+            const liveStatus = detailed?.timeline?.[detailed.timeline.length - 1]?.status;
+            const stickyStatus = statusByOrder[order.id]?.status;
+            const lastStatus = stickyStatus || liveStatus;
             const statusClass = statusPills[lastStatus] || 'bg-gray-100 text-gray-700';
-            const statusLabel = lastStatus ? lastStatus.replace('_', ' ') : '—';
+            const statusLabel = formatOrderStatus(lastStatus);
 
             const items = detailed?.items || [];
             const itemNames = items.map((it) => it.item_name_snapshot).slice(0, 2).join(', ');

@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import DashboardLayout from './src/components/layout/DashboardLayout';
 import FirstAccessWizard from './src/components/FirstAccessWizard';
+import WizardCompletionModal from './src/components/WizardCompletionModal';
 import { Dashboard } from './src/pages';
 import Orders from './src/pages/Orders';
 import Menu from './src/pages/Menu';
@@ -20,6 +21,7 @@ const RestaurantDashboard = () => {
   const [wizardReady, setWizardReady] = useState(false);
   const [wizardActive, setWizardActive] = useState(false);
   const [wizardStep, setWizardStep] = useState(0);
+  const [wizardCompleted, setWizardCompleted] = useState(false);
   const initGuard = useRef(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -45,74 +47,85 @@ const RestaurantDashboard = () => {
     },
     {
       route: `${basePrefix}/settings`,
-      targetSelector: '[data-wizard=\"store-name\"]',
+      targetSelector: '[data-wizard="store-name"]',
       title: 'Defina o nome da loja',
       description: 'Atualize o nome comercial. Lembrando que esses dados são os que vão aparecer no painel e no app do cliente. Use exatamente como quer apresentar o restaurante.',
+      validate: () => {
+        const el = document.querySelector('[data-wizard="store-name"] input');
+        const val = (el?.value || '').trim();
+        return val.length > 0 && val !== 'Minha Loja';
+      },
+      validateHint: 'Preencha o nome da loja para continuar.',
     },
     {
       route: `${basePrefix}/settings`,
-      targetSelector: '[data-wizard=\"store-slug\"]',
+      targetSelector: '[data-wizard="store-slug"]',
       title: 'Escolha o slug da loja',
       description: 'O slug vira parte do endereço da sua loja. Estará na URL de acesso. Sem espaços ou caracteres especiais. Prefira algo curto, legível e próximo da marca para facilitar compartilhamento.',
+      validate: () => {
+        const el = document.querySelector('[data-wizard="store-slug"] input');
+        const val = (el?.value || '').trim();
+        return val.length >= 3 && /^[a-z][a-z0-9-]*$/.test(val);
+      },
+      validateHint: 'Defina um slug válido (mín. 3 letras, sem espaços) para continuar.',
     },
     {
       route: `${basePrefix}/settings`,
-      targetSelector: '[data-wizard=\"store-document\"]',
+      targetSelector: '[data-wizard="store-document"]',
       title: 'Preencha CPF ou CNPJ',
       description: 'Esse campo é obrigatório para fechar o cadastro base da operação e evitar ajustes manuais depois.',
     },
-        {
+    {
       route: `${basePrefix}/settings`,
-      targetSelector: '[data-wizard=\"store-save\"]',
+      targetSelector: '[data-wizard="store-save"]',
       title: 'Salve as alterações',
       description: 'Não esqueça de salvar para garantir que todos os dados sejam registrados.',
     },
     {
       route: `${basePrefix}/settings`,
-      targetSelector: '[data-wizard=\"brand-identity\"]',
+      targetSelector: '[data-wizard="brand-identity"]',
       title: 'Monte sua identidade visual',
       description: 'Aqui você ajusta foto da loja e cor principal do seu site. Esses elementos aparecem no dashboard e ajudam o app do cliente a ficar com a cara do seu restaurante.',
     },
     {
       route: `${basePrefix}/settings`,
-      targetSelector: '[data-wizard=\"delivery-settings\"]',
+      targetSelector: '[data-wizard="delivery-settings"]',
       title: 'Configure o delivery',
       description: 'Defina método de entrega, taxa de serviço, meios de pagamento, horários e áreas atendidas. Essa parte impacta diretamente a experiência do pedido.',
       note: 'Se você entrega por bairros, cadastre cada região e o respectivo valor antes de começar a operar.',
     },
-   {
+    {
       route: `${basePrefix}/menu`,
-      targetSelector: '[data-wizard=\"menu-start\"]',
+      targetSelector: '[data-wizard="menu-start"]',
       title: 'Agora vamos para o cardápio',
-      description: 'Nesta tela você organiza categorias, itens e banners.',
-      note: 'O fluxo que deve ser seguido é cadastrar categorias, depois produtos e por fim os destaques visuais.',
+      description: 'Nesta tela você organiza categorias, itens e banners. O fluxo recomendado é: categorias → produtos → destaques visuais.',
     },
     {
       route: `${basePrefix}/menu`,
-      targetSelector: '[data-wizard=\"menu-categories\"]',
+      targetSelector: '[data-wizard="menu-categories"]',
       title: 'Organize as categorias',
       description: 'Separe o cardápio por grupos como hambúrgueres, combos, bebidas ou sobremesas. Isso melhora a navegação do cliente e a operação da equipe.',
     },
-        {
+    {
       route: `${basePrefix}/menu`,
-      targetSelector: '[data-wizard=\"menu-overview\"]',
+      targetSelector: '[data-wizard="menu-overview"]',
       title: 'Adicione itens ao cardápio',
-      description: 'Nesta tela você adiciona itens ao cardápio. Cada item pode ter foto, descrição, preço e grupos de opções. Adicione grupo de opções para variações como tamanhos, adicionais ou combos.',
-      note: 'Dica: Sempre revise o produto como se fosse o cliente comprando para garantir que tudo esteja correto.'
+      description: 'Nesta tela você adiciona itens ao cardápio. Cada item pode ter foto, descrição, preço e grupos de opções para variações como tamanhos, adicionais ou combos.',
     },
     {
       route: `${basePrefix}/menu`,
-      targetSelector: '[data-wizard=\"menu-add-item\"]',
+      targetSelector: '[data-wizard="menu-add-item"]',
       title: 'Cadastre os produtos',
       description: 'Use este botão para criar itens com foto, descrição, preço e grupos de opções. Sempre revise o produto como se fosse o cliente comprando.',
     },
     {
       route: `${basePrefix}/menu`,
-      targetSelector: '[data-wizard=\"menu-banners\"]',
+      targetSelector: '[data-wizard="menu-banners"]',
       title: 'Destaque produtos com banners',
       description: 'Os banners ajudam a promover lançamentos e produtos estratégicos. Você pode vinculá-los a um item específico para levar o cliente direto ao produto.',
     },
   ]), [basePrefix]);
+
   useEffect(() => {
     if (initGuard.current) {
       setReady(true);
@@ -121,6 +134,7 @@ const RestaurantDashboard = () => {
     initGuard.current = true;
     initKeycloak(() => setReady(true));
   }, []);
+
   useEffect(() => {
     const path = location.pathname || '';
     const m = path.match(/^\/([^/]+)\/dashboard(\/|$)/i);
@@ -129,6 +143,7 @@ const RestaurantDashboard = () => {
       try { localStorage.setItem('tenantSlug', slug); } catch (_) {}
     }
   }, [location.pathname, location.search]);
+
   useEffect(() => {
     if (!ready) return;
     const path = location.pathname || '';
@@ -189,7 +204,7 @@ const RestaurantDashboard = () => {
     setWizardStep((prev) => Math.max(prev - 1, 0));
   };
 
-  const handleWizardFinish = () => {
+  const markWizardDone = useCallback(() => {
     if (wizardStoragePrefix) {
       try {
         localStorage.setItem(`${wizardStoragePrefix}:completed`, '1');
@@ -197,9 +212,33 @@ const RestaurantDashboard = () => {
       } catch (_) {}
     }
     setWizardActive(false);
+  }, [wizardStoragePrefix]);
+
+  const handleWizardFinish = useCallback(() => {
+    markWizardDone();
+    setWizardCompleted(true);
+  }, [markWizardDone]);
+
+  const handleWizardSkip = useCallback(() => {
+    markWizardDone();
+  }, [markWizardDone]);
+
+  // O cliente só pode pular o tour depois de já ter setado nome e slug válidos.
+  // Sem isso, o pedido é inviável (rota /:slug/... não resolve, painel exibe
+  // "Minha Loja" como nome public-facing). Bloqueamos pulando enquanto faltar.
+  const canSkipWizard = useMemo(() => {
+    const name = String(tenant?.name || '').trim();
+    const slug = String(tenant?.slug || '').trim();
+    const nameOk = name.length > 0 && name.toLowerCase() !== 'minha loja';
+    const slugOk = slug.length >= 3 && /^[a-z][a-z0-9-]*$/.test(slug);
+    return nameOk && slugOk;
+  }, [tenant?.name, tenant?.slug]);
+
+  const handleCompletionClose = () => {
+    setWizardCompleted(false);
   };
 
-  const restartWizard = () => {
+  const restartWizard = useCallback(() => {
     if (!ready) return;
     if (wizardStoragePrefix) {
       try {
@@ -207,17 +246,19 @@ const RestaurantDashboard = () => {
         localStorage.removeItem(`${wizardStoragePrefix}:step`);
       } catch (_) {}
     }
+    setWizardCompleted(false);
     setWizardStep(0);
     setWizardActive(true);
     setWizardReady(true);
     navigate(`${basePrefix}/settings`, { replace: true });
-  };
+  }, [ready, wizardStoragePrefix, basePrefix, navigate]);
 
   useEffect(() => {
     const handler = () => restartWizard();
     window.addEventListener('restaurant-dashboard:wizard-restart', handler);
     return () => window.removeEventListener('restaurant-dashboard:wizard-restart', handler);
-  }, [ready, wizardStoragePrefix, basePrefix]);
+  }, [restartWizard]);
+
   if (!ready) {
     return (
       <div className="relative min-h-screen overflow-hidden">
@@ -239,6 +280,7 @@ const RestaurantDashboard = () => {
       </div>
     );
   }
+
   if (authDenied) {
     return (
       <div className="relative min-h-screen overflow-hidden">
@@ -264,6 +306,7 @@ const RestaurantDashboard = () => {
       </div>
     );
   }
+
   return (
     <DashboardLayout onHelp={restartWizard}>
       <FirstAccessWizard
@@ -274,7 +317,15 @@ const RestaurantDashboard = () => {
         onNext={handleWizardNext}
         onPrev={handleWizardPrev}
         onFinish={handleWizardFinish}
+        onSkip={canSkipWizard ? handleWizardSkip : null}
+        skipDisabledHint={canSkipWizard ? null : 'Defina o nome e o slug da loja para liberar o atalho de pular o tour.'}
       />
+      {wizardCompleted && (
+        <WizardCompletionModal
+          tenant={tenant}
+          onClose={handleCompletionClose}
+        />
+      )}
       <Routes>
         <Route index element={wizardReady && wizardActive ? <Navigate to="settings" replace /> : <Dashboard />} />
         <Route path="orders" element={<Orders />} />

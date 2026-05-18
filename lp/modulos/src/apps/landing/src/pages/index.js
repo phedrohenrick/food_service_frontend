@@ -8,3 +8,4 @@ export { default as BlogPostPage } from './BlogPostPage';
 export { default as DeliverySignupPage } from './DeliverySignupPage';
 export { default as RestaurantSignupPage } from './RestaurantSignupPage';
 export { default as FoodDeliveryPage } from './FoodDeliveryPage';
+export { default as PricingPage } from './PricingPage';

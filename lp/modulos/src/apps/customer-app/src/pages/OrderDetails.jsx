@@ -1,19 +1,35 @@
 import React from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { IoCheckmark, IoClose } from 'react-icons/io5';
 import { Button } from '../../../../shared/components/ui';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
 import api from '../../../../shared/services/api';
 
-const statusLabel = {
-  CREATED: 'Pedido criado',
-  PAYMENT_AUTHORIZED: 'Pagamento autorizado',
-  ACCEPTED: 'Pedido aceito',
-  IN_PREPARATION: 'Sendo preparado',
-  READY: 'Pronto para sair',
-  WAITING_FOR_COLLECTION: 'Aguardando coleta',
-  ON_ROUTE: 'Em rota de entrega',
-  DELIVERED: 'Entregue',
-  CANCELED: 'Cancelado',
+// Fluxo canônico do pedido, em ordem cronológica natural.
+// "heading" é o título do card de timeline quando este for o status atual.
+const orderFlow = [
+  { status: 'CREATED', label: 'Criado', heading: 'Pedido criado' },
+  { status: 'PAYMENT_AUTHORIZED', label: 'Pagamento aprovado', heading: 'Pagamento aprovado' },
+  { status: 'ACCEPTED', label: 'Confirmado', heading: 'Pedido confirmado' },
+  { status: 'IN_PREPARATION', label: 'Preparando', heading: 'Seu pedido está sendo preparado' },
+  { status: 'READY', label: 'Separado', heading: 'Seu pedido foi separado' },
+  { status: 'WAITING_FOR_COLLECTION', label: 'Aguardando coleta', heading: 'Aguardando coleta' },
+  { status: 'ON_ROUTE', label: 'A caminho', heading: 'Seu pedido está a caminho' },
+  { status: 'DELIVERED', label: 'Entregue', heading: 'Já entregamos seu pedido' },
+  { status: 'COMPLETED', label: 'Concluído', heading: 'Pedido concluído' },
+  { status: 'CANCELED', label: 'Cancelado', heading: 'Pedido cancelado' },
+];
+const flowIndex = orderFlow.reduce((acc, step, idx) => {
+  acc[step.status] = { ...step, idx };
+  return acc;
+}, {});
+
+const formatTimelineDateTime = (timestamp) => {
+  if (!timestamp) return '';
+  const d = new Date(timestamp);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)} - ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
 const OrderDetails = () => {
@@ -58,8 +74,26 @@ const OrderDetails = () => {
     ? liveTimeline
     : (detailed?.timeline || []);
 
-  const orderedSteps = ['CREATED','ACCEPTED','IN_PREPARATION','READY','ON_ROUTE','DELIVERED'];
-  const currentStatus = timeline?.[timeline.length - 1]?.status || 'CREATED';
+  // Constrói os passos a exibir a partir da timeline real. Cada status do fluxo
+  // só aparece se o backend já registrou o evento — passos futuros ficam ocultos.
+  // Dedup por status (último timestamp vence).
+  const reachedSteps = React.useMemo(() => {
+    const byStatus = new Map();
+    (timeline || []).forEach((t) => {
+      if (!t?.status || !flowIndex[t.status]) return;
+      const prev = byStatus.get(t.status);
+      const ts = t.timestamp || t.created_at;
+      if (!prev || new Date(ts) > new Date(prev.timestamp)) {
+        byStatus.set(t.status, { ...flowIndex[t.status], timestamp: ts });
+      }
+    });
+    return Array.from(byStatus.values()).sort((a, b) => a.idx - b.idx);
+  }, [timeline]);
+
+  // Mais recente no topo → reverso da ordem cronológica.
+  const displaySteps = React.useMemo(() => [...reachedSteps].reverse(), [reachedSteps]);
+  const currentStep = displaySteps[0] || flowIndex.CREATED;
+  const currentStatus = currentStep?.status || 'CREATED';
 
   if (!order) {
     return (
@@ -98,53 +132,72 @@ const OrderDetails = () => {
       </div>
 
       <section className="grid gap-6 xl:grid-cols-3">
-        <article className="rounded-3xl bg-white p-6 shadow space-y-6 xl:col-span-2">
-          <header>
-            <h2 className="text-xl font-semibold text-gray-900">Linha do tempo</h2>
-            <p className="text-sm text-gray-500">
-              Atualizamos cada etapa conforme o pedido avança.
-            </p>
+        <article className="rounded-3xl bg-white shadow overflow-hidden xl:col-span-2">
+          <header className="bg-slate-50 px-6 py-5 border-b border-slate-100">
+            <h2 className="text-xl font-bold text-slate-900">
+              {currentStep?.heading || 'Pedido em andamento'}
+            </h2>
           </header>
-          <div className="space-y-4">
-            {orderedSteps.map((st, index) => {
-              const entry = timeline?.find((t) => t.status === st);
-              const timeText = entry?.timestamp
-                ? new Intl.DateTimeFormat('pt-BR', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  }).format(new Date(entry.timestamp))
-                : st === currentStatus
-                  ? 'Atual'
-                  : '';
 
-              return (
-                <div key={st} className="flex gap-4">
-                  <div className="flex flex-col items-center">
-                    <div className="relative flex items-center justify-center h-4 w-4">
-                      {st === currentStatus && (
-                        <span className="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75 animate-ping"></span>
-                      )}
-                      <span
-                        className={`relative inline-flex h-4 w-4 rounded-full border-4 ${
-                          st === currentStatus ? 'border-green-500 bg-white' : 'border-gray-200'
-                        }`}
-                      />
-                    </div>
-                    {index < orderedSteps.length - 1 && (
-                      <span className="h-12 w-px bg-gradient-to-b from-gray-300 to-transparent" />
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-900">
-                      {statusLabel[st] || st}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {timeText}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
+          <div className="px-6 py-6">
+            {displaySteps.length === 0 ? (
+              <p className="text-sm text-slate-500">
+                Aguardando o restaurante confirmar o pedido...
+              </p>
+            ) : (
+              <ol className="relative">
+                {displaySteps.map((step, index) => {
+                  const isCurrent = index === 0;
+                  const isLast = index === displaySteps.length - 1;
+                  const stepCanceled = step.status === 'CANCELED';
+                  const currentAccent = stepCanceled ? 'bg-red-600' : 'bg-emerald-600';
+                  const Icon = stepCanceled ? IoClose : IoCheckmark;
+                  const titleColor = isCurrent
+                    ? (stepCanceled ? 'text-red-600' : 'text-emerald-600')
+                    : 'text-slate-800';
+
+                  return (
+                    <li key={`${step.status}-${index}`} className="flex gap-4">
+                      <div className="flex flex-col items-center" aria-hidden="true">
+                        <span className="relative flex h-7 w-7 shrink-0 items-center justify-center">
+                          {isCurrent && (
+                            <span
+                              className={`absolute inline-flex h-full w-full rounded-full opacity-60 animate-ping ${
+                                stepCanceled ? 'bg-red-500' : 'bg-emerald-500'
+                              }`}
+                            />
+                          )}
+                          <span
+                            className={`relative flex h-7 w-7 items-center justify-center rounded-full ${
+                              isCurrent ? currentAccent : 'bg-slate-200'
+                            }`}
+                          >
+                            <Icon
+                              className={`text-base ${
+                                isCurrent ? 'text-white' : 'text-slate-500'
+                              }`}
+                            />
+                          </span>
+                        </span>
+                        {!isLast && (
+                          <span className="mt-1 w-px flex-1 bg-slate-200" />
+                        )}
+                      </div>
+                      <div className={`flex-1 ${isLast ? '' : 'pb-7'}`}>
+                        <p className={`text-base font-semibold ${titleColor}`}>
+                          {step.label}
+                        </p>
+                        {step.timestamp && (
+                          <p className="mt-1 text-sm text-slate-500">
+                            {formatTimelineDateTime(step.timestamp)}
+                          </p>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
           </div>
         </article>
         <article className="space-y-4 rounded-3xl bg-white p-6 shadow">

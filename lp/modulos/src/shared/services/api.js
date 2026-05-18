@@ -1,4 +1,4 @@
-import { isLoginInProgress, loginWithRedirect } from '../auth/keycloak';
+import { tryRefreshToken } from '../auth/keycloak';
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:81';
 
 class ApiService {
@@ -56,20 +56,27 @@ class ApiService {
     }
 
     try {
-      const response = await fetch(url, config);
-      
-      if (!response.ok) {
-        // Reautentica apenas em 401. Em 403 o usuário está autenticado, mas sem permissão.
-        if (response.status === 401 && typeof window !== 'undefined') {
-          const path = window.location?.pathname || '';
-          const isCustomerApp = /\/app(\/|$)/i.test(path);
-          const hasAuthCallbackParams = /[?#].*(code=|session_state=|state=|iss=)/.test(window.location.href || '');
-          if (isCustomerApp && !hasAuthCallbackParams && !isLoginInProgress()) {
-            try { localStorage.removeItem('authToken'); } catch (_) {}
-            try {
-              await loginWithRedirect(window.location.href);
-            } catch (_) {}
+      let response = await fetch(url, config);
+
+      if (response.status === 401 && typeof window !== 'undefined' && !isPublicGet) {
+        const refreshed = await tryRefreshToken().catch(() => false);
+        if (refreshed) {
+          const newToken = (() => { try { return localStorage.getItem('authToken'); } catch (_) { return null; } })();
+          if (newToken) {
+            config.headers.Authorization = `Bearer ${newToken}`;
+            response = await fetch(url, config);
           }
+        }
+      }
+
+      if (!response.ok) {
+        // Em 401 só limpa o token se a request realmente carregava Authorization.
+        // 401 em endpoint público (sem Authorization enviado) significa problema de
+        // backend — não faz sentido invalidar a sessão do usuário por causa disso.
+        // E não fazemos loginWithRedirect automático aqui: 401 transitório + silent SSO
+        // do Keycloak já criou loop antes.
+        if (response.status === 401 && typeof window !== 'undefined' && !isPublicGet) {
+          try { localStorage.removeItem('authToken'); } catch (_) {}
         }
         const errorBody = await response.text().catch(() => '');
         console.error('API Error Body:', errorBody);

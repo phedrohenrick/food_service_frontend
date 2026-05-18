@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../../../../shared/components/ui';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
+import { formatOrderStatus } from '../../../../shared/utils/orderStatus';
 
 const formatCurrency = (n) =>
   (n || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -259,7 +260,7 @@ const Dashboard = () => {
                   <p className="text-sm text-slate-500">Total</p>
                   <p className="text-lg font-bold tracking-tight text-slate-900">{formatCurrency(order.total)}</p>
                   <span className={statusBadgeClass}>
-                    {status?.status || '—'}
+                    {formatOrderStatus(status?.status)}
                   </span>
                 </div>
               </div>
@@ -289,7 +290,7 @@ const Dashboard = () => {
                       <div className="text-right w-full sm:w-auto mt-2 sm:mt-0">
                         <p className="text-sm font-semibold text-slate-900">{order.payment_channel?.toUpperCase()}</p>
                         <span className={statusBadgeClass}>
-                          {status?.status || '—'}
+                          {formatOrderStatus(status?.status)}
                         </span>
                       </div>
                     </div>
@@ -346,7 +347,7 @@ const Dashboard = () => {
                     <div className="text-right w-full sm:w-auto mt-2 sm:mt-0">
                       <p className="text-sm font-semibold text-slate-900">{formatCurrency(o.total)}</p>
                       <span className={statusBadgeClass}>
-                        {o.status?.status || '—'}
+                        {formatOrderStatus(o.status?.status)}
                       </span>
                     </div>
                   </div>

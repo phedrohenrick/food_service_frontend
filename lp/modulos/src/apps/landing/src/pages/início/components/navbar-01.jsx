@@ -20,7 +20,6 @@ export function Navbar1() {
 
   const links = [
     { label: "Recursos", target: "funcionalidades" },
-    { label: "Planos", target: "planos" },
     { label: "Como funciona", target: "como-funciona" },
   ];
 
@@ -56,6 +55,12 @@ export function Navbar1() {
               {l.label}
             </button>
           ))}
+          <a
+            href="/planos"
+            className="text-sm font-medium text-white/70 transition hover:text-white"
+          >
+            Planos
+          </a>
         </div>
 
         <div className="hidden items-center gap-3 lg:flex">
@@ -113,11 +118,17 @@ export function Navbar1() {
                 <button
                   key={l.label}
                   onClick={() => scrollTo(l.target)}
-                  className="py-4 text-left text-base font-medium text-white/75 border-b border-white/8 last:border-0 hover:text-white transition"
+                  className="py-4 text-left text-base font-medium text-white/75 border-b border-white/8 hover:text-white transition"
                 >
                   {l.label}
                 </button>
               ))}
+              <a
+                href="/planos"
+                className="py-4 text-left text-base font-medium text-white/75 border-b border-white/8 hover:text-white transition"
+              >
+                Planos
+              </a>
               <div className="mt-5 flex flex-col gap-3">
                 <button
                   onClick={() => { try { window.location.assign("/login"); } catch (_) {} }}

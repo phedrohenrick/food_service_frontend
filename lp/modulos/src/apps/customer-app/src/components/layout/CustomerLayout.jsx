@@ -159,7 +159,7 @@ const CustomerLayout = ({ children }) => {
               >
                 <span className="relative text-lg">
                   {item.icon}
-                  {item.label === 'Sacola' && showCardapioHeader && cartItems.length > 0 && (
+                  {item.label === 'Sacola' && cartItems.length > 0 && (
                     <span className="pointer-events-none absolute -top-1 -right-1 flex items-center justify-center">
                       <span className="absolute inline-flex h-3 w-3 animate-ping rounded-full bg-[var(--accent-contrast)] opacity-75" />
                       <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--accent-contrast)]" />

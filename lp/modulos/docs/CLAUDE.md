@@ -14,8 +14,11 @@ Build: Create React App (not Vite). Entry: `src/index.js` → `src/App.js`.
 | **Landing** | `/` | `src/apps/landing/src/routes/index.jsx` | Public marketing + signups |
 | **Customer** | `/:slug/app` | `src/apps/customer-app/CustomerApp.jsx` | Food ordering for end-users |
 | **Dashboard** | `/:slug/dashboard` | `src/apps/restaurant-dashboard-v2/RestaurantDashboardApp.jsx` | Restaurant owner portal |
+| **Garçom** | `/:slug/garcom` | `src/apps/garcom/GarcomApp.jsx` | Tablet UI for waiters (table management, no auth) |
 
-All three are **lazy-loaded** in `src/App.js` via `React.lazy`. Root `StorefrontProvider` wraps everything.
+All apps are **lazy-loaded** in `src/App.js` via `React.lazy`. Root `StorefrontProvider` wraps everything.
+
+> The path `src/apps/customer-app/src/App.jsx` exists but is **not referenced** anywhere — the active entry is `customer-app/CustomerApp.jsx`. Don't edit the inner one expecting effects.
 
 ---
 
@@ -77,6 +80,8 @@ Pattern: **optimistic dispatch → API call → revert on error.**
 
 **Consumer hook:** `useStorefront()` — always use this, never use context directly.
 
+> ⚠️ **Handlers from `useStorefront()` are NOT memoized.** Functions like `reloadOrders`, `setCartAddress`, `saveAddress` get a new reference every time the provider dispatches. Never put them in `useEffect` deps — that re-fires the effect on every state change, causing reload loops, racing API calls, and visible flicker (already seen in `Orders.jsx`, `Addresses.jsx`, `CustomerApp.jsx`). Pattern to use: stash in a `useRef` and call `ref.current()` inside the effect, with stable deps like `[isAuthenticated]` or `[]`. Add an `inFlight` guard if you also poll.
+
 ---
 
 ## API Service — `src/shared/services/api.js`
@@ -87,27 +92,37 @@ Singleton `ApiService`. Methods: `get`, `post`, `put`, `patch`, `delete`.
 - `X-Tenant-Slug` — from URL pathname or `localStorage.tenantSlug`
 - `Authorization: Bearer <token>` — skipped for public GET endpoints
 
-**Public endpoints** (no auth): `/tenants`, `/menu-items`, `/menu-categories`, `/options`, `/option-groups`, `/banners`, `/neighborhoods`
+**Public endpoints** (no auth): `/tenants`, `/menu-items`, `/menu-categories`, `/options`, `/option-groups`, `/banners`, `/neighborhoods`, `/tables`, `/tabs`
 
 **Base URL:** `process.env.REACT_APP_API_URL` (default: `http://localhost:81`)
 
-**Error behavior:** 401 → redirect to Keycloak login (customer app only).
+**401 recovery flow (customer-app only):**
+1. Try `tryRefreshToken()` (which `await ensureSso()` if Keycloak isn't initialized yet, then `updateToken(0)`).
+2. If a fresh token comes back, **retry the same request once** with the new `Authorization` header.
+3. Only if refresh fails AND there are no callback params in URL AND no login in progress, fall back to `loginWithRedirect()` (silent, no `prompt`).
+4. 403 is never auto-redirected — it means authenticated but unauthorized.
 
 ---
 
 ## Authentication — `src/shared/auth/keycloak.js`
 
-Two Keycloak clients:
+Two Keycloak clients, resolved from URL by `resolveClientId`:
 - `frontend-web` → customers (`/:slug/app/*`)
-- `restaurant-owner-portal` → merchants (`/:slug/dashboard/*`)
+- `restaurant-owner-portal` → merchants (`/onboarding/*` and `/:slug/dashboard/*`)
 
 **Key functions:**
-- `initKeycloak(onReady)` — `login-required`, used in protected routes
-- `ensureSso()` — `check-sso`, used in public pages (optional auth)
-- `loginWithRedirect(redirectUri)` — programmatic PKCE login
-- Token auto-refreshed every 20s; stored in `localStorage.authToken`
+- `initKeycloak(onReady)` — `login-required`, used in protected routes (Dashboard, Onboarding). Always forces login.
+- `ensureSso()` — `check-sso`, used by the customer-app on mount. Dedup'd via internal `ssoPromise` so concurrent calls share a single init.
+- `loginWithRedirect(redirectUri, { forcePrompt = false })` — programmatic PKCE login. **`prompt=login` is opt-in** via `forcePrompt: true` (default: silent SSO via Keycloak session cookie). Use `forcePrompt: true` only when you must force re-credentials (e.g., account switch).
+- `tryRefreshToken()` — used by `api.js` on 401; calls `ensureSso` if needed, then `updateToken(0)`. Returns `true` if a fresh token is persisted.
+- `isLoginInProgress()` — sessionStorage flag, 120s TTL, guards the 401-handler from looping during the redirect window.
+- Refresh loop: `setInterval(updateToken(30), 20000)` — started on any successful auth, persists new tokens to `localStorage.authToken`.
+
+**Operation order matters in `ensureSso`:** persist token → clear callback params → start refresh loop → clear login-in-progress flag. Don't reorder — if you clear `loginInProgress` before persisting, racing API calls hitting 401 in that window will trigger an auto-redirect loop.
 
 **Login routes:** `/login`, `/login/lojista`, `/login/entregador`, `/login/cliente`, `/login/esqueci-senha`
+
+**Customer auth on mount** (`CustomerApp.jsx`): `ensureSso()` once on mount (deps `[]`, NOT `[reloadOrders]`), then calls `reloadOrdersRef.current()` to fetch authenticated data. If you change this, expect the loop bug back.
 
 ---
 
@@ -218,6 +233,31 @@ REACT_APP_GOOGLE_FORM_ACTION=<google-forms-url>
 
 ---
 
+## Domain Notes — recurring traps
+
+### Delivery fee & neighborhood coverage
+- `getDeliveryFeeForAddress` in `generalContext.jsx` looks up the address's `neighborhood_id` in `state.neighborhoods`. **Returns 0 silently** when there's no match (deleted bairro, free-text bairro never registered) — there's no "uncovered" sentinel value.
+- `Neighborhood` carries a `status` field: `ACTIVE` (default, delivered to) or `REJECTED` (merchant explicitly said no). REJECTED bairros are kept in the same list (active=true), filtered by UI.
+- `Bag.jsx` blocks checkout **only** when `selectedAddressCoverage.rejected === true` (status REJECTED). A bairro that simply isn't in the list lets the order through — the backend auto-creates an `UnrecognizedNeighborhood` entry the merchant sees in Settings.
+- The merchant's "Não entrego aqui" button in `Settings.jsx` upserts a Neighborhood with status=REJECTED (via `/unrecognized-neighborhoods/{id}/reject`). "Reverter" clears it.
+- `Settings.jsx` filters status=REJECTED out of the "Áreas atendidas" list; `AddressForm.jsx` filters them out of the autocomplete.
+
+### Polling pattern (Orders page)
+`Orders.jsx` polls `reloadOrders` every 10s. Two safeguards make it stable:
+1. `reloadOrdersRef` — stable across renders, avoids effect re-firing on `reloadOrders` reference changes.
+2. `inFlight` boolean inside the tick — prevents concurrent reloads. Without this, late responses from earlier polls can overwrite newer state and the UI flickers between the current and previous status.
+
+Also: status pill is sourced from a local "sticky" `statusByOrder` map that only advances (never regresses) — a defense against stale responses arriving out of order.
+
+### Address neighborhood matching
+`AddressForm.jsx` matches typed bairro against the tenant's neighborhoods (filtered to non-REJECTED). If match → `neighborhoodId` set. If no match → `neighborhoodId: null` + free-text `neighborhoodName` → backend records as unrecognized. Don't try to "auto-create" a neighborhood at order time — the unrecognized queue is the explicit funnel for that.
+
+### Garçom app
+- Lives at `/:slug/garcom`, **no auth required** (tablet shared between staff).
+- Public endpoints `/tables/**` and `/tabs/**` are open for read; `POST /tabs/open/**`, `POST /tabs/*/items`, `DELETE /tabs/*/items/*` are also unauthenticated by design — controlled by physical access to the tablet.
+
+---
+
 ## Hard Rules
 
 - **Read `generalContext.jsx` before touching state** — all actions and selectors live there.
@@ -227,6 +267,8 @@ REACT_APP_GOOGLE_FORM_ACTION=<google-forms-url>
 - **New pages** follow existing page folder pattern; add route in the app's own router file.
 - **API calls** always go through `ApiService` — never raw `fetch` outside the service.
 - **Auth gates** use `initKeycloak` (protected) or `ensureSso` (public) — never roll custom auth.
+- **Never put `useStorefront()` handlers in `useEffect` deps** — see warning above. Use refs.
+- **`loginWithRedirect` defaults to silent SSO.** Only pass `{ forcePrompt: true }` when an explicit account switch is required.
 - **Do not add comments** unless the WHY is non-obvious. Never describe what code does.
 - **Do not add error handling** for scenarios that cannot happen. Trust internal guarantees.
 - **No half-finished features** — if you can't complete it, say so.

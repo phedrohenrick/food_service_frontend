@@ -15,12 +15,20 @@ import { ensureSso } from '../../shared/auth/keycloak';
 
 const CustomerApp = () => {
   const { reloadOrders } = useStorefront();
+  const reloadOrdersRef = React.useRef(reloadOrders);
   useEffect(() => {
+    reloadOrdersRef.current = reloadOrders;
+  }, [reloadOrders]);
+  useEffect(() => {
+    let cancelled = false;
     (async () => {
       const ok = await ensureSso();
-      if (ok) reloadOrders();
+      if (!cancelled && ok) reloadOrdersRef.current?.();
     })();
-  }, [reloadOrders]);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   return (
     <CustomerLayout>
       <Routes>

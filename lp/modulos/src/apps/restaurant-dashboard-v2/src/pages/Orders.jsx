@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Button, Input, Modal } from '../../../../shared/components/ui';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
+import { formatOrderStatus } from '../../../../shared/utils/orderStatus';
 
 // Estilos para colunas da pipeline
 const pipelineStyles = {
@@ -332,7 +333,7 @@ const Orders = () => {
                             <span className="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-60 animate-ping"></span>
                           )}
                           <span className={`relative text-xs px-3 py-1 rounded-full border ${statusClass}`}>
-                            {lastStatus}
+                            {formatOrderStatus(lastStatus)}
                           </span>
                         </div>
                         <p className="mt-1 text-[10px] text-slate-500">{lastAt ? fmtDate(lastAt) : ''}</p>
@@ -431,7 +432,7 @@ const Orders = () => {
                           <div className="mt-2 space-y-1">
                             {(detailed?.timeline || []).map((st) => (
                               <div key={st.id} className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                                <span className={`px-2 py-1 rounded border ${statusPills[st.status] || 'bg-gray-100 text-gray-700'}`}>{st.status}</span>
+                                <span className={`px-2 py-1 rounded border ${statusPills[st.status] || 'bg-gray-100 text-gray-700'}`}>{formatOrderStatus(st.status)}</span>
                                 <span className="w-full text-right text-slate-600 sm:w-auto">{fmtDate(st.created_at)}</span>
                               </div>
                             ))}

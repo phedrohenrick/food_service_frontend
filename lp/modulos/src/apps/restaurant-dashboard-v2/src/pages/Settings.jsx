@@ -226,16 +226,101 @@ const Settings = () => {
   };
 
   const neighborhoodsSorted = useMemo(
-    () => [...neighborhoods].sort((a, b) => a.name.localeCompare(b.name)),
+    () =>
+      [...neighborhoods]
+        .filter((n) => String(n.status || 'ACTIVE').toUpperCase() !== 'REJECTED')
+        .sort((a, b) => a.name.localeCompare(b.name)),
     [neighborhoods]
   );
+
+  const neighborhoodsRejected = useMemo(
+    () =>
+      [...neighborhoods]
+        .filter((n) => String(n.status || '').toUpperCase() === 'REJECTED')
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [neighborhoods]
+  );
+
+  const handleRestoreRejectedNeighborhood = async (n) => {
+    const ok = await saveNeighborhood({
+      id: n.id,
+      name: n.name,
+      price: Number(n.price) || 0,
+      tenant_id: tenant.id,
+      status: 'ACTIVE',
+    });
+    if (ok !== false) {
+      showToast(`"${n.name}" voltou para a lista de áreas atendidas.`);
+    } else {
+      showToast('Erro ao reativar bairro.', 'error');
+    }
+  };
+
+  const handleDeactivateNeighborhood = async (n) => {
+    const ok = await saveNeighborhood({
+      id: n.id,
+      name: n.name,
+      price: Number(n.price) || 0,
+      tenant_id: tenant.id,
+      status: 'REJECTED',
+    });
+    if (ok !== false) {
+      showToast(`"${n.name}" movido para bairros não atendidos. Pode reativar a qualquer momento.`);
+    } else {
+      showToast('Erro ao desativar bairro.', 'error');
+    }
+  };
+
+  const [unrecognizedNeighborhoods, setUnrecognizedNeighborhoods] = useState([]);
+  const [addPriceMap, setAddPriceMap] = useState({});
+  const addedUnrecognizedIdsRef = React.useRef(new Set());
+
+  useEffect(() => {
+    if (!tenant?.id) return;
+    api.get(`/unrecognized-neighborhoods/by-tenant/${tenant.id}`)
+      .then(data => {
+        const all = Array.isArray(data) ? data : [];
+        setUnrecognizedNeighborhoods(all.filter(n => !addedUnrecognizedIdsRef.current.has(n.id)));
+      })
+      .catch(() => {});
+  }, [tenant?.id]);
+
+  const pendingUnrecognized = unrecognizedNeighborhoods.filter(n => n.status === 'PENDING');
+  const rejectedUnrecognized = unrecognizedNeighborhoods.filter(n => n.status === 'REJECTED');
+
+  const handleRejectUnrecognized = async (id) => {
+    const updated = await api.put(`/unrecognized-neighborhoods/${id}/reject`).catch(() => null);
+    if (updated) {
+      setUnrecognizedNeighborhoods(prev => prev.map(n => n.id === id ? { ...n, status: 'REJECTED' } : n));
+    }
+  };
+
+  const handleRevertUnrecognized = async (id) => {
+    const updated = await api.put(`/unrecognized-neighborhoods/${id}/revert`).catch(() => null);
+    if (updated) {
+      setUnrecognizedNeighborhoods(prev => prev.map(n => n.id === id ? { ...n, status: 'PENDING' } : n));
+    }
+  };
+
+  const handleAddUnrecognized = async (unrecognized) => {
+    const price = parseFloat(String(addPriceMap[unrecognized.id] ?? '').replace(',', '.')) || 0;
+    await saveNeighborhood({ name: unrecognized.name, price, tenant_id: tenant.id });
+    await api.delete(`/unrecognized-neighborhoods/${unrecognized.id}`).catch(() => {});
+    addedUnrecognizedIdsRef.current.add(unrecognized.id);
+    setUnrecognizedNeighborhoods(prev => prev.filter(n => n.id !== unrecognized.id));
+    setAddPriceMap(prev => { const next = { ...prev }; delete next[unrecognized.id]; return next; });
+    showToast(`Bairro "${unrecognized.name}" adicionado com sucesso!`);
+  };
   const surfaceClass = 'rounded-[28px] border border-slate-200/80 bg-white/95 shadow-[0_22px_55px_rgba(15,23,42,0.08)]';
   const subtleCardClass = 'rounded-3xl border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] shadow-[0_12px_30px_rgba(15,23,42,0.06)]';
 
   const saveNewNeighborhood = () => {
     const price = parseFloat(String(newNeighborhood.price).replace(',', '.')) || 0;
     if (!newNeighborhood.name) return;
-    saveNeighborhood({ name: newNeighborhood.name, price, tenant_id: tenant.id });
+    const existing = neighborhoods.find(
+      n => n.name.trim().toLowerCase() === newNeighborhood.name.trim().toLowerCase()
+    );
+    saveNeighborhood({ ...(existing ? { id: existing.id } : {}), name: newNeighborhood.name.trim(), price, tenant_id: tenant.id });
     setNewNeighborhood({ name: '', price: '' });
   };
 
@@ -245,6 +330,21 @@ const Settings = () => {
     const price = parseFloat(String(base.price).replace(',', '.')) || 0;
     saveNeighborhood({ id, name: base.name, price, tenant_id: tenant.id });
     setEditingNeighborhood((prev) => ({ ...prev, [id]: undefined }));
+  };
+
+  const handleDeleteNeighborhood = async (id) => {
+    try {
+      await deleteNeighborhood(id);
+    } catch (err) {
+      const isConstraint =
+        String(err?.message || err?.response?.data || '').toLowerCase().includes('foreign key') ||
+        String(err?.response?.status) === '500';
+      if (isConstraint) {
+        showToast('Este bairro está vinculado a endereços de clientes e não pode ser removido.', 'error');
+      } else {
+        showToast('Erro ao remover bairro.', 'error');
+      }
+    }
   };
 
   return (
@@ -293,7 +393,87 @@ const Settings = () => {
               <Input label="Endereço" value={tenantForm.address} onChange={onTenantChange('address')} />
               <Input label="Geo Lat" value={tenantForm.geo_lat} onChange={onTenantChange('geo_lat')} />
               <Input label="Geo Lng" value={tenantForm.geo_lng} onChange={onTenantChange('geo_lng')} />
-              <Input label="Status" value={tenantForm.status} onChange={onTenantChange('status')} />
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] pt-1">
+              <div className={`${subtleCardClass} p-4`}>
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Status da conta</p>
+                    <p className="mt-1 text-base font-semibold text-slate-900">{tenantForm.status || 'ACTIVE'}</p>
+                  </div>
+                  <span
+                    className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${
+                      String(tenantForm.status || '').toUpperCase() === 'ACTIVE'
+                        ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
+                        : 'bg-slate-100 text-slate-600 ring-1 ring-slate-200'
+                    }`}
+                  >
+                    <span className={`h-1.5 w-1.5 rounded-full ${
+                      String(tenantForm.status || '').toUpperCase() === 'ACTIVE' ? 'bg-emerald-500' : 'bg-slate-400'
+                    }`} />
+                    {String(tenantForm.status || '').toUpperCase() === 'ACTIVE' ? 'Ativo' : 'Inativo'}
+                  </span>
+                </div>
+                <p className="mt-3 text-xs text-slate-500">Controlado pela plataforma. Em caso de dúvida fale com o suporte.</p>
+              </div>
+
+              <div className={`${subtleCardClass} p-4`}>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={!!tenant.is_open}
+                      aria-label={tenant.is_open ? 'Pausar atendimento' : 'Reabrir atendimento'}
+                      onClick={toggleOpen}
+                      className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 ${
+                        tenant.is_open ? 'bg-emerald-500' : 'bg-slate-300'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform ${
+                          tenant.is_open ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Funcionamento</p>
+                      <p className="text-base font-semibold text-slate-900">
+                        {tenant.is_open ? 'Loja aberta' : 'Loja fechada'}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {tenant.is_open ? 'Recebendo pedidos no momento.' : 'Pausada — clientes verão a loja como indisponível.'}
+                      </p>
+                    </div>
+                  </div>
+                  <Button size="sm" variant="ghost" className="border border-slate-200 bg-white hover:border-[var(--accent)] hover:text-[var(--accent)]" onClick={saveWorkingHours}>
+                    Salvar horário
+                  </Button>
+                </div>
+
+                <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-end gap-3">
+                  <div>
+                    <label className="block text-xs font-medium uppercase tracking-wider text-slate-500 mb-1">Abre às</label>
+                    <input
+                      type="time"
+                      value={tenantForm.working_open}
+                      onChange={(e) => onTenantChange('working_open')(e)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
+                    />
+                  </div>
+                  <span className="pb-2.5 text-xs font-medium text-slate-400">até</span>
+                  <div>
+                    <label className="block text-xs font-medium uppercase tracking-wider text-slate-500 mb-1">Fecha às</label>
+                    <input
+                      type="time"
+                      value={tenantForm.working_close}
+                      onChange={(e) => onTenantChange('working_close')(e)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -438,35 +618,53 @@ const Settings = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className={`${subtleCardClass} p-4`}>
-                <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className="text-sm font-semibold text-slate-900">Funcionamento</p>
-                    <p className="text-sm text-slate-500">{tenant.is_open ? 'Loja aberta' : 'Loja fechada'}</p>
+                    <p className="text-sm font-semibold text-slate-900">Bairros não atendidos</p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Áreas que você marcou como fora da entrega. Reative quando quiser voltar a atender.
+                    </p>
                   </div>
-                <Button size="sm" className="w-full lg:w-auto" onClick={saveWorkingHours}>
-                  Salvar
-                </Button>
+                  {neighborhoodsRejected.length > 0 && (
+                    <span className="inline-flex shrink-0 items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
+                      {neighborhoodsRejected.length}
+                    </span>
+                  )}
                 </div>
-              <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-end gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Aberto de</label>
-                  <input
-                    type="time"
-                    value={tenantForm.working_open}
-                    onChange={(e) => onTenantChange('working_open')(e)}
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
-                  />
-                </div>
-                <div className="pb-3 text-slate-500">até</div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Até</label>
-                  <input
-                    type="time"
-                    value={tenantForm.working_close}
-                    onChange={(e) => onTenantChange('working_close')(e)}
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
-                  />
-                </div>
+
+                <div className="mt-3 space-y-2">
+                  {neighborhoodsRejected.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-4 py-6 text-center">
+                      <p className="text-sm text-slate-500">Nenhum bairro marcado como não atendido.</p>
+                      <p className="mt-1 text-xs text-slate-400">
+                        Quando você rejeitar uma área, ela aparece aqui pra reativação rápida.
+                      </p>
+                    </div>
+                  ) : (
+                    neighborhoodsRejected.map((n) => (
+                      <div
+                        key={n.id}
+                        className="group flex items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white px-3 py-2.5 shadow-sm opacity-70 transition hover:opacity-100"
+                      >
+                        <div className="min-w-0 flex items-center gap-2.5">
+                          <span className="inline-flex h-2 w-2 shrink-0 rounded-full bg-slate-400" aria-hidden="true" />
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium text-slate-700 line-through decoration-slate-300">
+                              {n.name}
+                            </p>
+                            <p className="text-[11px] uppercase tracking-wider text-slate-400">Não entrega</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRestoreRejectedNeighborhood(n)}
+                          className="shrink-0 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100"
+                        >
+                          Entregar nesse bairro
+                        </button>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
               <div className={`${subtleCardClass} p-4`}>
@@ -490,7 +688,15 @@ const Settings = () => {
                         </div>
                         <div className="flex flex-wrap gap-2">
                           <Button size="sm" className="w-full lg:w-auto" onClick={() => saveNeighborhoodEdit(n.id)}>Salvar</Button>
-                          <Button size="sm" variant="ghost" className="w-full lg:w-auto border border-red-200 text-red-700 hover:bg-red-50" onClick={() => deleteNeighborhood(n.id)}>Remover</Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="w-full lg:w-auto border border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                            onClick={() => handleDeactivateNeighborhood(n)}
+                            title="Move o bairro para 'Não atendidos'. Você pode reativar a qualquer momento."
+                          >
+                            Desativar
+                          </Button>
                         </div>
                       </div>
                     );
@@ -517,6 +723,113 @@ const Settings = () => {
         </div>
 
         <div className="space-y-4">
+
+          {(pendingUnrecognized.length > 0 || rejectedUnrecognized.length > 0) && (
+            <div
+              id="delivery-alert"
+              className="rounded-[28px] overflow-hidden shadow-[0_24px_64px_rgba(234,88,12,0.45)] ring-2 ring-orange-400"
+            >
+              {/* Header — gradiente forte */}
+              <div className="bg-gradient-to-br from-orange-500 via-orange-500 to-amber-400 px-5 pt-5 pb-4">
+                <div className="flex items-start gap-3">
+                  <div className="relative flex-shrink-0">
+                    <span className="absolute -inset-1.5 rounded-full bg-white/30 animate-ping" />
+                    <span className="relative flex h-11 w-11 items-center justify-center rounded-2xl bg-white/20 border border-white/40 backdrop-blur-sm">
+                      <svg className="h-6 w-6 text-white drop-shadow" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z" />
+                      </svg>
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-base font-bold text-white leading-tight">Atenção necessária!</p>
+                    <p className="text-sm text-orange-100 mt-0.5 leading-snug">
+                      {pendingUnrecognized.length > 0
+                        ? `${pendingUnrecognized.length} bairro${pendingUnrecognized.length > 1 ? 's' : ''} sem taxa de entrega cadastrada`
+                        : 'Bairros marcados como não atendidos'}
+                    </p>
+                  </div>
+                </div>
+                <p className="mt-3 text-xs text-orange-100/90 leading-relaxed">
+                  Clientes fizeram pedidos nesses bairros. Defina uma taxa ou marque como não atendido.
+                </p>
+              </div>
+
+              {/* Body — fundo branco */}
+              <div className="bg-white px-5 py-4 space-y-3">
+                {pendingUnrecognized.length > 0 && (
+                  <div className="space-y-2">
+                    {pendingUnrecognized.map(n => (
+                      <div key={n.id} className="rounded-2xl border border-orange-200 bg-orange-50 p-3">
+                        <div className="flex items-center gap-2 mb-2.5">
+                          <span className="flex h-2 w-2 rounded-full bg-orange-500 flex-shrink-0" />
+                          <span className="text-sm font-bold text-slate-800">{n.name}</span>
+                        </div>
+                        {addPriceMap[n.id] !== undefined ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              placeholder="Taxa de entrega (R$)"
+                              value={addPriceMap[n.id]}
+                              onChange={e => setAddPriceMap(prev => ({ ...prev, [n.id]: e.target.value }))}
+                              className="flex-1 rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                            />
+                            <Button size="sm" onClick={() => handleAddUnrecognized(n)}>Confirmar</Button>
+                            <button
+                              type="button"
+                              onClick={() => setAddPriceMap(prev => { const next = { ...prev }; delete next[n.id]; return next; })}
+                              className="text-xs text-slate-400 hover:text-slate-600 whitespace-nowrap"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setAddPriceMap(prev => ({ ...prev, [n.id]: '' }))}
+                              className="rounded-xl bg-orange-500 px-3 py-1.5 text-xs font-bold text-white hover:bg-orange-600 transition-colors shadow-sm shadow-orange-300"
+                            >
+                              + Adicionar à lista
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRejectUnrecognized(n.id)}
+                              className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-50 transition-colors"
+                            >
+                              Não entrego aqui
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {rejectedUnrecognized.length > 0 && (
+                  <div className={pendingUnrecognized.length > 0 ? 'pt-2 border-t border-orange-100' : ''}>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Não atendidos</p>
+                    <div className="space-y-1.5">
+                      {rejectedUnrecognized.map(n => (
+                        <div key={n.id} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
+                          <span className="text-sm text-slate-400 line-through">{n.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRevertUnrecognized(n.id)}
+                            className="text-xs font-bold text-orange-500 hover:text-orange-700 transition-colors"
+                          >
+                            Reverter
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="bg-gradient-to-br from-[var(--accent)] to-[var(--accent-hover)] text-[var(--accent-contrast)] rounded-[28px] p-6 shadow-[0_22px_55px_rgba(15,23,42,0.16)]">
             <p className="text-sm uppercase tracking-widest text-[var(--accent-contrast)]/80">experiência</p>
             <h3 className="text-2xl font-semibold mt-2">Seu restaurante como vitrine</h3>

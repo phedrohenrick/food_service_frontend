@@ -11,6 +11,7 @@ import BlogPostPage from '../pages/BlogPostPage';
 import DeliverySignupPage from '../pages/DeliverySignupPage';
 import RestaurantSignupPage from '../pages/RestaurantSignupPage';
 import FoodDeliveryPage from '../pages/FoodDeliveryPage';
+import PricingPage from '../pages/PricingPage';
 
 const LandingRoutes = () => {
   return (
@@ -24,6 +25,7 @@ const LandingRoutes = () => {
       <Route path="/cadastro-entregadores" element={<DeliverySignupPage />} />
       <Route path="/cadastro-restaurantes" element={<RestaurantSignupPage />} />
       <Route path="/entrega-de-comida" element={<FoodDeliveryPage />} />
+      <Route path="/planos" element={<PricingPage />} />
     </Routes>
   );
 };

@@ -12,6 +12,7 @@ let currentClientId = null;
 let initialized = false;
 let refreshTimer = null;
 let initPromise = null;
+let ssoPromise = null;
 const LOGIN_IN_PROGRESS_KEY = 'kcLoginInProgress';
 const LOGIN_TS_KEY = 'kcLoginStartedAt';
 
@@ -169,42 +170,86 @@ export function getKeycloak() {
   return ensureKeycloak();
 }
 
-export async function loginWithRedirect(redirectUri) {
+export async function tryRefreshToken() {
+  const instance = ensureKeycloak();
+  if (!initialized) {
+    try { await ensureSso(); } catch (_) {}
+  }
+  if (!instance.authenticated) return false;
+  try {
+    await instance.updateToken(0);
+    if (instance.authenticated) {
+      persistToken(instance);
+      return true;
+    }
+    return false;
+  } catch (_) {
+    return false;
+  }
+}
+
+export async function loginWithRedirect(redirectUri, options = {}) {
+  const { forcePrompt = false } = options;
   try {
     const instance = ensureKeycloak(redirectUri);
     setLoginInProgress(true);
-    const url = await instance.createLoginUrl({ redirectUri, prompt: 'login' });
+    const loginOpts = { redirectUri };
+    if (forcePrompt) loginOpts.prompt = 'login';
+    const url = await instance.createLoginUrl(loginOpts);
     if (typeof window !== 'undefined' && url) {
       window.location.assign(url);
       return;
     }
-    await instance.login({ redirectUri, prompt: 'login' });
+    await instance.login(loginOpts);
   } catch (_) {
     setLoginInProgress(false);
   }
 }
 
 export async function ensureSso() {
+  if (ssoPromise) {
+    return ssoPromise;
+  }
   const instance = ensureKeycloak();
-  try {
-    const href = typeof window !== 'undefined' ? window.location.href : '';
-    const hasCallbackParams = hasAuthCallbackParamsInUrl(href);
-    if (!initialized || hasCallbackParams) {
-      const authenticated = await instance.init({ onLoad: 'check-sso', checkLoginIframe: false, pkceMethod: 'S256' });
-      initialized = true;
-      if (authenticated && typeof window !== 'undefined') {
-        setLoginInProgress(false);
-        clearAuthCallbackParams();
-        persistToken(instance);
-        startRefreshLoop(instance);
+  ssoPromise = (async () => {
+    try {
+      const href = typeof window !== 'undefined' ? window.location.href : '';
+      const hasCallbackParams = hasAuthCallbackParamsInUrl(href);
+      if (!initialized || hasCallbackParams) {
+        let authenticated = false;
+        try {
+          authenticated = await instance.init({ onLoad: 'check-sso', checkLoginIframe: false, pkceMethod: 'S256' });
+        } catch (_) {
+          // init pode falhar se o code já foi consumido / PKCE bateu / etc.
+        }
+        initialized = true;
+        if (hasCallbackParams && typeof window !== 'undefined') {
+          // Limpa os params sempre que tentamos processar — code expirado/duplicado
+          // ficaria na URL e reprocessaria a cada ensureSso, causando loop.
+          clearAuthCallbackParams();
+        }
+        if (authenticated && typeof window !== 'undefined') {
+          persistToken(instance);
+          startRefreshLoop(instance);
+          setLoginInProgress(false);
+        }
+      } else {
+        try {
+          const refreshed = await instance.updateToken(30);
+          if (refreshed) persistToken(instance);
+        } catch (_) {}
       }
-    } else {
-      await instance.updateToken(0).catch(() => {});
-    }
-    if (instance.authenticated) {
-      setLoginInProgress(false);
-      persistToken(instance);
-    }
-  } catch (_) {}
-  return instance.authenticated === true;
+      if (instance.authenticated) {
+        persistToken(instance);
+        if (!refreshTimer) startRefreshLoop(instance);
+        setLoginInProgress(false);
+      }
+    } catch (_) {}
+    return instance.authenticated === true;
+  })();
+  try {
+    return await ssoPromise;
+  } finally {
+    ssoPromise = null;
+  }
 }

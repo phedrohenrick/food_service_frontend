@@ -34,23 +34,30 @@ const normalizeFormData = (address = {}) => ({
 const AddressForm = () => {
   const navigate = useNavigate();
   const { addressId } = useParams();
-  const { addresses, saveAddress, setCartAddress, user } = useStorefront();
+  const { addresses, saveAddress, setCartAddress, user, tenant } = useStorefront();
+  const basePrefix = (() => {
+    const p = window.location?.pathname || '';
+    const m = /^\/([^/]+)\/app(\/|$)/i.exec(p);
+    return m && m[1] ? `/${m[1]}/app` : '/app';
+  })();
   const [formData, setFormData] = useState(defaultForm);
   const [neighborhoods, setNeighborhoods] = useState([]);
   const [loading, setLoading] = useState(false);
   const hydratedAddressIdRef = React.useRef(null);
 
   useEffect(() => {
-    // Carregar bairros do tenant (assumindo tenant 1 para demo)
-    api.get('/neighborhoods/by-tenant/1')
+    if (!tenant?.id) return;
+    api.get(`/neighborhoods/by-tenant/${tenant.id}`)
       .then(response => {
-        const data = response?.data;
-        setNeighborhoods(Array.isArray(data) ? data : []);
+        const list = Array.isArray(response) ? response : [];
+        setNeighborhoods(
+          list.filter((nb) => String(nb.status || 'ACTIVE').toUpperCase() !== 'REJECTED')
+        );
       })
       .catch(error => {
         console.error('Erro ao carregar bairros:', error);
       });
-  }, []);
+  }, [tenant?.id]);
 
   useEffect(() => {
     if (!addressId) {
@@ -118,7 +125,7 @@ const AddressForm = () => {
       // Atualiza o contexto local se necessário ou apenas navega
       // Como o contexto é mockado, ele não vai refletir o backend automaticamente
       // Mas o fluxo de UI deve prosseguir
-      navigate('/app/enderecos');
+      navigate(`${basePrefix}/enderecos`);
     } catch (error) {
       console.error('Erro ao salvar endereço:', error);
       alert('Erro ao salvar endereço. Verifique o console.');

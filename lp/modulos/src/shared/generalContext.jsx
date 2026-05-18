@@ -230,7 +230,7 @@ const normalizeCartData = (rawCart, fallback = initialCart) => {
     ...rawCart,
     user_id: rawCart.userId ?? rawCart.user_id ?? fallback.user_id,
     tenant_id: rawCart.tenantId ?? rawCart.tenant_id ?? fallback.tenant_id,
-    address_id: rawCart.addressId ?? rawCart.address_id ?? fallback.address_id,
+    address_id: (() => { const v = rawCart.addressId ?? rawCart.address_id ?? fallback.address_id; return v != null ? String(v) : null; })(),
     payment_channel: rawCart.paymentChannel ?? rawCart.payment_channel ?? fallback.payment_channel,
     change: rawCart.changeFor ?? rawCart.change ?? fallback.change ?? '',
     delivery_fee: rawCart.deliveryFee ?? rawCart.delivery_fee ?? fallback.delivery_fee ?? 0,
@@ -324,10 +324,30 @@ const indexById = (arr) =>
   }, {});
 
 const getDeliveryFeeForAddress = (addressId, neighborhoods, addresses) => {
-  const address = addresses.find((a) => a.id === addressId);
+  if (addressId == null || addressId === '') return 0;
+  const address = addresses.find((a) => String(a.id) === String(addressId));
   if (!address) return 0;
-  const neighborhood = neighborhoods.find((n) => n.id === address.neighborhood_id);
-  return neighborhood?.price ?? 0;
+
+  const list = Array.isArray(neighborhoods) ? neighborhoods : [];
+
+  let neighborhood = null;
+  const nbId = address.neighborhood_id ?? address.neighborhoodId ?? null;
+  if (nbId != null) {
+    neighborhood = list.find((n) => String(n.id) === String(nbId)) || null;
+  }
+  if (!neighborhood) {
+    const nbName = String(
+      address.neighborhood_name ?? address.neighborhoodName ?? ''
+    ).trim().toLowerCase();
+    if (nbName) {
+      neighborhood = list.find(
+        (n) => String(n.name).trim().toLowerCase() === nbName
+      ) || null;
+    }
+  }
+  if (!neighborhood) return 0;
+  if (String(neighborhood.status || 'ACTIVE').toUpperCase() === 'REJECTED') return 0;
+  return Number(neighborhood.price) || 0;
 };
 
 const calcCartTotals = ({
@@ -344,14 +364,17 @@ const calcCartTotals = ({
   const optionMap = indexById(options);
 
   const subtotal = cartItems.reduce((sum, ci) => {
-    const base = menuItemMap[ci.item_id]?.price ?? 0;
+    const base = Number(menuItemMap[ci.item_id]?.price ?? 0) || 0;
 
     const selectedOptions = cartItemOptions.filter(
       (cio) => cio.cart_item_id === ci.id
     );
 
     const optionsTotal = selectedOptions.reduce((optSum, cio) => {
-      return optSum + (optionMap[cio.option_id]?.additional_charge ?? 0);
+      // Fonte primária: snapshot vindo no cart_item_option. Fallback: optionMap global.
+      const fromCio = Number(cio.additional_charge);
+      if (Number.isFinite(fromCio) && fromCio > 0) return optSum + fromCio;
+      return optSum + (Number(optionMap[cio.option_id]?.additional_charge) || 0);
     }, 0);
 
     return sum + (base + optionsTotal) * ci.quantity;
@@ -498,7 +521,7 @@ const reducer = (state, action) => {
     case actionMap.SET_CART_ADDRESS:
       return {
         ...state,
-        cart: { ...state.cart, address_id: action.payload },
+        cart: { ...state.cart, address_id: action.payload != null ? String(action.payload) : null },
       };
 
     case actionMap.SET_CART_PAYMENT:
@@ -1040,6 +1063,7 @@ export const StorefrontProvider = ({ children }) => {
        const neighborhoods = Array.isArray(rawNeighborhoods) ? rawNeighborhoods.map(n => ({
           ...n,
           tenant_id: n.tenantId || n.tenant_id,
+          status: n.status ? String(n.status).toUpperCase() : 'ACTIVE',
       })) : [];
 
       // Normalize Addresses
@@ -1082,6 +1106,10 @@ export const StorefrontProvider = ({ children }) => {
                         id: opt.id,
                         cart_item_id: ci.id,
                         option_id: opt.optionId,
+                        // Snapshot vindo do backend — usado como fonte primária no
+                        // cálculo, evita depender do optionMap global estar sincronizado.
+                        additional_charge: Number(opt.additionalPrice ?? opt.additional_charge ?? 0) || 0,
+                        name: opt.optionName ?? opt.name ?? null,
                     }));
                 }
                 return [];
@@ -1187,26 +1215,38 @@ export const StorefrontProvider = ({ children }) => {
         .filter((cio) => cio.cart_item_id === ci.id)
         .map((cio) => {
           const option = maps.optionMap[cio.option_id];
-          if (!option) return null;
-          const group = maps.optionGroupMap[option.group_id];
+          const group = option ? maps.optionGroupMap[option.group_id] : null;
+          // Garante que additional_charge venha do cio (snapshot do backend) mesmo
+          // se o option global não foi carregado ainda. Idem para name.
+          const snapshotCharge = Number(cio.additional_charge);
+          const fallbackCharge = Number(option?.additional_charge);
+          const charge = Number.isFinite(snapshotCharge) && snapshotCharge > 0
+            ? snapshotCharge
+            : (Number.isFinite(fallbackCharge) ? fallbackCharge : 0);
+          if (!option && !cio.name) return null;
           return {
-            ...option,
+            ...(option || {}),
+            id: option?.id ?? cio.option_id,
+            name: option?.name ?? cio.name,
+            additional_charge: charge,
+            group_id: option?.group_id ?? null,
             groupName: group ? group.name : undefined,
           };
         })
         .filter(Boolean);
 
       const optionsTotal = selectedOptions.reduce(
-        (sum, o) => sum + (o.additional_charge || 0),
+        (sum, o) => sum + (Number(o.additional_charge) || 0),
         0
       );
 
+      const basePrice = Number(item?.price) || 0;
       return {
         ...ci,
         item,
         selectedOptions,
-        unit_price_with_options: (item?.price || 0) + optionsTotal,
-        line_total: ((item?.price || 0) + optionsTotal) * ci.quantity,
+        unit_price_with_options: basePrice + optionsTotal,
+        line_total: (basePrice + optionsTotal) * ci.quantity,
       };
     });
   };
@@ -1251,14 +1291,17 @@ export const StorefrontProvider = ({ children }) => {
     return hasUser && hasToken;
   };
 
-  const getEffectiveCartId = async () => {
+  const getEffectiveCartId = async (pendingAddressId = null) => {
     if (state.cart && state.cart.id) return state.cart.id;
     if (!isAuthenticated()) return null;
     try {
       // Tenta buscar/criar o carrinho
       const res = await api.get(`/cart?userId=${state.user.id}&tenantId=${state.tenant.id}`);
       if (res && res.id) {
-        const normalizedCart = normalizeCartData(res, state.cart);
+        const fallback = pendingAddressId != null
+          ? { ...state.cart, address_id: String(pendingAddressId) }
+          : state.cart;
+        const normalizedCart = normalizeCartData(res, fallback);
         dispatch({ type: actionMap.SET_CART, payload: normalizedCart });
         return res.id;
       }
@@ -1313,6 +1356,8 @@ export const StorefrontProvider = ({ children }) => {
                 id: opt.id,
                 cart_item_id: ci.id,
                 option_id: opt.optionId || opt.option_id,
+                additional_charge: Number(opt.additionalPrice ?? opt.additional_charge ?? 0) || 0,
+                name: opt.optionName ?? opt.name ?? null,
               }));
             }
             return [];
@@ -1393,18 +1438,15 @@ export const StorefrontProvider = ({ children }) => {
       payload: addressId,
     });
     try {
-      const cartId = await getEffectiveCartId();
+      const cartId = await getEffectiveCartId(addressId);
       if (!cartId) return;
 
-      const updatedCart = await api.put(`/cart/${cartId}/details`, {
+      await api.put(`/cart/${cartId}/details`, {
         addressId,
         paymentChannel: state.cart.payment_channel ?? null,
         changeFor: state.cart.change ?? '',
         notes: state.cart.notes ?? '',
       });
-      if (updatedCart) {
-        dispatch({ type: actionMap.SET_CART, payload: updatedCart });
-      }
     } catch (error) {
       console.error('Erro ao definir endereço do carrinho:', error);
     }
@@ -1912,6 +1954,7 @@ export const StorefrontProvider = ({ children }) => {
               name: neighborhood.name,
               price: Number(neighborhood.price) || 0,
             };
+            if (neighborhood.status) payload.status = String(neighborhood.status).toUpperCase();
             await api.put(`/neighborhoods/${payload.id}`, payload);
           } else {
             const payload = {
@@ -1919,6 +1962,7 @@ export const StorefrontProvider = ({ children }) => {
               name: neighborhood.name,
               price: Number(neighborhood.price) || 0,
             };
+            if (neighborhood.status) payload.status = String(neighborhood.status).toUpperCase();
             await api.post('/neighborhoods', payload);
           }
           const list = await api.get(`/neighborhoods/by-tenant/${tenantId}`).catch(() => []);
@@ -1927,6 +1971,7 @@ export const StorefrontProvider = ({ children }) => {
             tenant_id: n.tenantId || n.tenant_id,
             name: n.name,
             price: n.price,
+            status: n.status ? String(n.status).toUpperCase() : 'ACTIVE',
           })) : [];
           dispatch({ type: actionMap.SET_DATA, payload: { neighborhoods } });
           return true;

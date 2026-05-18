@@ -5,6 +5,7 @@ import { StorefrontProvider } from './shared/generalContext.jsx';
 // Landing Pages
 import LandingPage from './apps/landing/src/pages/HomePage';
 import AboutPage from './apps/landing/src/pages/sobre-nós';
+import PricingPage from './apps/landing/src/pages/PricingPage';
 import StartOnboarding from './onboarding/StartOnboarding.jsx';
 
 // Restaurant Dashboard (lazy loading)
@@ -48,6 +49,7 @@ function App() {
             {/* Landing Pages Routes */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/sobre-nos" element={<AboutPage />} />
+            <Route path="/planos" element={<PricingPage />} />
             <Route path="/onboarding/start" element={<StartOnboarding />} />
             
             {/* Auth Routes */}

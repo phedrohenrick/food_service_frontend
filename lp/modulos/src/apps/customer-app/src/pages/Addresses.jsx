@@ -10,6 +10,9 @@ import { loginWithRedirect } from '../../../../shared/auth/keycloak';
 const Addresses = () => {
   const { addresses: addressesList, user, cart, setCartAddress, deleteAddress } = useStorefront();
   const [addresses, setAddresses] = React.useState([]);
+  const [selectedAddressId, setSelectedAddressId] = React.useState(
+    cart.address_id ? String(cart.address_id) : null
+  );
   const [alertModal, setAlertModal] = React.useState({
     isOpen: false,
     title: '',
@@ -18,16 +21,24 @@ const Addresses = () => {
     onCancel: null
   });
 
-  const isAuthenticated = (() => {
-    let hasToken = false;
-    try { hasToken = !!localStorage.getItem('authToken'); } catch (_) {}
-    return hasToken && !!user?.id;
+  const hasToken = (() => {
+    try { return !!localStorage.getItem('authToken'); } catch (_) { return false; }
   })();
+  const hasUser = !!user?.id;
+  const isAuthenticated = hasToken && hasUser;
+  const isAuthLoading = hasToken && !hasUser;
   const basePrefix = (() => {
     const p = window.location?.pathname || '';
     const m = /^\/([^/]+)\/app(\/|$)/i.exec(p);
     return m && m[1] ? `/${m[1]}/app` : '/app';
   })();
+
+  const handleSelectAddress = (id) => {
+    const sid = String(id);
+    if (sid === selectedAddressId) return;
+    setSelectedAddressId(sid);
+    setCartAddress(id);
+  };
 
   const handleDeleteAddress = (id) => {
     setAlertModal({
@@ -86,9 +97,9 @@ const Addresses = () => {
 
     loadAddresses();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [addressesList, user?.id, isAuthenticated]); // Updated dependencies
+  }, [user?.id, isAuthenticated]);
 
-  if (!isAuthenticated) {
+  if (!hasToken) {
     return (
       <div className="rounded-3xl bg-white p-10 text-center shadow flex flex-col items-center">
         <CiLocationOn className="text-4xl text-gray-900 mb-3"/>
@@ -102,6 +113,15 @@ const Addresses = () => {
             <Button variant="outline">Voltar ao cardápio</Button>
           </Link>
         </div>
+      </div>
+    );
+  }
+
+  if (isAuthLoading) {
+    return (
+      <div className="rounded-3xl bg-white p-10 text-center shadow flex flex-col items-center">
+        <CiLocationOn className="text-4xl text-gray-900 mb-3 animate-pulse"/>
+        <h2 className="text-2xl font-semibold text-gray-900 mb-2">Carregando seus endereços...</h2>
       </div>
     );
   }
@@ -148,16 +168,16 @@ const Addresses = () => {
         {(addresses || []).map((address) => (
           <article
             key={address.id}
-            onClick={() => setCartAddress(address.id)}
+            onClick={() => handleSelectAddress(address.id)}
             onKeyDown={(event) => {
               if (event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault();
-                setCartAddress(address.id);
+                handleSelectAddress(address.id);
               }
             }}
             tabIndex={0}
             className={`rounded-3xl border p-6 shadow-sm transition cursor-pointer focus:outline-none ${
-              cart.address_id === address.id
+              selectedAddressId === address.id
                 ? 'border-[var(--accent)] bg-[var(--accent)]/5'
                 : 'border-gray-100 bg-white hover:border-[var(--accent)]/50'
             }`}
@@ -165,19 +185,16 @@ const Addresses = () => {
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold text-gray-900">{address.label || "Endereço"}</h2>
               <div className="flex gap-2">
-                
                 <Link
                   to={`${basePrefix}/enderecos/${address.id}`}
                   onClick={(event) => event.stopPropagation()}
                   className="text-sm font-semibold text-[var(--accent-contrast)]"
                 >
                   Editar
-                 
                 </Link>
-                
-                {(cart.address_id === address.id) && (
+                {selectedAddressId === address.id && (
                   <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-                     Selecionado
+                    Selecionado
                   </span>
                 )}
               </div>
@@ -195,15 +212,12 @@ const Addresses = () => {
             </div>
             <div className="mt-4 flex items-center justify-between">
               <div className="flex items-center">
-                {cart.address_id === address.id ? (
+                {selectedAddressId === address.id ? (
                   <Link
                     to={`${basePrefix}/sacola`}
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <Button
-                      size="sm"
-                      className="!px-3 !py-1 text-xs"
-                    >
+                    <Button size="sm" className="!px-3 !py-1 text-xs">
                       Ir para a sacola
                     </Button>
                   </Link>
@@ -212,7 +226,7 @@ const Addresses = () => {
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setCartAddress(address.id);
+                      handleSelectAddress(address.id);
                     }}
                     className="text-sm font-bold text-[var(--accent-contrast)] hover:text-gray-700"
                   >
@@ -221,8 +235,8 @@ const Addresses = () => {
                 )}
               </div>
 
-              {cart.address_id === address.id && (
-                <button 
+              {selectedAddressId === address.id && (
+                <button
                   onClick={(e) => {
                     e.stopPropagation();
                     handleDeleteAddress(address.id);
