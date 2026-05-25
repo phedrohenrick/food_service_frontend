@@ -18,7 +18,6 @@ export default function GarcomMesas({ slug }) {
   const navigate = useNavigate();
   const [tables, setTables] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [opening, setOpening] = useState(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -35,20 +34,8 @@ export default function GarcomMesas({ slug }) {
     load();
   }, []);
 
-  const handleTableClick = async (table) => {
-    if (table.status === 'OCCUPIED') {
-      navigate(`/${slug}/garcom/comanda/${table.currentTabId}`);
-      return;
-    }
-    setOpening(table.id);
-    setError('');
-    try {
-      const tab = await api.post(`/tabs/open/${table.id}`);
-      navigate(`/${slug}/garcom/comanda/${tab.id}`);
-    } catch (e) {
-      setError('Erro ao abrir mesa. Tente novamente.');
-      setOpening(null);
-    }
+  const handleTableClick = (table) => {
+    navigate(`/${slug}/garcom/mesa/${table.id}`);
   };
 
   if (loading) {
@@ -82,17 +69,16 @@ export default function GarcomMesas({ slug }) {
           <div className="grid grid-cols-2 gap-4">
             {tables.map((table) => {
               const occupied = table.status === 'OCCUPIED';
-              const isOpening = opening === table.id;
+              const tabCount = table.openTabs?.length || 0;
               return (
                 <button
                   key={table.id}
-                  onClick={() => !isOpening && handleTableClick(table)}
-                  disabled={isOpening}
+                  onClick={() => handleTableClick(table)}
                   className={`relative rounded-2xl border-2 p-5 text-left transition-all duration-200 active:scale-95 ${
                     occupied
                       ? 'border-red-200 bg-red-50 active:bg-red-100'
                       : 'border-green-200 bg-green-50 active:bg-green-100'
-                  } ${isOpening ? 'opacity-60' : ''}`}
+                  }`}
                 >
                   <div className="flex items-center gap-2 mb-3">
                     <div className={`w-2.5 h-2.5 rounded-full ${occupied ? 'bg-red-500' : 'bg-green-500'}`} />
@@ -109,13 +95,11 @@ export default function GarcomMesas({ slug }) {
                   {occupied && table.currentTabTotal != null && (
                     <div className="mt-3 space-y-0.5">
                       <p className="text-sm font-bold text-red-700">{formatCurrency(table.currentTabTotal)}</p>
-                      <p className="text-xs text-gray-500">{formatElapsed(table.openedAt)}</p>
-                    </div>
-                  )}
-
-                  {isOpening && (
-                    <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-white/60">
-                      <div className="w-6 h-6 border-3 border-gray-300 border-t-gray-700 rounded-full animate-spin" />
+                      <p className="text-xs text-gray-500">
+                        {tabCount > 1
+                          ? `${tabCount} comandas · ${formatElapsed(table.openedAt)}`
+                          : formatElapsed(table.openedAt)}
+                      </p>
                     </div>
                   )}
                 </button>
