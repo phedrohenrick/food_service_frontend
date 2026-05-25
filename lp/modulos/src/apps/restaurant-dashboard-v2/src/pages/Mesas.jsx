@@ -1,6 +1,8 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../../../../shared/services/api';
+import { useStorefront } from '../../../../shared/generalContext.jsx';
+import MesaQrCard from '../components/MesaQrCard';
 
 const formatCurrency = (n) =>
   (Number(n) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -19,14 +21,27 @@ const POLLING_INTERVAL = 15000;
 export default function Mesas() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { tenant } = useStorefront();
   const [tables, setTables] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddTable, setShowAddTable] = useState(false);
+  const [qrModalTable, setQrModalTable] = useState(null);
+  const [printSheetOpen, setPrintSheetOpen] = useState(false);
 
-  const basePrefix = (() => {
+  const slug = useMemo(() => {
     const m = /^\/([^/]+)\/dashboard(\/|$)/i.exec(location.pathname || '');
-    return m ? `/${m[1]}/dashboard` : '/dashboard';
-  })();
+    return m ? m[1] : tenant?.slug || '';
+  }, [location.pathname, tenant?.slug]);
+
+  const basePrefix = slug ? `/${slug}/dashboard` : '/dashboard';
+
+  const buildMesaUrl = useCallback(
+    (tableId) => `${window.location.origin}/${slug}/mesa/${tableId}`,
+    [slug]
+  );
+
+  const storeName = tenant?.name || 'Seu restaurante';
+
   const [newTableNumber, setNewTableNumber] = useState('');
   const [newTableCapacity, setNewTableCapacity] = useState('');
   const [savingTable, setSavingTable] = useState(false);
@@ -101,15 +116,28 @@ export default function Mesas() {
             {freeCount} livre{freeCount !== 1 ? 's' : ''} &middot; {occupiedCount} ocupada{occupiedCount !== 1 ? 's' : ''}
           </p>
         </div>
-        <button
-          onClick={() => setShowAddTable(true)}
-          className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-700 transition-colors"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-          </svg>
-          Nova mesa
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {tables.length > 0 && (
+            <button
+              onClick={() => setPrintSheetOpen(true)}
+              className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+              Imprimir QRs
+            </button>
+          )}
+          <button
+            onClick={() => setShowAddTable(true)}
+            className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-700 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            Nova mesa
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -151,15 +179,26 @@ export default function Mesas() {
                         occupied ? 'bg-red-500' : 'bg-green-500'
                       }`}
                     />
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleDeleteTable(table.id); }}
-                      className="text-gray-300 hover:text-red-500 transition-colors"
-                      title="Remover mesa"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setQrModalTable(table); }}
+                        className="text-gray-400 hover:text-gray-900 transition-colors"
+                        title="QR code da mesa"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4 4h6v6H4V4zm10 0h6v6h-6V4zM4 14h6v6H4v-6zm10 4h2m-2-4h2m2 0h2m-2 4h2m-2 2h2" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDeleteTable(table.id); }}
+                        className="text-gray-300 hover:text-red-500 transition-colors"
+                        title="Remover mesa"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
 
                   <p className="text-3xl font-bold text-gray-900 mt-2">{table.number}</p>
@@ -172,7 +211,11 @@ export default function Mesas() {
                       <p className="text-xs font-semibold text-red-700">
                         {formatCurrency(table.currentTabTotal)}
                       </p>
-                      <p className="text-xs text-gray-500">{formatElapsed(table.openedAt)}</p>
+                      <p className="text-xs text-gray-500">
+                        {table.openTabs && table.openTabs.length > 1
+                          ? `${table.openTabs.length} comandas · ${formatElapsed(table.openedAt)}`
+                          : formatElapsed(table.openedAt)}
+                      </p>
                     </div>
                   )}
 
@@ -240,6 +283,148 @@ export default function Mesas() {
           </div>
         </div>
       )}
+
+      {/* Single-mesa QR modal */}
+      {qrModalTable && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm no-print"
+          onClick={() => setQrModalTable(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl space-y-5 max-h-[95vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">QR da Mesa {qrModalTable.number}</h2>
+                <p className="text-sm text-gray-500 mt-0.5">Imprima e coloque na mesa.</p>
+              </div>
+              <button
+                onClick={() => setQrModalTable(null)}
+                className="text-gray-400 hover:text-gray-900"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="bg-gray-50 rounded-2xl p-4">
+              <MesaQrCard
+                url={buildMesaUrl(qrModalTable.id)}
+                mesaNumber={qrModalTable.number}
+                storeName={storeName}
+                qrSize={200}
+                compact
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setQrModalTable(null)}
+                className="flex-1 rounded-2xl border border-gray-200 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Fechar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPrintSheetOpen({ singleTableId: qrModalTable.id });
+                  setQrModalTable(null);
+                }}
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-gray-900 py-3 text-sm font-semibold text-white hover:bg-gray-700"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+                Imprimir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Print sheet — fullscreen grid of QR cards */}
+      {printSheetOpen && (
+        <PrintSheet
+          tables={
+            printSheetOpen?.singleTableId
+              ? tables.filter((t) => t.id === printSheetOpen.singleTableId)
+              : tables.slice().sort((a, b) => a.number - b.number)
+          }
+          storeName={storeName}
+          buildMesaUrl={buildMesaUrl}
+          onClose={() => setPrintSheetOpen(false)}
+        />
+      )}
+
+      <style>{`
+        @media print {
+          body * { visibility: hidden !important; }
+          .mesa-qr-print-root, .mesa-qr-print-root * { visibility: visible !important; }
+          .mesa-qr-print-root { position: absolute !important; inset: 0 !important; padding: 0 !important; background: white !important; overflow: visible !important; }
+          .no-print, .no-print * { display: none !important; }
+          @page { size: A4; margin: 12mm; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+function PrintSheet({ tables, storeName, buildMesaUrl, onClose }) {
+  const single = tables.length === 1;
+
+  return (
+    <div className="fixed inset-0 z-50 bg-white overflow-y-auto mesa-qr-print-root">
+      <div className="no-print sticky top-0 z-10 flex items-center justify-between bg-white border-b border-gray-200 px-6 py-3">
+        <div>
+          <h2 className="text-lg font-bold text-gray-900">
+            {single ? `QR da Mesa ${tables[0]?.number}` : `Imprimir QRs (${tables.length} mesas)`}
+          </h2>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Revise abaixo e clique em <span className="font-semibold">Imprimir</span>.
+            No diálogo, você também pode salvar como PDF.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={onClose}
+            className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Voltar
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-700"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            Imprimir
+          </button>
+        </div>
+      </div>
+
+      <div className="px-6 py-6">
+        <div
+          className={`grid gap-6 mx-auto ${
+            single
+              ? 'grid-cols-1 max-w-sm'
+              : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 max-w-4xl'
+          }`}
+        >
+          {tables.map((table) => (
+            <MesaQrCard
+              key={table.id}
+              url={buildMesaUrl(table.id)}
+              mesaNumber={table.number}
+              storeName={storeName}
+              qrSize={single ? 260 : 200}
+            />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

@@ -73,6 +73,7 @@ const nextStatus = (current) => {
 const Orders = () => {
   const { orders, user, tenant, updateTenant, maps, getOrderDetailed, addOrderStatus, updateOrderStatus, reloadOrders } = useStorefront();
   const [filter, setFilter] = useState('todos');
+  const [originFilter, setOriginFilter] = useState('todos');
   const [expanded, setExpanded] = useState(null);
   const [dayClosed, setDayClosed] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
@@ -123,11 +124,16 @@ const Orders = () => {
   }, [orders, getOrderDetailed]);
 
   const filteredOrders = useMemo(() => {
-    const base = filter === 'todos'
+    let base = filter === 'todos'
       ? ordersWithLast
       : ordersWithLast.filter((row) => pipelineKeyForStatus(row.lastStatus) === filter);
+    if (originFilter === 'mesa') {
+      base = base.filter((row) => row.order.tab_id != null);
+    } else if (originFilter === 'delivery') {
+      base = base.filter((row) => row.order.tab_id == null);
+    }
     return base.filter((row) => (dayClosed ? !isToday(row.order.created_at) : true));
-  }, [ordersWithLast, filter, dayClosed]);
+  }, [ordersWithLast, filter, originFilter, dayClosed]);
 
   const openOrdersCount = useMemo(() => {
     return ordersWithLast.filter(
@@ -297,6 +303,27 @@ const Orders = () => {
         ))}
       </div>
 
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs uppercase tracking-wider text-slate-500 font-semibold mr-1">Origem:</span>
+        {[
+          { key: 'todos', label: 'Todos' },
+          { key: 'delivery', label: 'Delivery' },
+          { key: 'mesa', label: 'Mesa' },
+        ].map((opt) => (
+          <button
+            key={opt.key}
+            onClick={() => setOriginFilter(opt.key)}
+            className={`px-3 py-1.5 rounded-full border text-xs font-medium transition ${
+              originFilter === opt.key
+                ? 'bg-slate-900 text-white border-slate-900'
+                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
         {columns.map((column) => (
           <div key={column.key} className="rounded-[30px] border border-slate-200/80 bg-white/95 p-4 shadow-[0_24px_60px_-34px_rgba(15,23,42,0.35)] space-y-4">
@@ -319,13 +346,44 @@ const Orders = () => {
                 const serviceFee = order.service_fee ?? (order.subtotal || 0) * (0.08); // fallback
                 const isExpanded = expanded === order.id;
 
+                const isTableOrder = order.tab_id != null;
                 return (
-                  <div key={order.id} className="rounded-[26px] border border-slate-500 bg-[linear-gradient(180deg,_rgba(255,255,255,0.98),_rgba(248,250,252,0.98))] p-4 shadow-[0_18px_45px_-34px_rgba(15,23,42,0.4)] space-y-4">
+                  <div
+                    key={order.id}
+                    className={`rounded-[26px] border bg-[linear-gradient(180deg,_rgba(255,255,255,0.98),_rgba(248,250,252,0.98))] p-4 shadow-[0_18px_45px_-34px_rgba(15,23,42,0.4)] space-y-4 ${
+                      isTableOrder ? '' : 'border-slate-500'
+                    }`}
+                    style={
+                      isTableOrder
+                        ? {
+                            borderColor: 'var(--accent)',
+                            borderLeftWidth: '6px',
+                          }
+                        : undefined
+                    }
+                  >
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-xs font-medium tracking-[0.12em] text-slate-500 uppercase">Pedido #{order.id}</p>
-                        <p className="mt-1 font-semibold text-slate-950">{user?.name || 'Cliente'}</p>
-                        <p className="text-xs text-slate-500">{user?.phone}</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-xs font-medium tracking-[0.12em] text-slate-500 uppercase">Pedido #{order.id}</p>
+                          {isTableOrder && (
+                            <span
+                              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+                              style={{
+                                background: 'color-mix(in srgb, var(--accent) 14%, transparent)',
+                                color: 'var(--accent)',
+                              }}
+                            >
+                              🍽 Mesa {order.table_number ?? '?'}
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-1 font-semibold text-slate-950">
+                          {isTableOrder
+                            ? (order.customer_name || `Mesa ${order.table_number ?? ''}`)
+                            : (user?.name || 'Cliente')}
+                        </p>
+                        {!isTableOrder && <p className="text-xs text-slate-500">{user?.phone}</p>}
                       </div>
                       <div className="text-right">
                         <div className="relative inline-flex items-center justify-center">
@@ -340,20 +398,38 @@ const Orders = () => {
                       </div>
                     </div>
 
-                    <div className="rounded-2xl border border-slate-200/80 bg-white/80 p-3 text-sm text-slate-600 shadow-sm">
-                      <p>Endereço:</p>
-                      <p className="truncate">
-                        {address
-                          ? `${address.street}, ${address.street_number} · ${neighborhood?.name} (${money(neighborhood?.price)})`
-                          : 'Sem endereço'}
-                      </p>
-                      {address?.complement && (
-                        <p className="truncate">{address.complement}</p>
-                      )}
-                      {address && (
-                        <p className="truncate">{address.city} · CEP {address.zip_code}</p>
-                      )}
-                    </div>
+                    {isTableOrder ? (
+                      <div
+                        className="rounded-2xl border p-3 text-sm text-slate-700 shadow-sm"
+                        style={{
+                          borderColor: 'color-mix(in srgb, var(--accent) 30%, transparent)',
+                          background: 'color-mix(in srgb, var(--accent) 8%, white)',
+                        }}
+                      >
+                        <p className="font-semibold" style={{ color: 'var(--accent)' }}>
+                          Consumo na mesa
+                        </p>
+                        <p className="truncate">
+                          Mesa {order.table_number ?? '?'}
+                          {order.customer_name ? ` · ${order.customer_name}` : ''}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="rounded-2xl border border-slate-200/80 bg-white/80 p-3 text-sm text-slate-600 shadow-sm">
+                        <p>Endereço:</p>
+                        <p className="truncate">
+                          {address
+                            ? `${address.street}, ${address.street_number} · ${neighborhood?.name} (${money(neighborhood?.price)})`
+                            : 'Sem endereço'}
+                        </p>
+                        {address?.complement && (
+                          <p className="truncate">{address.complement}</p>
+                        )}
+                        {address && (
+                          <p className="truncate">{address.city} · CEP {address.zip_code}</p>
+                        )}
+                      </div>
+                    )}
 
                     <div className="grid grid-cols-2 gap-3 rounded-2xl border border-slate-200/80 bg-slate-50/70 p-3">
                       <div className="text-xs text-slate-600">
