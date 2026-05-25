@@ -17,6 +17,9 @@ const CustomerApp = React.lazy(() => import('./apps/customer-app/CustomerApp'));
 // Garçom App (lazy loading)
 const GarcomApp = React.lazy(() => import('./apps/garcom/GarcomApp'));
 
+// Customer Table App (QR scan flow, no auth)
+const CustomerTableApp = React.lazy(() => import('./apps/customer-table/CustomerTableApp'));
+
 // Auth Pages
 const LoginPage = React.lazy(() => import('./features/auth'));
 const MerchantLoginPage = React.lazy(() => import('./features/auth/MerchantLogin'));
@@ -69,6 +72,9 @@ function App() {
 
             {/* Garçom Routes */}
             <Route path="/:slug/garcom/*" element={<GarcomApp />} />
+
+            {/* Customer Table Routes (QR-scanned, no auth) */}
+            <Route path="/:slug/mesa/:tableId/*" element={<CustomerTableApp />} />
           </Routes>
         </React.Suspense>
       </Router>
