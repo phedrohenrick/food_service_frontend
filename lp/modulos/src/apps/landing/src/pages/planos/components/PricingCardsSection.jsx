@@ -119,14 +119,14 @@ export function PricingCardsSection({ annual }) {
           <PlanCard
             tier="Pro"
             icon={<IconTrendingUp />}
-            iconBg="rgba(221,63,12,0.10)"
-            iconColor="#DD3F0C"
+            iconBg="rgba(14,165,233,0.10)"
+            iconColor="#0EA5E9"
             desc="Para restaurantes que querem crescer com controle total da operação."
             price={PRICES.pro[k]}
             savingsNote={annual ? { orig: "R$ 89/mês", saving: "Economize R$ 240/ano" } : null}
             features={PRO_FEATURES}
             ctaLabel="Assinar Pro"
-            ctaVariant="orange"
+            ctaVariant="primary"
             microCopy="30 dias grátis · sem cartão"
             popular
           />
@@ -157,31 +157,31 @@ function PlanCard({ tier, icon, iconBg, iconColor, desc, price, savingsNote, fea
     <div
       className="group relative flex flex-col rounded-2xl bg-white transition-all duration-200"
       style={{
-        border: popular ? "2px solid #FF7F27" : "1.5px solid rgba(13,31,51,0.1)",
+        border: popular ? "2px solid #0EA5E9" : "1.5px solid rgba(13,31,51,0.1)",
         boxShadow: popular
-          ? "0 4px 24px rgba(255,127,39,0.14)"
+          ? "0 4px 24px rgba(14,165,233,0.14)"
           : "0 1px 4px rgba(13,31,51,0.06)",
         order: popular ? -1 : undefined,
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = "translateY(-3px)";
-        e.currentTarget.style.borderColor = popular ? "#FF7F27" : "rgba(255,127,39,0.4)";
+        e.currentTarget.style.borderColor = popular ? "#0EA5E9" : "rgba(14,165,233,0.4)";
         e.currentTarget.style.boxShadow = popular
-          ? "0 8px 32px rgba(255,127,39,0.22)"
+          ? "0 8px 32px rgba(14,165,233,0.22)"
           : "0 4px 16px rgba(13,31,51,0.1)";
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = "translateY(0)";
-        e.currentTarget.style.borderColor = popular ? "#FF7F27" : "rgba(13,31,51,0.1)";
+        e.currentTarget.style.borderColor = popular ? "#0EA5E9" : "rgba(13,31,51,0.1)";
         e.currentTarget.style.boxShadow = popular
-          ? "0 4px 24px rgba(255,127,39,0.14)"
+          ? "0 4px 24px rgba(14,165,233,0.14)"
           : "0 1px 4px rgba(13,31,51,0.06)";
       }}
     >
       {popular && (
         <div
           className="absolute -top-3.5 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full px-4 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-white"
-          style={{ background: "#FF7F27", whiteSpace: "nowrap" }}
+          style={{ background: "#0EA5E9", whiteSpace: "nowrap" }}
         >
           <IconDiamond />
           Mais popular
@@ -198,7 +198,7 @@ function PlanCard({ tier, icon, iconBg, iconColor, desc, price, savingsNote, fea
 
         <p
           className="mb-1 text-[11px] font-bold uppercase tracking-[0.12em]"
-          style={{ color: popular ? "#DD3F0C" : "#8A9AB0" }}
+          style={{ color: popular ? "#0EA5E9" : "#8A9AB0" }}
         >
           {tier}
         </p>
@@ -216,7 +216,7 @@ function PlanCard({ tier, icon, iconBg, iconColor, desc, price, savingsNote, fea
             style={{
               fontSize: "clamp(40px,4vw,52px)",
               letterSpacing: "-0.04em",
-              color: popular ? "#DD3F0C" : "#0D1F33",
+              color: popular ? "#0EA5E9" : "#0D1F33",
             }}
           >
             {price}
@@ -231,7 +231,7 @@ function PlanCard({ tier, icon, iconBg, iconColor, desc, price, savingsNote, fea
             <>
               <span className="line-through opacity-60">{savingsNote.orig}</span>
               {" · "}
-              <span style={{ color: "#DD3F0C", fontWeight: 600 }}>{savingsNote.saving}</span>
+              <span style={{ color: "#0EA5E9", fontWeight: 600 }}>{savingsNote.saving}</span>
             </>
           ) : (
             <span>&nbsp;</span>
@@ -249,7 +249,7 @@ function PlanCard({ tier, icon, iconBg, iconColor, desc, price, savingsNote, fea
             >
               <span className="mt-px flex-shrink-0">
                 {feat.included
-                  ? <IconCheckCircle color="#FF7F27" />
+                  ? <IconCheckCircle color="#0EA5E9" />
                   : <IconMinusCircle />
                 }
               </span>
@@ -274,13 +274,13 @@ function PlanCard({ tier, icon, iconBg, iconColor, desc, price, savingsNote, fea
 function CtaButton({ variant, label }) {
   const base = "block w-full rounded-xl py-3.5 text-center text-sm font-bold transition-all duration-150";
 
-  if (variant === "orange") {
+  if (variant === "primary") {
     return (
       <button
         className={base}
-        style={{ background: "#DD3F0C", color: "#fff" }}
-        onMouseEnter={(e) => { e.currentTarget.style.background = "#C43509"; e.currentTarget.style.transform = "translateY(-1px)"; }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = "#DD3F0C"; e.currentTarget.style.transform = "translateY(0)"; }}
+        style={{ background: "#0EA5E9", color: "#fff" }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = "#0284C7"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = "#0EA5E9"; e.currentTarget.style.transform = "translateY(0)"; }}
       >
         {label}
       </button>
@@ -315,17 +315,17 @@ function CtaButton({ variant, label }) {
 function TrustStrip() {
   return (
     <div
-      className="mt-14 flex flex-wrap items-center justify-center gap-x-10 gap-y-4 border-t pt-10"
-      style={{ borderColor: "rgba(13,31,51,0.08)" }}
+      className="mt-14 flex flex-wrap items-center justify-center gap-x-10 gap-y-5 rounded-2xl px-10 py-6"
+      style={{ background: "#075985" }}
     >
       {TRUST_ITEMS.map(({ icon: Icon, text }, i) => (
         <React.Fragment key={text}>
-          <div className="flex items-center gap-2.5 text-sm font-medium" style={{ color: "#4A6278" }}>
-            <Icon className="h-4 w-4 flex-shrink-0" style={{ color: "#0EA5E9" }} strokeWidth={1.5} />
+          <div className="flex items-center gap-2.5 text-sm font-medium" style={{ color: "rgba(255,255,255,0.95)" }}>
+            <Icon className="h-4 w-4 flex-shrink-0" style={{ color: "#7DD3FC" }} strokeWidth={1.5} />
             {text}
           </div>
           {i < TRUST_ITEMS.length - 1 && (
-            <span className="hidden h-1 w-1 rounded-full sm:block" style={{ background: "rgba(13,31,51,0.15)" }} />
+            <span className="hidden h-1 w-1 rounded-full sm:block" style={{ background: "rgba(255,255,255,0.25)" }} />
           )}
         </React.Fragment>
       ))}
