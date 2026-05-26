@@ -427,6 +427,7 @@ const actionMap = {
   DELETE_NEIGHBORHOOD: 'DELETE_NEIGHBORHOOD',
   SET_CART: 'SET_CART',
   DELETE_ADDRESS: 'DELETE_ADDRESS',
+  SET_ENTITLEMENTS: 'SET_ENTITLEMENTS',
 };
 
 const reducer = (state, action) => {
@@ -788,6 +789,10 @@ const reducer = (state, action) => {
       return { ...state, neighborhoods };
     }
 
+    case actionMap.SET_ENTITLEMENTS: {
+      return { ...state, entitlements: action.payload };
+    }
+
     case actionMap.SET_DATA: {
       const nextCart = action.payload?.cart
         ? normalizeCartData(action.payload.cart, state.cart)
@@ -827,6 +832,7 @@ export const StorefrontProvider = ({ children }) => {
     statuses: initialStatuses,
     orderItems: initialOrderItems,
     orderItemOptions: initialOrderItemOptions,
+    entitlements: {},
   });
 
   const loadData = async () => {
@@ -1141,6 +1147,12 @@ export const StorefrontProvider = ({ children }) => {
           orderItemOptions,
         },
       });
+
+      if (isMerchantApp && isAuthenticated) {
+        api.get('/subscriptions/my-entitlements')
+          .then(data => dispatch({ type: actionMap.SET_ENTITLEMENTS, payload: data || {} }))
+          .catch(() => {});
+      }
     } catch (error) {
       console.error('Erro ao carregar dados iniciais:', error);
     }
@@ -1189,6 +1201,22 @@ export const StorefrontProvider = ({ children }) => {
     state.neighborhoods,
     state.addresses,
   ]);
+
+  /* ------------ Entitlements ------------ */
+
+  const canUseFeature = (key) => {
+    const val = state.entitlements[key];
+    return val !== undefined && val !== 'false' && val !== false;
+  };
+
+  const getEntitlementValue = (key) => state.entitlements[key] || 'false';
+
+  const getEntitlementLimit = (key) => {
+    const val = state.entitlements[key];
+    if (val === 'unlimited') return -1;
+    const n = parseInt(val, 10);
+    return isNaN(n) ? 0 : n;
+  };
 
   /* ------------ Selectors úteis para o front ------------ */
 
@@ -1658,6 +1686,11 @@ export const StorefrontProvider = ({ children }) => {
       ...state,
       maps,
       cartTotals,
+
+      // entitlements
+      canUseFeature,
+      getEntitlementValue,
+      getEntitlementLimit,
 
       // selectors
       getMenuItemsByCategory,

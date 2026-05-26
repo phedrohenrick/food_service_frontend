@@ -11,18 +11,19 @@ import { IoSearch } from "react-icons/io5";
 import { MdOutlineRestaurantMenu } from "react-icons/md";
 import { IoBarChartOutline } from "react-icons/io5";
 import { MdTableRestaurant } from "react-icons/md";
+import { Crown } from 'lucide-react';
 
 const navItems = [
   { label: 'Visão geral', suffix: '', icon: <RiDashboardHorizontalFill /> },
   { label: 'Pedidos', suffix: 'orders', icon: <MdMenuBook /> },
-  { label: 'Mesas', suffix: 'mesas', icon: <MdTableRestaurant /> },
+  { label: 'Mesas', suffix: 'mesas', icon: <MdTableRestaurant />, gatedBy: 'table_management' },
   { label: 'Cardápio', suffix: 'menu', icon: <MdOutlineRestaurantMenu /> },
-  { label: 'Métricas', suffix: 'metricas', icon: <IoBarChartOutline /> },
+  { label: 'Métricas', suffix: 'metricas', icon: <IoBarChartOutline />, gatedBy: 'analytics' },
   { label: 'Configurações', suffix: 'settings', icon: <MdOutlineSettings /> },
 ];
 
 const DashboardLayoutv2 = ({ children, onHelp }) => {
-  const { tenant, user, updateTenant } = useStorefront();
+  const { tenant, user, updateTenant, canUseFeature } = useStorefront();
   const navigate = useNavigate();
   const [pendingNeighborhoodsCount, setPendingNeighborhoodsCount] = useState(0);
 
@@ -179,6 +180,7 @@ const DashboardLayoutv2 = ({ children, onHelp }) => {
           <nav className="px-3 py-6 space-y-2">
             {navItems.map((item) => {
               const target = item.suffix ? `${basePrefix}/${item.suffix}` : basePrefix;
+              const locked = item.gatedBy && !canUseFeature(item.gatedBy);
               return (
               <Link
                 key={item.label}
@@ -192,6 +194,11 @@ const DashboardLayoutv2 = ({ children, onHelp }) => {
               >
                 <span className="text-lg">{item.icon}</span>
                 {item.label}
+                {locked && (
+                  <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                    <Crown className="h-2.5 w-2.5" /> PRO
+                  </span>
+                )}
               </Link>
             )})}
             {onHelp && (

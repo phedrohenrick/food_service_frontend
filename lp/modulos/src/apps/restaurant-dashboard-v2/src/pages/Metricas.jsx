@@ -87,13 +87,13 @@ function FeedbackCard({ msg }) {
 }
 
 export default function Metricas() {
-  const { tenant } = useStorefront();
+  const { tenant, canUseFeature } = useStorefront();
   const [days, setDays] = useState(30);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const isBlocked = BLOCKED_STATUSES.includes(tenant?.subscription_status);
+  const isBlocked = BLOCKED_STATUSES.includes(tenant?.subscription_status) || !canUseFeature('analytics');
 
   useEffect(() => {
     if (isBlocked) return;

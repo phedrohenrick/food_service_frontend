@@ -18,6 +18,8 @@ const Settings = () => {
     updateTenant,
     saveNeighborhood,
     deleteNeighborhood,
+    canUseFeature,
+    entitlements,
   } = useStorefront();
 
   const [tenantForm, setTenantForm] = useState(() => ({
@@ -864,6 +866,69 @@ const Settings = () => {
                   <p className="text-sm text-slate-500">{user?.phone}</p>
                   <p className="text-sm text-slate-500">Status: {user?.status}</p>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <div className={`${surfaceClass} p-5 space-y-4`} id="plano">
+            <div>
+              <p className="text-sm text-slate-500">Assinatura</p>
+              <h3 className="text-lg font-semibold tracking-tight text-slate-900">Meu Plano</h3>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">
+                    {tenant?.plan_code === 'PRO_TRIAL' ? 'Pro (Trial)' :
+                     tenant?.plan_code === 'PRO' ? 'Pro' :
+                     tenant?.plan_code === 'ENTERPRISE' ? 'Enterprise' : 'Grátis'}
+                  </p>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {tenant?.subscription_status === 'TRIALING' ? 'Período de teste' :
+                     tenant?.subscription_status === 'ACTIVE' ? 'Ativo' :
+                     tenant?.subscription_status === 'PAST_DUE' ? 'Pagamento pendente' :
+                     tenant?.subscription_status === 'CANCELED' ? 'Cancelado' : 'Sem assinatura'}
+                  </p>
+                </div>
+                {tenant?.plan_code && tenant.plan_code !== 'FREE' && (
+                  <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                    {tenant.plan_code}
+                  </span>
+                )}
+              </div>
+              <div className="flex gap-2">
+                {(!tenant?.plan_code || tenant.plan_code === 'FREE' || tenant.plan_code === 'PRO_TRIAL') && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const res = await api.post('/subscriptions/checkout', { priceId: 'pro_monthly' });
+                        if (res?.url) window.location.href = res.url;
+                      } catch (e) {
+                        console.error('Checkout error', e);
+                      }
+                    }}
+                    className="flex-1 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-600 transition-colors shadow-lg shadow-amber-500/25"
+                  >
+                    Fazer upgrade
+                  </button>
+                )}
+                {tenant?.subscription_status === 'ACTIVE' && tenant?.plan_code !== 'FREE' && tenant?.plan_code !== 'PRO_TRIAL' && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const res = await api.post('/subscriptions/billing-portal', {});
+                        if (res?.url) window.location.href = res.url;
+                      } catch (e) {
+                        console.error('Portal error', e);
+                      }
+                    }}
+                    className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                  >
+                    Gerenciar assinatura
+                  </button>
+                )}
               </div>
             </div>
           </div>

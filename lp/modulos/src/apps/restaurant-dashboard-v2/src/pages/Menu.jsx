@@ -50,6 +50,8 @@ const Menu = () => {
     saveBanner,
     deleteBanner,
     loadData,
+    canUseFeature,
+    getEntitlementLimit,
   } = useStorefront();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -470,8 +472,14 @@ const Menu = () => {
             <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Lista pronta para o cliente</h2>
             <p className="mt-2 text-sm text-slate-600">Visualize o que o cliente enxerga no app, com mídia, categoria e status operacional.</p>
           </div>
-        <div className="flex gap-2">
-          <Button onClick={openNewItem} data-wizard="menu-add-item">Adicionar item</Button>
+        <div className="flex items-center gap-2">
+          {(() => {
+            const limit = getEntitlementLimit('max_menu_items');
+            const atLimit = limit !== -1 && menuItems.length >= limit;
+            return atLimit
+              ? <span className="text-xs text-amber-600 font-medium">Limite de {limit} itens atingido — faça upgrade</span>
+              : <Button onClick={openNewItem} data-wizard="menu-add-item">Adicionar item</Button>;
+          })()}
         </div>
         </div>
 

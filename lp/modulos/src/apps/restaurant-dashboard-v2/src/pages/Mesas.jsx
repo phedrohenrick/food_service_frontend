@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../../../../shared/services/api';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
+import { UpgradeCTA } from '../../../../shared/components/ui';
 import MesaQrCard from '../components/MesaQrCard';
 
 const formatCurrency = (n) =>
@@ -21,7 +22,7 @@ const POLLING_INTERVAL = 15000;
 export default function Mesas() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { tenant } = useStorefront();
+  const { tenant, canUseFeature, getEntitlementLimit } = useStorefront();
   const [tables, setTables] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddTable, setShowAddTable] = useState(false);
@@ -128,15 +129,23 @@ export default function Mesas() {
               Imprimir QRs
             </button>
           )}
-          <button
-            onClick={() => setShowAddTable(true)}
-            className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-700 transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-            Nova mesa
-          </button>
+          {(() => {
+            const limit = getEntitlementLimit('max_tables');
+            const atLimit = limit !== -1 && tables.length >= limit;
+            return atLimit
+              ? <span className="text-xs text-amber-600 font-medium">Limite de {limit} mesa{limit !== 1 ? 's' : ''} atingido — faça upgrade</span>
+              : (
+                <button
+                  onClick={() => setShowAddTable(true)}
+                  className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-700 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                  Nova mesa
+                </button>
+              );
+          })()}
         </div>
       </div>
 
