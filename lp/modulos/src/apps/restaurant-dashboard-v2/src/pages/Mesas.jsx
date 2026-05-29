@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../../../../shared/services/api';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
-import { UpgradeCTA } from '../../../../shared/components/ui';
+import { UpgradeCTA, UpgradeRequiredModal } from '../../../../shared/components/ui';
 import MesaQrCard from '../components/MesaQrCard';
 
 const formatCurrency = (n) =>
@@ -47,6 +47,7 @@ export default function Mesas() {
   const [newTableCapacity, setNewTableCapacity] = useState('');
   const [savingTable, setSavingTable] = useState(false);
   const [error, setError] = useState('');
+  const [upgradeModal, setUpgradeModal] = useState(null);
 
   const fetchTables = useCallback(async () => {
     try {
@@ -65,6 +66,37 @@ export default function Mesas() {
     return () => clearInterval(interval);
   }, [fetchTables]);
 
+  const buildUpgradePayload = () => {
+    const limit = getEntitlementLimit('max_tables');
+    return {
+      currentUsage: tables.length,
+      limit: limit === -1 ? null : limit,
+      currentPlan: tenant?.plan_code,
+      suggestedPlan: 'MAX',
+      featureLabel: 'mesas',
+      message: null,
+    };
+  };
+
+  const openUpgradeForTables = () => {
+    setUpgradeModal(buildUpgradePayload());
+  };
+
+  const handleNewTableClick = () => {
+    const limit = getEntitlementLimit('max_tables');
+    const atLimit = limit !== -1 && tables.length >= limit;
+    if (atLimit) {
+      openUpgradeForTables();
+      return;
+    }
+    setShowAddTable(true);
+  };
+
+  const handleUpgradeRedirect = () => {
+    setUpgradeModal(null);
+    navigate(`${basePrefix}/settings`);
+  };
+
   const handleAddTable = async (e) => {
     e.preventDefault();
     if (!newTableNumber) return;
@@ -79,8 +111,16 @@ export default function Mesas() {
       setNewTableCapacity('');
       setShowAddTable(false);
       await fetchTables();
-    } catch (e) {
-      setError('Erro ao criar mesa. Verifique se o número já existe.');
+    } catch (err) {
+      const msg = String(err?.message || '');
+      const is403 = /\bstatus:\s*403\b/i.test(msg);
+      const isFeatureBlock = /feature_not_available/i.test(msg);
+      if (is403 && isFeatureBlock) {
+        setShowAddTable(false);
+        openUpgradeForTables();
+      } else {
+        setError('Erro ao criar mesa. Verifique se o número já existe.');
+      }
     } finally {
       setSavingTable(false);
     }
@@ -110,11 +150,20 @@ export default function Mesas() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
+      <div className="flex items-center justify-between flex-wrap gap-4 rounded-2xl" data-wizard="tables-header">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Mesas</h1>
           <p className="text-sm text-gray-500 mt-0.5">
             {freeCount} livre{freeCount !== 1 ? 's' : ''} &middot; {occupiedCount} ocupada{occupiedCount !== 1 ? 's' : ''}
+            {(() => {
+              const limit = getEntitlementLimit('max_tables');
+              if (limit === -1 || limit <= 0) return null;
+              return (
+                <span className="ml-2 text-gray-400">
+                  &middot; {tables.length}/{limit} no plano
+                </span>
+              );
+            })()}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -129,23 +178,15 @@ export default function Mesas() {
               Imprimir QRs
             </button>
           )}
-          {(() => {
-            const limit = getEntitlementLimit('max_tables');
-            const atLimit = limit !== -1 && tables.length >= limit;
-            return atLimit
-              ? <span className="text-xs text-amber-600 font-medium">Limite de {limit} mesa{limit !== 1 ? 's' : ''} atingido — faça upgrade</span>
-              : (
-                <button
-                  onClick={() => setShowAddTable(true)}
-                  className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-700 transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                  </svg>
-                  Nova mesa
-                </button>
-              );
-          })()}
+          <button
+            onClick={handleNewTableClick}
+            className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-700 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            Nova mesa
+          </button>
         </div>
       </div>
 
@@ -353,6 +394,20 @@ export default function Mesas() {
           </div>
         </div>
       )}
+
+      {/* Upgrade required modal */}
+      <UpgradeRequiredModal
+        open={!!upgradeModal}
+        onClose={() => setUpgradeModal(null)}
+        onUpgrade={handleUpgradeRedirect}
+        title="Limite de mesas atingido"
+        currentUsage={upgradeModal?.currentUsage}
+        limit={upgradeModal?.limit}
+        currentPlan={upgradeModal?.currentPlan}
+        suggestedPlan={upgradeModal?.suggestedPlan}
+        featureLabel={upgradeModal?.featureLabel}
+        message={upgradeModal?.message}
+      />
 
       {/* Print sheet — fullscreen grid of QR cards */}
       {printSheetOpen && (
