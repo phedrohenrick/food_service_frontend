@@ -40,64 +40,71 @@ const Addresses = () => {
     setCartAddress(id);
   };
 
+  const loadAddresses = React.useCallback(async () => {
+    try {
+      if (!isAuthenticated) {
+        setAddresses([]);
+        return;
+      }
+      const effectiveUserId = user?.id;
+
+      const raw = await api
+        .get(`/user-addresses/by-user/${effectiveUserId}/active`)
+        .catch(() => []);
+
+      const normalized = Array.isArray(raw)
+        ? raw.map(item => ({
+            id: String(item.id),
+            user_id: String(item.userId || effectiveUserId),
+            label: item.label,
+            street: item.street,
+            streetNumber: item.streetNumber,
+            neighborhood: item.neighborhood,
+            neighborhoodName: item.neighborhoodName,
+            city: item.city,
+            state: item.state,
+            zip_code: item.zipCode,
+            complement: item.complement,
+            is_default: item.isDefault,
+            geo_lat: item.geoLat,
+            geo_lng: item.geoLng,
+          }))
+        : [];
+
+      setAddresses(normalized);
+    } catch (error) {
+      console.error('Erro ao carregar endereços:', error);
+    }
+  }, [isAuthenticated, user?.id]);
+
   const handleDeleteAddress = (id) => {
     setAlertModal({
       isOpen: true,
       title: 'Remover endereço',
       message: 'Tem certeza que deseja remover este endereço?',
       onConfirm: async () => {
-        if (deleteAddress) {
-          await deleteAddress(id);
-        } else {
-          console.error("Função deleteAddress não encontrada no contexto");
+        try {
+          if (deleteAddress) {
+            await deleteAddress(id);
+          } else {
+            console.error("Função deleteAddress não encontrada no contexto");
+          }
+          if (String(selectedAddressId) === String(id)) {
+            setSelectedAddressId(null);
+            setCartAddress(null);
+          }
+          await loadAddresses();
+        } finally {
+          setAlertModal((prev) => ({ ...prev, isOpen: false }));
         }
-        setAlertModal({ ...alertModal, isOpen: false });
       },
-      onCancel: () => setAlertModal({ ...alertModal, isOpen: false })
+      onCancel: () => setAlertModal((prev) => ({ ...prev, isOpen: false }))
     });
   };
 
   useEffect(() => {
-    const loadAddresses = async () => {
-      try {
-        if (!isAuthenticated) {
-          setAddresses([]);
-          return;
-        }
-        const effectiveUserId = user?.id;
-
-        const raw = await api
-          .get(`/user-addresses/by-user/${effectiveUserId}/active`)
-          .catch(() => []);
-
-        const normalized = Array.isArray(raw)
-          ? raw.map(item => ({
-              id: String(item.id),
-              user_id: String(item.userId || effectiveUserId),
-              label: item.label,
-              street: item.street,
-              streetNumber: item.streetNumber,
-              neighborhood: item.neighborhood,
-              neighborhoodName: item.neighborhoodName,
-              city: item.city,
-              state: item.state,
-              zip_code: item.zipCode,
-              complement: item.complement,
-              is_default: item.isDefault,
-              geo_lat: item.geoLat,
-              geo_lng: item.geoLng,
-            }))
-          : [];
-
-        setAddresses(normalized);
-      } catch (error) {
-        console.error('Erro ao carregar endereços:', error);
-      }
-    };
-
     loadAddresses();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, isAuthenticated]);
+  }, [loadAddresses]);
 
   if (!hasToken) {
     return (
