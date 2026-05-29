@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
+import { Smartphone } from 'lucide-react';
 import { Button, Input, Modal } from '../../../../shared/components/ui';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
+import MobilePreviewWidget from '../components/MobilePreviewWidget';
 
 const money = (n) => (n || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const productImageFallback =
@@ -70,6 +72,7 @@ const Menu = () => {
   });
   
   const [isSyncing, setIsSyncing] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const [editingItemId, setEditingItemId] = useState(null);
   const [editingCategoryId, setEditingCategoryId] = useState(null);
   const [categoryForm, setCategoryForm] = useState({ name: '', order: 0 });
@@ -382,9 +385,6 @@ const Menu = () => {
           <div data-wizard="menu-start">
             <p className="text-sm font-medium tracking-[0.18em] text-slate-500 uppercase">Curadoria do cardápio</p>
             <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">Categorias de Produtos</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-              Organize a vitrine do restaurante, refine a apresentação dos itens e mantenha os banners do app em destaque.
-            </p>
           </div>
           <div className="flex items-center gap-3">
             <Button
@@ -397,6 +397,14 @@ const Menu = () => {
               }}
             >
               Ajuda
+            </Button>
+            <Button
+              variant="ghost"
+              className="border border-slate-200 bg-white text-slate-700 shadow-sm hover:border-[var(--accent)] hover:text-[var(--accent)] inline-flex items-center gap-2"
+              onClick={() => setShowPreview((v) => !v)}
+            >
+              <Smartphone className="h-4 w-4" />
+              {showPreview ? 'Fechar pré-visualização' : 'Ver como cliente'}
             </Button>
             {/* <Button
               variant="ghost"
@@ -470,7 +478,6 @@ const Menu = () => {
           <div>
             <p className="text-sm font-medium tracking-[0.16em] text-slate-500 uppercase">Itens ao vivo</p>
             <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Lista pronta para o cliente</h2>
-            <p className="mt-2 text-sm text-slate-600">Visualize o que o cliente enxerga no app, com mídia, categoria e status operacional.</p>
           </div>
         <div className="flex items-center gap-2">
           {(() => {
@@ -525,7 +532,6 @@ const Menu = () => {
           <div>
             <p className="text-sm font-medium tracking-[0.16em] text-slate-500 uppercase">Marketing e Destaques</p>
             <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Banners do App</h2>
-            <p className="mt-2 text-sm text-slate-600">Mantenha campanhas e destaques visuais do cardápio sempre atualizados para o cliente.</p>
           </div>
           <Button onClick={() => setIsBannerModalOpen(true)}>
             Novo Banner
@@ -866,7 +872,7 @@ const Menu = () => {
             label="Nome da Categoria"
             value={categoryForm.name}
             onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
-            placeholder="Ex: Combos, Bebidas..."
+            placeholder="Ex: Sobremesas..."
           />
           <Input
             label="Ordem de Exibição"
@@ -948,6 +954,12 @@ const Menu = () => {
             </div>
         </div>
       </Modal>
+
+      <MobilePreviewWidget
+        open={showPreview}
+        onClose={() => setShowPreview(false)}
+        tenantSlug={tenant?.slug}
+      />
 
       <Modal isOpen={confirmModal.isOpen} onClose={closeConfirmModal} title={confirmModal.title}>
         <div className="space-y-5">
