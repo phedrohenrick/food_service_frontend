@@ -815,6 +815,7 @@ const reducer = (state, action) => {
    ========================================================= */
 
 export const StorefrontProvider = ({ children }) => {
+  const [dataLoaded, setDataLoaded] = React.useState(false);
   const [state, dispatch] = useReducer(reducer, {
     tenant: initialTenant,
     banners: initialBanners,
@@ -1024,6 +1025,7 @@ export const StorefrontProvider = ({ children }) => {
           working_hours: rawTenant.workingHours || rawTenant.working_hours,
           accepts_cash: rawTenant.acceptsCash || rawTenant.accepts_cash,
           photo_url: rawTenant.photoUrl || rawTenant.photo_url,
+          whatsapp_phone: rawTenant.whatsappPhone ?? rawTenant.whatsapp_phone ?? '',
           payment_channels: (rawTenant.paymentChannels || rawTenant.payment_channels || (rawTenant.paymentChannel ? [rawTenant.paymentChannel] : []))
             .map((channel) => String(channel).toLowerCase()),
           is_open: rawTenant.isOpen !== undefined ? rawTenant.isOpen : rawTenant.is_open,
@@ -1155,6 +1157,8 @@ export const StorefrontProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('Erro ao carregar dados iniciais:', error);
+    } finally {
+      setDataLoaded(true);
     }
   };
 
@@ -1686,6 +1690,7 @@ export const StorefrontProvider = ({ children }) => {
       ...state,
       maps,
       cartTotals,
+      dataLoaded,
 
       // entitlements
       canUseFeature,
@@ -1748,6 +1753,7 @@ export const StorefrontProvider = ({ children }) => {
                 email: updated.email,
                 slug: updated.slug,
                 photoUrl: updated.photo_url,
+                whatsappPhone: updated.whatsapp_phone,
                 paymentChannels: Array.isArray(updated.payment_channels)
                     ? updated.payment_channels.map((channel) => String(channel).toUpperCase())
                     : updated.payment_channels
@@ -2033,6 +2039,7 @@ export const StorefrontProvider = ({ children }) => {
       state,
       maps,
       cartTotals,
+      dataLoaded,
     ]
   );
 
