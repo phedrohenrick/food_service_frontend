@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-
 import DashboardLayout from './src/components/layout/DashboardLayout';
 import FirstAccessWizard from './src/components/FirstAccessWizard';
 import WizardCompletionModal from './src/components/WizardCompletionModal';
+import OnboardingChecklist from './src/components/OnboardingChecklist';
 import { Dashboard } from './src/pages';
 import Orders from './src/pages/Orders';
 import Menu from './src/pages/Menu';
@@ -15,7 +16,7 @@ import api from '../../shared/services/api';
 import { useStorefront } from '../../shared/generalContext.jsx';
 
 const RestaurantDashboard = () => {
-  const { tenant } = useStorefront();
+  const { tenant, dataLoaded } = useStorefront();
   const [ready, setReady] = useState(false);
   const [authDenied, setAuthDenied] = useState(false);
   const [wizardReady, setWizardReady] = useState(false);
@@ -259,7 +260,7 @@ const RestaurantDashboard = () => {
     return () => window.removeEventListener('restaurant-dashboard:wizard-restart', handler);
   }, [restartWizard]);
 
-  if (!ready) {
+  if (!ready || !dataLoaded) {
     return (
       <div className="relative min-h-screen overflow-hidden">
         <video
@@ -273,8 +274,10 @@ const RestaurantDashboard = () => {
         <div className="absolute inset-0 bg-black/40" />
         <div className="relative z-10 flex min-h-screen items-center justify-center">
           <div className="max-w-md rounded-2xl bg-white/90 p-6 shadow text-center space-y-3">
-            <h2 className="text-xl font-semibold text-gray-900">Carregando</h2>
-            <p className="text-sm text-gray-600">Preparando seu painel…</p>
+            <h2 className="text-xl font-semibold text-gray-900">Priatoo</h2>
+            <p className="text-sm text-gray-600">
+              {!ready ? 'Autenticando…' : 'Carregando os dados do seu restaurante…'}
+            </p>
           </div>
         </div>
       </div>
@@ -326,6 +329,7 @@ const RestaurantDashboard = () => {
           onClose={handleCompletionClose}
         />
       )}
+      {wizardReady && !wizardActive && <OnboardingChecklist />}
       <Routes>
         <Route index element={wizardReady && wizardActive ? <Navigate to="settings" replace /> : <Dashboard />} />
         <Route path="orders" element={<Orders />} />
