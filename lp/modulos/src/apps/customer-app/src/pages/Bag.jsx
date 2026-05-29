@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../../../../shared/components/ui';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
 import { LiaShoppingBagSolid } from "react-icons/lia";
+import { FaWhatsapp } from "react-icons/fa";
 import api from '../../../../shared/services/api';
 import { loginWithRedirect } from '../../../../shared/auth/keycloak';
 
@@ -27,9 +28,18 @@ const Bag = () => {
     placeOrder,
   } = useStorefront();
 
+  const isPreview = React.useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    if (new URLSearchParams(window.location.search).get('preview') === '1') return true;
+    try { return sessionStorage.getItem('priatoo_preview_mode') === '1'; } catch (_) {
+      return false;
+    }
+  }, []);
+
   const [activeAddresses, setActiveAddresses] = React.useState([]);
   const [addressAlertOpen, setAddressAlertOpen] = React.useState(false);
   const [unsupportedAreaOpen, setUnsupportedAreaOpen] = React.useState(false);
+  const [previewBlockOpen, setPreviewBlockOpen] = React.useState(false);
   const [selectedAddressId, setSelectedAddressId] = React.useState(
     cart.address_id ? String(cart.address_id) : null
   );
@@ -150,7 +160,82 @@ const Bag = () => {
     return channel;
   };
 
+  const sanitizeWhatsappPhone = (raw) => {
+    const digits = String(raw || '').replace(/\D/g, '');
+    if (!digits) return '';
+    if (digits.length <= 11) return `55${digits}`;
+    return digits;
+  };
+
+  const isValidWhatsapp = (raw) => {
+    const digits = String(raw || '').replace(/\D/g, '');
+    return digits.length >= 10 && digits.length <= 15;
+  };
+
+  const whatsappAvailable = isValidWhatsapp(tenant?.whatsapp_phone);
+
+  const buildWhatsappMessage = () => {
+    const lines = [];
+    lines.push(`*Novo pedido — ${tenant?.name || 'Restaurante'}*`);
+    lines.push('');
+    detailedItems.forEach((item) => {
+      const qty = item.quantity;
+      const name = item.item?.name || 'Item';
+      const { baseLineTotal, optionsWithCharge } = splitLineTotals(item);
+      lines.push(`• ${qty}x ${name} — R$ ${baseLineTotal.toFixed(2)}`);
+      optionsWithCharge.forEach((opt) => {
+        lines.push(`    + ${opt.name} (R$ ${(Number(opt.additional_charge) * qty).toFixed(2)})`);
+      });
+      const freeOpts = (item.selectedOptions || []).filter(
+        (o) => !Number(o.additional_charge)
+      );
+      freeOpts.forEach((opt) => lines.push(`    • ${opt.name}`));
+      if (item.notes) lines.push(`    Obs: ${item.notes}`);
+    });
+    lines.push('');
+    lines.push(`Subtotal: R$ ${(cartTotals.subtotal ?? 0).toFixed(2)}`);
+    if (cartTotals.serviceFee > 0) {
+      lines.push(`Serviço: R$ ${cartTotals.serviceFee.toFixed(2)}`);
+    }
+    lines.push(`Entrega: R$ ${(cartTotals.deliveryFee ?? 0).toFixed(2)}`);
+    lines.push(`*Total: R$ ${(cartTotals.total ?? 0).toFixed(2)}*`);
+    lines.push('');
+    if (selectedAddressId == null) {
+      lines.push('Retirada na loja');
+    } else if (selectedAddress) {
+      lines.push(`Entrega: ${selectedAddress.street}, ${selectedAddress.streetNumber || selectedAddress.street_number} — ${selectedAddress.neighborhoodName || ''}`);
+      if (selectedAddress.complement) lines.push(`Complemento: ${selectedAddress.complement}`);
+    }
+    if (selectedPaymentChannel) {
+      lines.push(`Pagamento: ${getPaymentChannelLabel(selectedPaymentChannel)}`);
+      if ((selectedPaymentChannel === 'cash' || selectedPaymentChannel === 'CASH') && cart.change) {
+        lines.push(`Troco para: ${cart.change}`);
+      }
+    }
+    if (user?.name) {
+      lines.push('');
+      lines.push(`Cliente: ${user.name}`);
+    }
+    return lines.join('\n');
+  };
+
+  const handleWhatsappCheckout = () => {
+    if (isPreview) {
+      setPreviewBlockOpen(true);
+      return;
+    }
+    if (!isValidWhatsapp(tenant?.whatsapp_phone)) return;
+    const phone = sanitizeWhatsappPhone(tenant?.whatsapp_phone);
+    const text = encodeURIComponent(buildWhatsappMessage());
+    const url = `https://wa.me/${phone}?text=${text}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
   const handleCheckout = async () => {
+    if (isPreview) {
+      setPreviewBlockOpen(true);
+      return;
+    }
     if (!isAuthenticated) {
       await loginWithRedirect(window.location.href);
       return;
@@ -283,6 +368,22 @@ const Bag = () => {
                   Cadastrar endereço
                 </Button>
               </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {previewBlockOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <h3 className="mb-2 text-xl font-bold text-gray-900">Modo pré-visualização</h3>
+            <p className="mb-6 text-gray-600">
+              Você está vendo o app como o cliente veria. Para proteger os dados, a finalização de pedidos está desabilitada nessa visualização.
+            </p>
+            <div className="flex justify-end">
+              <Button onClick={() => setPreviewBlockOpen(false)}>
+                Entendi
+              </Button>
             </div>
           </div>
         </div>
@@ -621,6 +722,28 @@ const Bag = () => {
         <p className="text-xs text-gray-500">
           Ao finalizar, você será direcionado para acompanhar o status em tempo real.
         </p>
+
+        {whatsappAvailable && (
+          <>
+            <div className="flex items-center gap-3 py-1">
+              <span className="h-px flex-1 bg-gray-200" />
+              <span className="text-xs uppercase tracking-wide text-gray-400">ou</span>
+              <span className="h-px flex-1 bg-gray-200" />
+            </div>
+            <button
+              type="button"
+              onClick={handleWhatsappCheckout}
+              disabled={selectedAddressId != null && selectedAddressCoverage.rejected}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-500 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-500 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <FaWhatsapp className="text-lg" />
+              Finalizar via WhatsApp
+            </button>
+            <p className="text-xs text-gray-500">
+              Envia o resumo do pedido direto pro WhatsApp do restaurante.
+            </p>
+          </>
+        )}
       </aside>
       </div>
     </>

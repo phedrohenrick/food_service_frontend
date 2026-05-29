@@ -27,6 +27,7 @@ const Settings = () => {
     email: tenant?.email || '',
     slug: tenant?.slug || '',
     cnpj_cpf: tenant?.cnpj_cpf || '',
+    whatsapp_phone: tenant?.whatsapp_phone || '',
     address: tenant?.address || '',
     geo_lat: tenant?.geo_lat || '',
     geo_lng: tenant?.geo_lng || '',
@@ -60,6 +61,7 @@ const Settings = () => {
         email: tenant.email || '',
         slug: tenant.slug || '',
         cnpj_cpf: tenant.cnpj_cpf || '',
+        whatsapp_phone: tenant.whatsapp_phone || '',
         address: tenant.address || '',
         geo_lat: tenant.geo_lat || '',
         geo_lng: tenant.geo_lng || '',
@@ -137,6 +139,7 @@ const Settings = () => {
       email: tenantForm.email,
       slug: desiredSlug,
       cnpj_cpf: tenantForm.cnpj_cpf,
+      whatsapp_phone: tenantForm.whatsapp_phone,
       address: tenantForm.address,
       geo_lat: tenantForm.geo_lat,
       geo_lng: tenantForm.geo_lng,
@@ -214,6 +217,7 @@ const Settings = () => {
   const [editingNeighborhood, setEditingNeighborhood] = useState({});
   const [toast, setToast] = useState({ message: '', type: '', visible: false });
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [deliveryAlertCollapsed, setDeliveryAlertCollapsed] = useState(false);
 
   const handleLogout = () => {
     try { localStorage.removeItem('authToken'); } catch (_) {}
@@ -392,6 +396,21 @@ const Settings = () => {
               <Input label="Email" value={tenantForm.email} onChange={onTenantChange('email')} />
               <Input label="Slug" value={tenantForm.slug} onChange={onTenantChange('slug')} wrapperProps={{ 'data-wizard': 'store-slug' }} />
               <Input label="CNPJ/CPF" value={tenantForm.cnpj_cpf} onChange={onTenantChange('cnpj_cpf')} wrapperProps={{ 'data-wizard': 'store-document' }} />
+              <Input
+                label="WhatsApp da loja"
+                value={tenantForm.whatsapp_phone}
+                onChange={onTenantChange('whatsapp_phone')}
+                placeholder="Ex: +55 11 98888-7777"
+                error={(() => {
+                  const v = String(tenantForm.whatsapp_phone || '').trim();
+                  if (!v) return '';
+                  const digits = v.replace(/\D/g, '');
+                  if (digits.length < 10 || digits.length > 15) {
+                    return 'Número inválido. Use DDD + número (ex: 11 98888-7777).';
+                  }
+                  return '';
+                })()}
+              />
               <Input label="Endereço" value={tenantForm.address} onChange={onTenantChange('address')} />
               <Input label="Geo Lat" value={tenantForm.geo_lat} onChange={onTenantChange('geo_lat')} />
               <Input label="Geo Lng" value={tenantForm.geo_lng} onChange={onTenantChange('geo_lng')} />
@@ -420,7 +439,7 @@ const Settings = () => {
                 <p className="mt-3 text-xs text-slate-500">Controlado pela plataforma. Em caso de dúvida fale com o suporte.</p>
               </div>
 
-              <div className={`${subtleCardClass} p-4`}>
+              <div className={`${subtleCardClass} p-4`} data-wizard="working-hours">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <button
@@ -726,108 +745,50 @@ const Settings = () => {
 
         <div className="space-y-4">
 
-          {(pendingUnrecognized.length > 0 || rejectedUnrecognized.length > 0) && (
-            <div
-              id="delivery-alert"
-              className="rounded-[28px] overflow-hidden shadow-[0_24px_64px_rgba(234,88,12,0.45)] ring-2 ring-orange-400"
-            >
-              {/* Header — gradiente forte */}
-              <div className="bg-gradient-to-br from-orange-500 via-orange-500 to-amber-400 px-5 pt-5 pb-4">
-                <div className="flex items-start gap-3">
-                  <div className="relative flex-shrink-0">
-                    <span className="absolute -inset-1.5 rounded-full bg-white/30 animate-ping" />
-                    <span className="relative flex h-11 w-11 items-center justify-center rounded-2xl bg-white/20 border border-white/40 backdrop-blur-sm">
-                      <svg className="h-6 w-6 text-white drop-shadow" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z" />
-                      </svg>
-                    </span>
-                  </div>
+          {(!tenant?.plan_code || tenant.plan_code === 'FREE' || tenant.plan_code === 'PRO_TRIAL') && (
+            <div className={`${surfaceClass} p-5 space-y-4`} id="plano">
+              <div>
+                <p className="text-sm text-slate-500">Assinatura</p>
+                <h3 className="text-lg font-semibold tracking-tight text-slate-900">Meu Plano</h3>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
+                <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-base font-bold text-white leading-tight">Atenção necessária!</p>
-                    <p className="text-sm text-orange-100 mt-0.5 leading-snug">
-                      {pendingUnrecognized.length > 0
-                        ? `${pendingUnrecognized.length} bairro${pendingUnrecognized.length > 1 ? 's' : ''} sem taxa de entrega cadastrada`
-                        : 'Bairros marcados como não atendidos'}
+                    <p className="text-sm font-semibold text-slate-900">
+                      {tenant?.plan_code === 'PRO_TRIAL' ? 'Pro (Trial)' :
+                       tenant?.plan_code === 'PRO' ? 'Pro' :
+                       tenant?.plan_code === 'ENTERPRISE' ? 'Enterprise' : 'Grátis'}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {tenant?.subscription_status === 'TRIALING' ? 'Período de teste' :
+                       tenant?.subscription_status === 'ACTIVE' ? 'Ativo' :
+                       tenant?.subscription_status === 'PAST_DUE' ? 'Pagamento pendente' :
+                       tenant?.subscription_status === 'CANCELED' ? 'Cancelado' : 'Sem assinatura'}
                     </p>
                   </div>
+                  {tenant?.plan_code && tenant.plan_code !== 'FREE' && (
+                    <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                      {tenant.plan_code}
+                    </span>
+                  )}
                 </div>
-                <p className="mt-3 text-xs text-orange-100/90 leading-relaxed">
-                  Clientes fizeram pedidos nesses bairros. Defina uma taxa ou marque como não atendido.
-                </p>
-              </div>
-
-              {/* Body — fundo branco */}
-              <div className="bg-white px-5 py-4 space-y-3">
-                {pendingUnrecognized.length > 0 && (
-                  <div className="space-y-2">
-                    {pendingUnrecognized.map(n => (
-                      <div key={n.id} className="rounded-2xl border border-orange-200 bg-orange-50 p-3">
-                        <div className="flex items-center gap-2 mb-2.5">
-                          <span className="flex h-2 w-2 rounded-full bg-orange-500 flex-shrink-0" />
-                          <span className="text-sm font-bold text-slate-800">{n.name}</span>
-                        </div>
-                        {addPriceMap[n.id] !== undefined ? (
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              placeholder="Taxa de entrega (R$)"
-                              value={addPriceMap[n.id]}
-                              onChange={e => setAddPriceMap(prev => ({ ...prev, [n.id]: e.target.value }))}
-                              className="flex-1 rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                            />
-                            <Button size="sm" onClick={() => handleAddUnrecognized(n)}>Confirmar</Button>
-                            <button
-                              type="button"
-                              onClick={() => setAddPriceMap(prev => { const next = { ...prev }; delete next[n.id]; return next; })}
-                              className="text-xs text-slate-400 hover:text-slate-600 whitespace-nowrap"
-                            >
-                              Cancelar
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex flex-wrap gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setAddPriceMap(prev => ({ ...prev, [n.id]: '' }))}
-                              className="rounded-xl bg-orange-500 px-3 py-1.5 text-xs font-bold text-white hover:bg-orange-600 transition-colors shadow-sm shadow-orange-300"
-                            >
-                              + Adicionar à lista
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleRejectUnrecognized(n.id)}
-                              className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-50 transition-colors"
-                            >
-                              Não entrego aqui
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {rejectedUnrecognized.length > 0 && (
-                  <div className={pendingUnrecognized.length > 0 ? 'pt-2 border-t border-orange-100' : ''}>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Não atendidos</p>
-                    <div className="space-y-1.5">
-                      {rejectedUnrecognized.map(n => (
-                        <div key={n.id} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
-                          <span className="text-sm text-slate-400 line-through">{n.name}</span>
-                          <button
-                            type="button"
-                            onClick={() => handleRevertUnrecognized(n.id)}
-                            className="text-xs font-bold text-orange-500 hover:text-orange-700 transition-colors"
-                          >
-                            Reverter
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const res = await api.post('/subscriptions/checkout', { priceId: 'pro_monthly' });
+                      if (res?.url) window.location.href = res.url;
+                    } catch (e) {
+                      console.error('Checkout error', e);
+                    }
+                  }}
+                  className="w-full rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-colors shadow-lg"
+                  style={{ background: '#0EA5E9', boxShadow: '0 4px 14px rgba(14,165,233,0.35)' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = '#0284C7'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = '#0EA5E9'; }}
+                >
+                  Fazer upgrade
+                </button>
               </div>
             </div>
           )}
@@ -870,69 +831,6 @@ const Settings = () => {
             </div>
           </div>
 
-          <div className={`${surfaceClass} p-5 space-y-4`} id="plano">
-            <div>
-              <p className="text-sm text-slate-500">Assinatura</p>
-              <h3 className="text-lg font-semibold tracking-tight text-slate-900">Meu Plano</h3>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {tenant?.plan_code === 'PRO_TRIAL' ? 'Pro (Trial)' :
-                     tenant?.plan_code === 'PRO' ? 'Pro' :
-                     tenant?.plan_code === 'ENTERPRISE' ? 'Enterprise' : 'Grátis'}
-                  </p>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    {tenant?.subscription_status === 'TRIALING' ? 'Período de teste' :
-                     tenant?.subscription_status === 'ACTIVE' ? 'Ativo' :
-                     tenant?.subscription_status === 'PAST_DUE' ? 'Pagamento pendente' :
-                     tenant?.subscription_status === 'CANCELED' ? 'Cancelado' : 'Sem assinatura'}
-                  </p>
-                </div>
-                {tenant?.plan_code && tenant.plan_code !== 'FREE' && (
-                  <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                    {tenant.plan_code}
-                  </span>
-                )}
-              </div>
-              <div className="flex gap-2">
-                {(!tenant?.plan_code || tenant.plan_code === 'FREE' || tenant.plan_code === 'PRO_TRIAL') && (
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      try {
-                        const res = await api.post('/subscriptions/checkout', { priceId: 'pro_monthly' });
-                        if (res?.url) window.location.href = res.url;
-                      } catch (e) {
-                        console.error('Checkout error', e);
-                      }
-                    }}
-                    className="flex-1 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-600 transition-colors shadow-lg shadow-amber-500/25"
-                  >
-                    Fazer upgrade
-                  </button>
-                )}
-                {tenant?.subscription_status === 'ACTIVE' && tenant?.plan_code !== 'FREE' && tenant?.plan_code !== 'PRO_TRIAL' && (
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      try {
-                        const res = await api.post('/subscriptions/billing-portal', {});
-                        if (res?.url) window.location.href = res.url;
-                      } catch (e) {
-                        console.error('Portal error', e);
-                      }
-                    }}
-                    className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
-                  >
-                    Gerenciar assinatura
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-
           <div className={`${surfaceClass} p-5 space-y-4`}>
             <div>
               <p className="text-sm text-slate-500">Conta</p>
@@ -961,6 +859,112 @@ const Settings = () => {
           </div>
         </div>
       </div>
+
+      {pendingUnrecognized.length > 0 && (
+        <div className="fixed bottom-5 right-5 z-50 w-80 select-none">
+          <div
+            className="rounded-2xl bg-white border border-orange-200 overflow-hidden"
+            style={{ boxShadow: '0 8px 32px -4px rgba(234,88,12,0.30), 0 2px 8px -2px rgba(0,0,0,0.08)' }}
+          >
+            <button
+              type="button"
+              onClick={() => setDeliveryAlertCollapsed((v) => !v)}
+              className="w-full flex items-center justify-between px-5 py-4 transition-colors"
+              style={{ background: 'linear-gradient(135deg, #f97316 0%, #fb923c 100%)' }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="relative flex-shrink-0">
+                  <span className="absolute -inset-1 rounded-full bg-white/30 animate-ping" />
+                  <span className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 border border-white/40">
+                    <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z" />
+                    </svg>
+                  </span>
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-semibold text-white">Atenção necessária</p>
+                  <p className="text-xs text-orange-100">
+                    {pendingUnrecognized.length > 0
+                      ? `${pendingUnrecognized.length} bairro${pendingUnrecognized.length > 1 ? 's' : ''} sem taxa cadastrada`
+                      : 'Bairros não atendidos'}
+                  </p>
+                </div>
+              </div>
+              <svg
+                className={`h-4 w-4 text-white/80 transition-transform duration-200 ${deliveryAlertCollapsed ? '' : 'rotate-180'}`}
+                fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            <div className="h-0.5 bg-orange-100" />
+
+            <div
+              className="overflow-hidden transition-all duration-300 ease-in-out"
+              style={{ maxHeight: deliveryAlertCollapsed ? '0px' : '400px', opacity: deliveryAlertCollapsed ? 0 : 1 }}
+            >
+              <div className="bg-white px-4 py-3 space-y-3 max-h-80 overflow-y-auto">
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Clientes fizeram pedidos nesses bairros. Defina uma taxa ou marque como não atendido.
+                </p>
+
+                {pendingUnrecognized.length > 0 && (
+                  <div className="space-y-2">
+                    {pendingUnrecognized.map((n) => (
+                      <div key={n.id} className="rounded-2xl border border-orange-200 bg-orange-50 p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="flex h-2 w-2 rounded-full bg-orange-500 flex-shrink-0" />
+                          <span className="text-sm font-bold text-slate-800">{n.name}</span>
+                        </div>
+                        {addPriceMap[n.id] !== undefined ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              placeholder="Taxa (R$)"
+                              value={addPriceMap[n.id]}
+                              onChange={(e) => setAddPriceMap((prev) => ({ ...prev, [n.id]: e.target.value }))}
+                              className="flex-1 rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                            />
+                            <Button size="sm" onClick={() => handleAddUnrecognized(n)}>OK</Button>
+                            <button
+                              type="button"
+                              onClick={() => setAddPriceMap((prev) => { const next = { ...prev }; delete next[n.id]; return next; })}
+                              className="text-xs text-slate-400 hover:text-slate-600"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex flex-wrap gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setAddPriceMap((prev) => ({ ...prev, [n.id]: '' }))}
+                              className="rounded-xl bg-orange-500 px-3 py-1.5 text-xs font-bold text-white hover:bg-orange-600 transition-colors"
+                            >
+                              + Adicionar taxa
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRejectUnrecognized(n.id)}
+                              className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-50 transition-colors"
+                            >
+                              Não entrego aqui
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showLogoutModal && (
         <div
