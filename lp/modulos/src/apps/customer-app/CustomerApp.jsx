@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Eye } from 'lucide-react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import CustomerLayout from './src/components/layout/CustomerLayout';
@@ -13,6 +13,7 @@ import {
 } from './src/pages';
 import { useStorefront } from '../../shared/generalContext.jsx';
 import { ensureSso } from '../../shared/auth/keycloak';
+import { resolveAccent } from '../../shared/utils/accentColor';
 
 const CustomerApp = () => {
   const { reloadOrders, dataLoaded } = useStorefront();
@@ -42,6 +43,21 @@ const CustomerApp = () => {
       cancelled = true;
     };
   }, []);
+
+  const [previewAccent, setPreviewAccent] = useState(null);
+
+  useEffect(() => {
+    if (!isPreview || typeof window === 'undefined') return undefined;
+    const onMessage = (event) => {
+      const data = event?.data;
+      if (!data || data.type !== 'priatoo-preview-accent') return;
+      const resolved = resolveAccent(data.mainColor);
+      setPreviewAccent(resolved);
+    };
+    window.addEventListener('message', onMessage);
+    try { window.parent?.postMessage({ type: 'priatoo-preview-ready' }, '*'); } catch (_) {}
+    return () => window.removeEventListener('message', onMessage);
+  }, [isPreview]);
 
   if (!dataLoaded) {
     return (
@@ -75,6 +91,15 @@ const CustomerApp = () => {
             *::-webkit-scrollbar { width: 0; height: 0; display: none; }
             * { scrollbar-width: none; -ms-overflow-style: none; }
           `}</style>
+          {previewAccent && (
+            <style>{`
+              [data-customer-root="true"] {
+                --accent: ${previewAccent.accent} !important;
+                --accent-hover: ${previewAccent.accentHover} !important;
+                --accent-contrast: ${previewAccent.accentContrast} !important;
+              }
+            `}</style>
+          )}
           <div className="sticky top-0 z-40 flex items-center justify-center gap-2 bg-amber-50 border-b border-amber-200 px-3 py-1.5 text-[11px] font-medium text-amber-800">
             <Eye className="h-3 w-3" />
             <span>Modo pré-visualização — pedidos desabilitados</span>

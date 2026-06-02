@@ -70,6 +70,7 @@ const CustomerLayout = ({ children }) => {
 
   return (
     <div
+      data-customer-root="true"
       className="min-h-screen flex flex-col bg-gray-50 text-gray-1000 md:bg-gray-300"
       style={{
         '--accent': accent,
