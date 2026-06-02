@@ -69,7 +69,7 @@ const FirstAccessWizard = ({
       window.removeEventListener('resize', handleViewportUpdate);
       window.removeEventListener('scroll', handleViewportUpdate, true);
     };
-  }, [active, step]);
+  }, [active, step?.targetSelector]);
 
   useEffect(() => {
     if (!active || !step?.validate) {
@@ -104,13 +104,26 @@ const FirstAccessWizard = ({
       };
     }
 
+    if (step?.placement === 'side') {
+      const sideWidth = Math.min(360, window.innerWidth - 32);
+      const left = Math.max(16, window.innerWidth - sideWidth - 24);
+      const top = clamp(targetRect.top, 80, Math.max(80, window.innerHeight - 460));
+      return {
+        top,
+        left,
+        width: sideWidth,
+        maxHeight: window.innerHeight - 96,
+        overflowY: 'auto',
+      };
+    }
+
     const panelWidth = Math.min(420, window.innerWidth - 32);
     const preferredLeft = clamp(targetRect.left, 16, window.innerWidth - panelWidth - 16);
     const fitsBelow = targetRect.bottom + 24 + 280 < window.innerHeight;
     const top = fitsBelow ? targetRect.bottom + 20 : Math.max(24, targetRect.top - 300);
 
     return { top, left: preferredLeft, width: panelWidth };
-  }, [targetRect]);
+  }, [targetRect, step?.placement]);
 
   if (!active || !step) return null;
 

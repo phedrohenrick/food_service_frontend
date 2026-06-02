@@ -13,6 +13,7 @@ import Mesas from './src/pages/Mesas';
 import MesaDetalhe from './src/pages/MesaDetalhe';
 import { initKeycloak, getKeycloak } from '../../shared/auth/keycloak';
 import api from '../../shared/services/api';
+import { validateCpfOrCnpj } from '../../shared/utils/validators';
 import { useStorefront } from '../../shared/generalContext.jsx';
 
 const RestaurantDashboard = () => {
@@ -23,6 +24,7 @@ const RestaurantDashboard = () => {
   const [wizardActive, setWizardActive] = useState(false);
   const [wizardStep, setWizardStep] = useState(0);
   const [wizardCompleted, setWizardCompleted] = useState(false);
+  const [slugCheck, setSlugCheck] = useState({ slug: '', status: 'idle' });
   const initGuard = useRef(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -61,20 +63,34 @@ const RestaurantDashboard = () => {
     {
       route: `${basePrefix}/settings`,
       targetSelector: '[data-wizard="store-slug"]',
-      title: 'Escolha o slug da loja',
-      description: 'O slug vira parte do endereço da sua loja. Estará na URL de acesso. Sem espaços ou caracteres especiais. Prefira algo curto, legível e próximo da marca para facilitar compartilhamento.',
+      title: 'Defina o link da sua loja',
+      description: 'Esse é o link público que você vai divulgar para os clientes — Instagram, WhatsApp, Google Maps, panfleto. Escolha algo curto e próximo da marca: sem espaços, sem acentos, só letras minúsculas, números e hífen.',
       validate: () => {
         const el = document.querySelector('[data-wizard="store-slug"] input');
         const val = (el?.value || '').trim();
-        return val.length >= 3 && /^[a-z][a-z0-9-]*$/.test(val);
+        if (val.length < 3 || !/^[a-z][a-z0-9-]*$/.test(val)) return false;
+        if (tenant?.slug && val === tenant.slug) return true;
+        return slugCheck.slug === val && slugCheck.status === 'available';
       },
-      validateHint: 'Defina um slug válido (mín. 3 letras, sem espaços) para continuar.',
+      validateHint: (() => {
+        if (slugCheck.status === 'checking') return 'Verificando disponibilidade do link...';
+        if (slugCheck.status === 'taken') return `O link "${slugCheck.slug}" já está em uso. Escolha outro.`;
+        return 'Defina um link válido (mín. 3 letras, sem espaços) e disponível para continuar.';
+      })(),
     },
     {
       route: `${basePrefix}/settings`,
       targetSelector: '[data-wizard="store-document"]',
+      placement: 'side',
       title: 'Preencha CPF ou CNPJ',
       description: 'Esse campo é obrigatório para fechar o cadastro base da operação e evitar ajustes manuais depois.',
+      validate: () => {
+        const el = document.querySelector('[data-wizard="store-document"] input');
+        const val = (el?.value || '').trim();
+        if (!val) return false;
+        return validateCpfOrCnpj(val) === '';
+      },
+      validateHint: 'Preencha um CPF (11 dígitos) ou CNPJ (14 dígitos) válido para continuar.',
     },
     {
       route: `${basePrefix}/settings`,
@@ -87,6 +103,7 @@ const RestaurantDashboard = () => {
       targetSelector: '[data-wizard="brand-identity"]',
       title: 'Monte sua identidade visual',
       description: 'Aqui você ajusta foto da loja e cor principal do seu site. Esses elementos aparecem no dashboard e ajudam o app do cliente a ficar com a cara do seu restaurante.',
+      placement: 'side',
     },
     {
       route: `${basePrefix}/settings`,
@@ -94,6 +111,7 @@ const RestaurantDashboard = () => {
       title: 'Configure o delivery',
       description: 'Defina método de entrega, taxa de serviço, meios de pagamento, horários e áreas atendidas. Essa parte impacta diretamente a experiência do pedido.',
       note: 'Se você entrega por bairros, cadastre cada região e o respectivo valor antes de começar a operar.',
+      placement: 'side',
     },
     {
       route: `${basePrefix}/menu`,
@@ -125,7 +143,59 @@ const RestaurantDashboard = () => {
       title: 'Destaque produtos com banners',
       description: 'Os banners ajudam a promover lançamentos e produtos estratégicos. Você pode vinculá-los a um item específico para levar o cliente direto ao produto.',
     },
-  ]), [basePrefix]);
+  ]), [basePrefix, slugCheck, tenant?.slug]);
+
+  useEffect(() => {
+    if (!wizardReady || !wizardActive) return undefined;
+    if (wizardStep !== 2) return undefined;
+
+    let cancelled = false;
+    let debounceId = null;
+    let activeRequestSlug = null;
+
+    const runCheck = async (raw) => {
+      const value = String(raw || '').trim();
+      if (value.length < 3 || !/^[a-z][a-z0-9-]*$/.test(value)) {
+        if (!cancelled) setSlugCheck({ slug: value, status: 'invalid' });
+        return;
+      }
+      if (tenant?.slug && value === tenant.slug) {
+        if (!cancelled) setSlugCheck({ slug: value, status: 'available' });
+        return;
+      }
+      activeRequestSlug = value;
+      if (!cancelled) setSlugCheck({ slug: value, status: 'checking' });
+      try {
+        const result = await api.get(`/onboarding/slug-available?slug=${encodeURIComponent(value)}`).catch(() => null);
+        if (cancelled || activeRequestSlug !== value) return;
+        const available = !result || result.available !== false;
+        setSlugCheck({
+          slug: value,
+          status: available ? 'available' : 'taken',
+        });
+      } catch (_) {
+        if (!cancelled) setSlugCheck({ slug: value, status: 'available' });
+      }
+    };
+
+    const onInput = (event) => {
+      const target = event.target;
+      if (!target || !target.closest) return;
+      if (!target.closest('[data-wizard="store-slug"]')) return;
+      if (debounceId) window.clearTimeout(debounceId);
+      debounceId = window.setTimeout(() => runCheck(target.value), 400);
+    };
+
+    const initial = document.querySelector('[data-wizard="store-slug"] input');
+    if (initial) runCheck(initial.value);
+
+    document.addEventListener('input', onInput);
+    return () => {
+      cancelled = true;
+      if (debounceId) window.clearTimeout(debounceId);
+      document.removeEventListener('input', onInput);
+    };
+  }, [wizardReady, wizardActive, wizardStep, tenant?.slug, tenant?.id]);
 
   useEffect(() => {
     if (initGuard.current) {
