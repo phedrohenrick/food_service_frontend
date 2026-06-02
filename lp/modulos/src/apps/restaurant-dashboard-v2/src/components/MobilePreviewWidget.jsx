@@ -1,20 +1,43 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Smartphone, X, RotateCw } from 'lucide-react';
 
-const PHONE_SCALE = 0.75;
 const PHONE_W = 454;
 const PHONE_H = 956;
 const SCREEN_W = 430;
 const SCREEN_H = 932;
+const MAX_SCALE = 0.75;
+const MIN_SCALE = 0.4;
+const CHROME_VERTICAL = 130;
+const VIEWPORT_VERTICAL_MARGIN = 30;
+const VIEWPORT_HORIZONTAL_MARGIN = 60;
+
+const computeAdaptiveScale = () => {
+  if (typeof window === 'undefined') return MAX_SCALE;
+  const verticalBudget = window.innerHeight - CHROME_VERTICAL - VIEWPORT_VERTICAL_MARGIN;
+  const horizontalBudget = window.innerWidth - VIEWPORT_HORIZONTAL_MARGIN;
+  const verticalScale = verticalBudget / PHONE_H;
+  const horizontalScale = horizontalBudget / PHONE_W;
+  const fitted = Math.min(verticalScale, horizontalScale);
+  return Math.max(MIN_SCALE, Math.min(MAX_SCALE, fitted));
+};
 
 const MobilePreviewWidget = ({ open, onClose, tenantSlug }) => {
   const [reloadKey, setReloadKey] = useState(0);
+  const [phoneScale, setPhoneScale] = useState(MAX_SCALE);
   const containerRef = useRef(null);
 
   const iframeSrc = useMemo(() => {
     if (!tenantSlug) return '';
     return `/${tenantSlug}/app?preview=1`;
   }, [tenantSlug]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const update = () => setPhoneScale(computeAdaptiveScale());
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -43,7 +66,7 @@ const MobilePreviewWidget = ({ open, onClose, tenantSlug }) => {
     <div
       ref={containerRef}
       className="fixed bottom-5 right-5 z-50 select-none font-sans"
-      style={{ width: `${PHONE_W * PHONE_SCALE + 28}px` }}
+      style={{ width: `${PHONE_W * phoneScale + 28}px` }}
     >
       <div
         className="rounded-3xl bg-white overflow-hidden border border-gray-200/60"
@@ -106,14 +129,14 @@ const MobilePreviewWidget = ({ open, onClose, tenantSlug }) => {
         >
           <div
             style={{
-              width: `${PHONE_W * PHONE_SCALE}px`,
-              height: `${PHONE_H * PHONE_SCALE}px`,
+              width: `${PHONE_W * phoneScale}px`,
+              height: `${PHONE_H * phoneScale}px`,
               position: 'relative',
             }}
           >
             <div
               style={{
-                transform: `scale(${PHONE_SCALE})`,
+                transform: `scale(${phoneScale})`,
                 transformOrigin: 'top left',
                 width: `${PHONE_W}px`,
                 height: `${PHONE_H}px`,
