@@ -225,7 +225,7 @@ Located in `src/apps/restaurant-dashboard-v2/`. 12-step guided onboarding for ne
 ```
 REACT_APP_API_URL=http://localhost:81
 REACT_APP_KC_URL=http://localhost:8080
-REACT_APP_KC_REALM=food-service-realm
+REACT_APP_KC_REALM=priatoo
 REACT_APP_KC_CLIENT_ID=frontend-web
 REACT_APP_KC_MERCHANT_CLIENT_ID=restaurant-owner-portal
 REACT_APP_GOOGLE_FORM_ACTION=<google-forms-url>

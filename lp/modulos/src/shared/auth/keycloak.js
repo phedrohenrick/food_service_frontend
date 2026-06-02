@@ -2,7 +2,7 @@ import Keycloak from 'keycloak-js';
 
 const kcBaseConfig = {
   url: process.env.REACT_APP_KC_URL || 'http://localhost:8080',
-  realm: process.env.REACT_APP_KC_REALM || 'food-service-realm',
+  realm: process.env.REACT_APP_KC_REALM || 'priatoo',
 };
 const defaultClientId = process.env.REACT_APP_KC_CLIENT_ID || 'frontend-web';
 const merchantClientId = process.env.REACT_APP_KC_MERCHANT_CLIENT_ID || 'restaurant-owner-portal';
