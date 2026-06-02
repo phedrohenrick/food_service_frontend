@@ -288,6 +288,7 @@ const Orders = () => {
       </Modal>
 
       <div className="flex flex-wrap gap-3">
+        <span className="text-xs uppercase tracking-wider text-slate-500 font-semibold mt-3">STATUS:</span>
         {['todos', ...columns.map((c) => c.key)].map((key) => (
           <button
             key={key}
