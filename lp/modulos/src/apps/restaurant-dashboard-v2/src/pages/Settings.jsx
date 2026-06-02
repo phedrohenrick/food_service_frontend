@@ -1,8 +1,10 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
+import { Copy, Check } from 'lucide-react';
 import { Button, Input } from '../../../../shared/components/ui';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
-import { getKeycloak } from '../../../../shared/auth/keycloak';
 import api from '../../../../shared/services/api';
+import { validateCpfOrCnpj } from '../../../../shared/utils/validators';
+import BrandPreviewPhone from '../components/BrandPreviewPhone';
 
 const paymentOptions = [
   { value: 'PIX', label: 'Pix', helper: 'Pagamento instantaneo' },
@@ -14,7 +16,6 @@ const Settings = () => {
   const {
     tenant,
     neighborhoods,
-    user,
     updateTenant,
     saveNeighborhood,
     deleteNeighborhood,
@@ -98,6 +99,110 @@ const Settings = () => {
     setTenantForm((prev) => ({ ...prev, [field]: value }));
   };
 
+  const storeLinkOrigin =
+    typeof window !== 'undefined' ? window.location.origin : '';
+  const storeLinkSuffix = '/app';
+  const slugInputRef = useRef(null);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [isEditingSlug, setIsEditingSlug] = useState(false);
+  const [slugCheck, setSlugCheck] = useState({ slug: '', status: 'idle' });
+
+  const buildStoreUrl = (slug) =>
+    `${storeLinkOrigin}/${String(slug || '').trim()}${storeLinkSuffix}`;
+
+  const handleCopyStoreLink = async () => {
+    const slug = String(tenantForm.slug || '').trim();
+    if (!slug) return;
+    const fullUrl = buildStoreUrl(slug);
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(fullUrl);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = fullUrl;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 1800);
+    } catch (_) {}
+  };
+
+  const enterSlugEdit = () => {
+    setIsEditingSlug(true);
+    requestAnimationFrame(() => {
+      const el = slugInputRef.current;
+      if (el) {
+        el.focus();
+        el.select();
+      }
+    });
+  };
+
+  useEffect(() => {
+    const raw = String(tenantForm.slug || '').trim();
+    if (!isEditingSlug && !raw) return;
+    let cancelled = false;
+    let timeoutId = null;
+    const tenantSlug = tenant?.slug || '';
+
+    const run = async () => {
+      if (!raw) {
+        if (!cancelled) setSlugCheck({ slug: '', status: 'empty' });
+        return;
+      }
+      const validationMsg = validateSlug(raw);
+      if (validationMsg) {
+        if (!cancelled) setSlugCheck({ slug: raw, status: 'invalid', message: validationMsg });
+        return;
+      }
+      if (raw === tenantSlug) {
+        if (!cancelled) setSlugCheck({ slug: raw, status: 'available' });
+        return;
+      }
+      if (!cancelled) setSlugCheck({ slug: raw, status: 'checking' });
+      try {
+        const result = await api.get(`/onboarding/slug-available?slug=${encodeURIComponent(raw)}`);
+        if (cancelled) return;
+        const available = !result || result.available !== false;
+        setSlugCheck({ slug: raw, status: available ? 'available' : 'taken' });
+      } catch (_) {
+        if (!cancelled) setSlugCheck({ slug: raw, status: 'available' });
+      }
+    };
+
+    timeoutId = setTimeout(run, 350);
+    return () => {
+      cancelled = true;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [tenantForm.slug, isEditingSlug, tenant?.slug]);
+
+  const slugStatus = slugCheck.slug === String(tenantForm.slug || '').trim() ? slugCheck.status : 'idle';
+  const slugBlockingError =
+    slugStatus === 'taken' || slugStatus === 'invalid' || slugStatus === 'empty';
+
+  const handleSlugBlur = () => {
+    if (slugBlockingError) return;
+    setIsEditingSlug(false);
+  };
+
+  const handleSlugKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (!slugBlockingError) {
+        e.currentTarget.blur();
+      }
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      e.currentTarget.blur();
+    }
+  };
+
   const isReservedSlug = (s) => {
     const r = ['app','dashboard','onboarding','login','admin','api','tenant','tenants','orders','menu','settings'];
     return r.includes(s);
@@ -114,6 +219,21 @@ const Settings = () => {
   };
 
   const saveTenantProfile = async () => {
+    const trimmedName = (tenantForm.name || '').trim();
+    if (!trimmedName || trimmedName.toLowerCase() === 'minha loja') {
+      showToast('Preencha o nome da loja antes de salvar.', 'error');
+      return;
+    }
+    const trimmedDocument = (tenantForm.cnpj_cpf || '').trim();
+    if (!trimmedDocument) {
+      showToast('Preencha o CPF ou CNPJ antes de salvar.', 'error');
+      return;
+    }
+    const documentError = validateCpfOrCnpj(trimmedDocument);
+    if (documentError) {
+      showToast(documentError, 'error');
+      return;
+    }
     const oldSlug = tenant?.slug || '';
     let desiredSlug = (tenantForm.slug || '').trim();
     desiredSlug = desiredSlug.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/-+/g, '-').replace(/^-+|-+$/g, '');
@@ -216,15 +336,7 @@ const Settings = () => {
   const [newNeighborhood, setNewNeighborhood] = useState({ name: '', price: '' });
   const [editingNeighborhood, setEditingNeighborhood] = useState({});
   const [toast, setToast] = useState({ message: '', type: '', visible: false });
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [deliveryAlertCollapsed, setDeliveryAlertCollapsed] = useState(false);
-
-  const handleLogout = () => {
-    try { localStorage.removeItem('authToken'); } catch (_) {}
-    try { localStorage.removeItem('tenantSlug'); } catch (_) {}
-    try { localStorage.removeItem('authTenantSlug'); } catch (_) {}
-    getKeycloak().logout({ redirectUri: window.location.origin });
-  };
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type, visible: true });
@@ -381,21 +493,130 @@ const Settings = () => {
                 <p className="text-sm font-medium text-slate-500">Cadastro principal</p>
                 <h2 className="text-xl font-semibold tracking-tight text-slate-900">Dados do restaurante</h2>
               </div>
-              <Button
-                className="w-full lg:w-auto shadow-[0_12px_30px_rgba(15,23,42,0.12)]"
-                onClick={saveTenantProfile}
-                data-wizard="store-save"
-              >
-                Salvar perfil
-              </Button>
+              {(() => {
+                const docError = validateCpfOrCnpj(tenantForm.cnpj_cpf);
+                const slugBlocking = slugStatus === 'taken' || slugStatus === 'invalid' || slugStatus === 'checking' || slugStatus === 'empty';
+                const disabled = slugBlocking || !!docError;
+                const reason =
+                  slugStatus === 'taken' ? 'O link informado já está em uso.' :
+                  slugStatus === 'invalid' ? 'Corrija o link da loja antes de salvar.' :
+                  slugStatus === 'checking' ? 'Verificando disponibilidade do link...' :
+                  slugStatus === 'empty' ? 'Informe um link válido.' :
+                  docError ? docError :
+                  undefined;
+                return (
+                  <Button
+                    className="w-full lg:w-auto shadow-[0_12px_30px_rgba(15,23,42,0.12)]"
+                    onClick={saveTenantProfile}
+                    data-wizard="store-save"
+                    disabled={disabled}
+                    title={reason}
+                  >
+                    Salvar perfil
+                  </Button>
+                );
+              })()}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <Input label="ID" value={tenant?.id || ''} disabled />
               <Input label="Nome" value={tenantForm.name} onChange={onTenantChange('name')} wrapperProps={{ 'data-wizard': 'store-name' }} />
               <Input label="Email" value={tenantForm.email} onChange={onTenantChange('email')} />
-              <Input label="Slug" value={tenantForm.slug} onChange={onTenantChange('slug')} wrapperProps={{ 'data-wizard': 'store-slug' }} />
-              <Input label="CNPJ/CPF" value={tenantForm.cnpj_cpf} onChange={onTenantChange('cnpj_cpf')} wrapperProps={{ 'data-wizard': 'store-document' }} />
+              <div className="mb-4" data-wizard="store-slug">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Link da loja
+                </label>
+                <div
+                  className={`relative flex items-center w-full rounded-lg border bg-white transition-colors ${
+                    slugBlockingError && isEditingSlug
+                      ? 'border-red-400 ring-2 ring-red-200'
+                      : isEditingSlug
+                        ? 'border-transparent ring-2 ring-background-primary'
+                        : 'border-gray-300 hover:border-gray-400'
+                  }`}
+                >
+                  <input
+                    ref={slugInputRef}
+                    type="text"
+                    value={tenantForm.slug}
+                    onChange={onTenantChange('slug')}
+                    onBlur={handleSlugBlur}
+                    onKeyDown={handleSlugKeyDown}
+                    placeholder="sua-loja"
+                    aria-label="Identificador da loja no link"
+                    className={`flex-1 min-w-0 px-3 py-2 text-gray-900 font-medium bg-transparent focus:outline-none ${
+                      isEditingSlug ? '' : 'sr-only'
+                    }`}
+                  />
+
+                  {!isEditingSlug && (
+                    <button
+                      type="button"
+                      onClick={enterSlugEdit}
+                      className="flex-1 min-w-0 text-left px-3 py-2 text-gray-900 truncate cursor-text hover:bg-gray-50 rounded-l-lg"
+                      title="Clique para editar o slug"
+                    >
+                      {tenantForm.slug
+                        ? buildStoreUrl(tenantForm.slug)
+                        : <span className="text-gray-400">Defina o link da sua loja</span>}
+                    </button>
+                  )}
+
+                  {isEditingSlug && (
+                    <span className="px-2 py-2 text-xs text-gray-400 whitespace-nowrap select-none">
+                      {slugStatus === 'checking'
+                        ? 'Verificando...'
+                        : slugStatus === 'available'
+                          ? '✓ disponível'
+                          : ''}
+                    </span>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleCopyStoreLink}
+                    disabled={!String(tenantForm.slug || '').trim() || isEditingSlug}
+                    title={linkCopied ? 'Link copiado!' : 'Copiar link completo'}
+                    aria-label="Copiar link da loja"
+                    className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-l border-gray-200 rounded-r-lg transition-colors ${
+                      linkCopied
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : 'bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed'
+                    }`}
+                  >
+                    {linkCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    <span className="hidden sm:inline">{linkCopied ? 'Copiado' : 'Copiar'}</span>
+                  </button>
+                </div>
+
+                {isEditingSlug && slugStatus === 'taken' && (
+                  <p className="mt-1 text-sm text-red-600">
+                    O link "{slugCheck.slug}" já está em uso. Escolha outro.
+                  </p>
+                )}
+                {isEditingSlug && slugStatus === 'invalid' && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {slugCheck.message || 'Link inválido.'}
+                  </p>
+                )}
+                {isEditingSlug && slugStatus === 'empty' && (
+                  <p className="mt-1 text-sm text-red-600">
+                    Informe um link válido.
+                  </p>
+                )}
+                {!isEditingSlug && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    Clique no campo para alterar. Divulgue esse link no Instagram, WhatsApp, Google Maps e onde mais quiser.
+                  </p>
+                )}
+              </div>
+              <Input
+                label="CNPJ/CPF"
+                value={tenantForm.cnpj_cpf}
+                onChange={onTenantChange('cnpj_cpf')}
+                wrapperProps={{ 'data-wizard': 'store-document' }}
+                error={validateCpfOrCnpj(tenantForm.cnpj_cpf)}
+              />
               <Input
                 label="WhatsApp da loja"
                 value={tenantForm.whatsapp_phone}
@@ -691,21 +912,37 @@ const Settings = () => {
               <div className={`${subtleCardClass} p-4`}>
                 <p className="text-sm font-semibold text-slate-900 mb-2">Áreas atendidas e taxa por bairro</p>
                 <div className="space-y-2">
+                  {neighborhoodsSorted.length > 0 && (
+                    <div className="hidden lg:flex items-center gap-2 px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      <span className="flex-1">Bairro</span>
+                      <span className="w-32 text-right">Taxa de entrega (R$)</span>
+                      <span className="w-[160px]" aria-hidden="true" />
+                    </div>
+                  )}
                   {neighborhoodsSorted.map((n) => {
                     const edit = editingNeighborhood[n.id] ?? { name: n.name, price: n.price };
                     return (
                       <div key={n.id} className="space-y-2 rounded-2xl border border-slate-200/80 bg-white p-3 shadow-sm">
                         <div className="flex flex-wrap items-center gap-2">
-                          <input
-                            className="w-full lg:flex-1 rounded-2xl border border-slate-200 px-3 py-2 text-sm"
-                            value={edit.name}
-                            onChange={(e) => setEditingNeighborhood((prev) => ({ ...prev, [n.id]: { ...edit, name: e.target.value } }))}
-                          />
-                          <input
-                            className="w-full lg:w-32 rounded-2xl border border-slate-200 px-3 py-2 text-sm"
-                            value={String(edit.price)}
-                            onChange={(e) => setEditingNeighborhood((prev) => ({ ...prev, [n.id]: { ...edit, price: e.target.value } }))}
-                          />
+                          <label className="w-full lg:flex-1">
+                            <span className="lg:hidden block text-xs font-medium text-slate-500 mb-1">Bairro</span>
+                            <input
+                              className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
+                              value={edit.name}
+                              aria-label="Nome do bairro"
+                              onChange={(e) => setEditingNeighborhood((prev) => ({ ...prev, [n.id]: { ...edit, name: e.target.value } }))}
+                            />
+                          </label>
+                          <label className="w-full lg:w-32">
+                            <span className="lg:hidden block text-xs font-medium text-slate-500 mb-1">Taxa (R$)</span>
+                            <input
+                              className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
+                              value={String(edit.price)}
+                              aria-label="Taxa de entrega em reais"
+                              inputMode="decimal"
+                              onChange={(e) => setEditingNeighborhood((prev) => ({ ...prev, [n.id]: { ...edit, price: e.target.value } }))}
+                            />
+                          </label>
                         </div>
                         <div className="flex flex-wrap gap-2">
                           <Button size="sm" className="w-full lg:w-auto" onClick={() => saveNeighborhoodEdit(n.id)}>Salvar</Button>
@@ -722,20 +959,30 @@ const Settings = () => {
                       </div>
                     );
                   })}
-                  <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-200">
-                    <input
-                      className="w-full lg:flex-1 rounded-2xl border border-slate-200 px-3 py-2 text-sm"
-                      placeholder="Novo bairro"
-                      value={newNeighborhood.name}
-                      onChange={(e) => setNewNeighborhood((prev) => ({ ...prev, name: e.target.value }))}
-                    />
-                    <input
-                      className="w-full lg:w-32 rounded-2xl border border-slate-200 px-3 py-2 text-sm"
-                      placeholder="Preço"
-                      value={newNeighborhood.price}
-                      onChange={(e) => setNewNeighborhood((prev) => ({ ...prev, price: e.target.value }))}
-                    />
-                    <Button size="sm" className="w-full lg:w-auto" onClick={saveNewNeighborhood}>Adicionar</Button>
+                  <div className="pt-3 border-t border-slate-200">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Adicionar novo bairro</p>
+                    <div className="flex flex-wrap items-end gap-2">
+                      <label className="w-full lg:flex-1">
+                        <span className="block text-xs font-medium text-slate-500 mb-1">Bairro</span>
+                        <input
+                          className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
+                          placeholder="Ex: Centro"
+                          value={newNeighborhood.name}
+                          onChange={(e) => setNewNeighborhood((prev) => ({ ...prev, name: e.target.value }))}
+                        />
+                      </label>
+                      <label className="w-full lg:w-32">
+                        <span className="block text-xs font-medium text-slate-500 mb-1">Taxa (R$)</span>
+                        <input
+                          className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
+                          placeholder="0,00"
+                          inputMode="decimal"
+                          value={newNeighborhood.price}
+                          onChange={(e) => setNewNeighborhood((prev) => ({ ...prev, price: e.target.value }))}
+                        />
+                      </label>
+                      <Button size="sm" className="w-full lg:w-auto" onClick={saveNewNeighborhood}>Adicionar</Button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -744,119 +991,10 @@ const Settings = () => {
         </div>
 
         <div className="space-y-4">
-
-          {(!tenant?.plan_code || tenant.plan_code === 'FREE' || tenant.plan_code === 'PRO_TRIAL') && (
-            <div className={`${surfaceClass} p-5 space-y-4`} id="plano">
-              <div>
-                <p className="text-sm text-slate-500">Assinatura</p>
-                <h3 className="text-lg font-semibold tracking-tight text-slate-900">Meu Plano</h3>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">
-                      {tenant?.plan_code === 'PRO_TRIAL' ? 'Pro (Trial)' :
-                       tenant?.plan_code === 'PRO' ? 'Pro' :
-                       tenant?.plan_code === 'ENTERPRISE' ? 'Enterprise' : 'Grátis'}
-                    </p>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      {tenant?.subscription_status === 'TRIALING' ? 'Período de teste' :
-                       tenant?.subscription_status === 'ACTIVE' ? 'Ativo' :
-                       tenant?.subscription_status === 'PAST_DUE' ? 'Pagamento pendente' :
-                       tenant?.subscription_status === 'CANCELED' ? 'Cancelado' : 'Sem assinatura'}
-                    </p>
-                  </div>
-                  {tenant?.plan_code && tenant.plan_code !== 'FREE' && (
-                    <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                      {tenant.plan_code}
-                    </span>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      const res = await api.post('/subscriptions/checkout', { priceId: 'pro_monthly' });
-                      if (res?.url) window.location.href = res.url;
-                    } catch (e) {
-                      console.error('Checkout error', e);
-                    }
-                  }}
-                  className="w-full rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-colors shadow-lg"
-                  style={{ background: '#0EA5E9', boxShadow: '0 4px 14px rgba(14,165,233,0.35)' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = '#0284C7'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = '#0EA5E9'; }}
-                >
-                  Fazer upgrade
-                </button>
-              </div>
-            </div>
-          )}
-
-          <div className="bg-gradient-to-br from-[var(--accent)] to-[var(--accent-hover)] text-[var(--accent-contrast)] rounded-[28px] p-6 shadow-[0_22px_55px_rgba(15,23,42,0.16)]">
-            <p className="text-sm uppercase tracking-widest text-[var(--accent-contrast)]/80">experiência</p>
-            <h3 className="text-2xl font-semibold mt-2">Seu restaurante como vitrine</h3>
-            <p className="text-[var(--accent-contrast)]/80 mt-2">
-              Destaque fotos, tempos de preparo reais e mantenha o cardápio sempre atualizado para subir nos resultados.
-            </p>
-            <Button
-              variant="secondary"
-              className="mt-4 border border-white/50 bg-white text-[var(--accent)] shadow-[0_12px_30px_rgba(0,0,0,0.12)] hover:bg-white/92"
-              onClick={() => {
-                const slug = tenant?.slug;
-                const path = slug ? `/${slug}/app` : '/app';
-                window.open(path, '_blank', 'noopener,noreferrer');
-              }}
-            >
-              Ver como o cliente vê
-            </Button>
-          </div>
-
-          <div className={`${surfaceClass} p-5 space-y-3`}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-500">Equipe</p>
-                <h3 className="text-lg font-semibold tracking-tight text-slate-900">Acessos rápidos</h3>
-              </div>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between rounded-2xl border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] p-4 shadow-sm">
-                <div>
-                  <p className="font-semibold text-slate-900">{user?.name || 'Proprietário'}</p>
-                  <p className="text-sm text-slate-500">{user?.email}</p>
-                  <p className="text-sm text-slate-500">{user?.phone}</p>
-                  <p className="text-sm text-slate-500">Status: {user?.status}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className={`${surfaceClass} p-5 space-y-4`}>
-            <div>
-              <p className="text-sm text-slate-500">Conta</p>
-              <h3 className="text-lg font-semibold tracking-tight text-slate-900">Sessão</h3>
-            </div>
-            <div className="rounded-2xl border border-red-100 bg-red-50 p-4 space-y-3">
-              <div className="flex items-start gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-100">
-                  <svg className="h-4 w-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-red-900">Encerrar sessão</p>
-                  <p className="text-xs text-red-600 mt-0.5">Você será desconectado do sistema.</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowLogoutModal(true)}
-                className="w-full rounded-xl border border-red-200 bg-white px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors shadow-sm"
-              >
-                Sair da conta
-              </button>
-            </div>
-          </div>
+          <BrandPreviewPhone
+            tenantSlug={tenant?.slug}
+            mainColor={tenantForm.main_color}
+          />
         </div>
       </div>
 
@@ -966,48 +1104,6 @@ const Settings = () => {
         </div>
       )}
 
-      {showLogoutModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
-          onClick={() => setShowLogoutModal(false)}
-        >
-          <div
-            className="w-full max-w-sm rounded-3xl bg-white p-8 shadow-2xl space-y-5"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-red-100">
-                <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-slate-900">Encerrar sessão</h2>
-                <p className="text-sm text-slate-500 mt-0.5">Você sairá do painel agora.</p>
-              </div>
-            </div>
-            <p className="text-sm text-slate-600 leading-relaxed">
-              Tem certeza que deseja sair? Você precisará fazer login novamente para acessar o painel do restaurante.
-            </p>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setShowLogoutModal(false)}
-                className="flex-1 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="flex-1 rounded-2xl bg-red-600 px-4 py-3 text-sm font-semibold text-white hover:bg-red-700 transition-colors shadow-lg shadow-red-600/25"
-              >
-                Sair
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
       {/* Toast Notification */}
       {toast.visible && (
         <div

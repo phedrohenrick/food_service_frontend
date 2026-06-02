@@ -70,6 +70,20 @@ export const isValidCNPJ = (cnpj) => {
   return digit2 === parseInt(cleaned.charAt(13));
 };
 
+// Combined CPF/CNPJ validation — returns '' if valid, otherwise an error message.
+// Empty input returns '' (treat as "not yet provided"; required-ness is enforced elsewhere).
+export const validateCpfOrCnpj = (input) => {
+  const cleaned = String(input || '').replace(/\D/g, '');
+  if (!cleaned) return '';
+  if (cleaned.length === 11) {
+    return isValidCPF(cleaned) ? '' : 'CPF inválido. Confira os dígitos.';
+  }
+  if (cleaned.length === 14) {
+    return isValidCNPJ(cleaned) ? '' : 'CNPJ inválido. Confira os dígitos.';
+  }
+  return 'Informe um CPF (11 dígitos) ou CNPJ (14 dígitos).';
+};
+
 // Password strength validation
 export const validatePasswordStrength = (password) => {
   const minLength = 8;
