@@ -1,8 +1,16 @@
 import React, { useMemo, useState } from 'react';
-import { Smartphone } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import { Smartphone, Sparkles, X } from 'lucide-react';
 import { Button, Input, Modal } from '../../../../shared/components/ui';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
 import MobilePreviewWidget from '../components/MobilePreviewWidget';
+
+// Keep in sync with InitialTenantDataService on the backend.
+const SEED_ITEM_NAMES = new Set([
+  'X-Bacon', 'X-Salada', 'Double Cheddar', 'Coca-Cola Lata',
+  'Spaghetti Carbonara', 'Fettuccine Alfredo', 'Água com gás',
+]);
+const isSeedItem = (item) => SEED_ITEM_NAMES.has(String(item?.name || '').trim());
 
 const money = (n) => (n || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const productImageFallback =
@@ -87,6 +95,17 @@ const Menu = () => {
   const [groupsForm, setGroupsForm] = useState([]); // [{id?, name, is_required, min, max, options:[{id?, name, additional_charge}]}]
   const [bannerForm, setBannerForm] = useState({ banner_image: '', enabled: false });
   const [newBanner, setNewBanner] = useState({ banner_image: '', product_link: '' });
+
+  const location = useLocation();
+  const cleanSeedsRequested = useMemo(() => {
+    const params = new URLSearchParams(location.search || '');
+    return params.get('clean-seeds') === '1';
+  }, [location.search]);
+  const seedItems = useMemo(() => (menuItems || []).filter(isSeedItem), [menuItems]);
+  const [seedBannerDismissed, setSeedBannerDismissed] = useState(false);
+  const [isDeletingSeeds, setIsDeletingSeeds] = useState(false);
+  const showSeedBanner =
+    cleanSeedsRequested && seedItems.length > 0 && !seedBannerDismissed;
 
   const sortedCategories = useMemo(
     () => [...menuCategories].sort((a, b) => (a.order || 0) - (b.order || 0)),
@@ -336,6 +355,25 @@ const Menu = () => {
     setBannerForm({ banner_image: '', enabled: false });
   };
 
+  const handleDeleteAllSeeds = () => {
+    if (seedItems.length === 0) return;
+    showConfirmModal({
+      title: 'Apagar itens de exemplo',
+      message: `Os ${seedItems.length} itens de exemplo serão removidos. Em seguida, adicione seus próprios pratos.`,
+      confirmLabel: 'Apagar exemplos',
+      onConfirm: async () => {
+        setIsDeletingSeeds(true);
+        try {
+          for (const seed of seedItems) {
+            await deleteMenuItem(seed.id);
+          }
+        } finally {
+          setIsDeletingSeeds(false);
+        }
+      },
+    });
+  };
+
   const handleRemoveItem = async (id) => {
     showConfirmModal({
       title: 'Excluir produto',
@@ -472,6 +510,50 @@ const Menu = () => {
       </div>
 
 
+
+      {showSeedBanner && (
+        <div className="flex items-start gap-4 rounded-[28px] border border-[color:var(--accent)]/25 bg-[color:var(--accent)]/5 px-5 py-4 shadow-[0_18px_45px_-32px_rgba(15,23,42,0.45)]">
+          <div
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-white shadow-md"
+            style={{ background: 'var(--accent)' }}
+          >
+            <Sparkles className="h-5 w-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-slate-900">
+              Esses {seedItems.length} itens são apenas exemplos
+            </p>
+            <p className="mt-1 text-sm leading-relaxed text-slate-600">
+              Apague-os e adicione seus próprios pratos para o cardápio refletir o seu restaurante.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                onClick={handleDeleteAllSeeds}
+                disabled={isDeletingSeeds}
+              >
+                {isDeletingSeeds ? 'Apagando...' : `Apagar ${seedItems.length} exemplos`}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className={subtleButtonClass}
+                onClick={openNewItem}
+              >
+                Adicionar item próprio
+              </Button>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSeedBannerDismissed(true)}
+            className="rounded-full p-1.5 text-slate-400 hover:bg-white/70 hover:text-slate-600 transition-colors"
+            title="Dispensar"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       <div className={`${sectionCardClass} p-6 space-y-5`} data-wizard="menu-overview">
         <div className="flex flex-wrap items-center justify-between gap-3">

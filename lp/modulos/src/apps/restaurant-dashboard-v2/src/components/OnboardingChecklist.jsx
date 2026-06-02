@@ -19,6 +19,15 @@ const STORAGE_KEY_COLLAPSED = (tenantId) => `onboarding-checklist:${tenantId}:co
 const STORAGE_KEY_DISMISSED = (tenantId) => `onboarding-checklist:${tenantId}:dismissed`;
 const STORAGE_KEY_CELEBRATED = (tenantId) => `onboarding-checklist:${tenantId}:celebrated`;
 
+// Names seeded by the backend (InitialTenantDataService). Items matching these
+// are treated as untouched defaults and don't count toward the "menu" step.
+const SEED_ITEM_NAMES = new Set([
+  'X-Bacon', 'X-Salada', 'Double Cheddar', 'Coca-Cola Lata',
+  'Spaghetti Carbonara', 'Fettuccine Alfredo', 'Água com gás',
+]);
+
+const isSeedItem = (item) => SEED_ITEM_NAMES.has(String(item?.name || '').trim());
+
 const PING_STYLE_ID = 'priatoo-attention-ping-styles';
 const PING_CLASS = 'priatoo-attention-ping';
 const ensurePingStyles = () => {
@@ -97,7 +106,11 @@ const OnboardingChecklist = () => {
     const hasColor = !!tenant?.main_color && tenant.main_color !== 'rgb(153, 153, 153)';
 
     const hasCategories = Array.isArray(menuCategories) && menuCategories.length > 0;
-    const hasItems = Array.isArray(menuItems) && menuItems.length > 0;
+    const itemList = Array.isArray(menuItems) ? menuItems : [];
+    const hasItems = itemList.length > 0;
+    const seedCount = itemList.filter(isSeedItem).length;
+    const hasOwnItem = itemList.some((it) => !isSeedItem(it));
+    const onlySeeds = hasItems && !hasOwnItem;
 
     const hasWorkingHours = (() => {
       const wh = tenant?.working_hours;
@@ -130,11 +143,16 @@ const OnboardingChecklist = () => {
       {
         id: 'menu',
         title: 'Montar o cardápio',
-        description: 'Categorias e pelo menos 1 item',
+        description: !hasItems
+          ? 'Adicione categorias e o seu primeiro item'
+          : onlySeeds
+            ? `Apague os ${seedCount} exemplos e adicione os seus`
+            : 'Categorias e pelo menos 1 item próprio',
         icon: UtensilsCrossed,
-        completed: hasCategories && hasItems,
+        completed: hasCategories && hasOwnItem,
         route: `${basePrefix}/menu`,
         target: 'menu-overview',
+        query: onlySeeds ? { 'clean-seeds': '1' } : undefined,
       },
       {
         id: 'hours',
@@ -246,14 +264,17 @@ const OnboardingChecklist = () => {
 
   if (dismissed || !tenantId) return null;
 
-  const goTo = (route, target) => {
+  const goTo = (route, target, extraQuery) => {
     if (!route) return;
-    if (target) {
-      const sep = route.includes('?') ? '&' : '?';
-      navigate(`${route}${sep}highlight=${encodeURIComponent(target)}`);
-    } else {
-      navigate(route);
+    const params = new URLSearchParams();
+    if (target) params.set('highlight', target);
+    if (extraQuery && typeof extraQuery === 'object') {
+      Object.entries(extraQuery).forEach(([k, v]) => params.set(k, String(v)));
     }
+    const qs = params.toString();
+    if (!qs) return navigate(route);
+    const sep = route.includes('?') ? '&' : '?';
+    navigate(`${route}${sep}${qs}`);
   };
 
   return (
@@ -328,7 +349,7 @@ const OnboardingChecklist = () => {
               return (
                 <div
                   key={step.id}
-                  onClick={() => goTo(step.route, step.target)}
+                  onClick={() => goTo(step.route, step.target, step.query)}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group ${
                     step.route
                       ? 'cursor-pointer hover:bg-gray-50'
