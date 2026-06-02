@@ -17,19 +17,6 @@ export function PricingHeroSection({ annual, onToggle }) {
       />
 
       <div className="relative z-10 mx-auto max-w-3xl">
-        <div
-          className="mb-8 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-[0.12em]"
-          style={{
-            borderColor: "rgba(221,63,12,0.22)",
-            background: "rgba(255,127,39,0.06)",
-            color: "#DD3F0C",
-          }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" />
-          </svg>
-          Preços
-        </div>
 
         <h1
           className="mb-5 font-extrabold leading-[1.06] tracking-tight"

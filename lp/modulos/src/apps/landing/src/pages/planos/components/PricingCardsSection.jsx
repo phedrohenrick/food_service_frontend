@@ -1,12 +1,14 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Lock, CalendarX2, Headphones, BadgeCheck } from "lucide-react";
+import api from '../../../../../../shared/services/api';
+import { loginWithRedirect } from '../../../../../../shared/auth/keycloak';
 
 const PRICES = {
-  free: { monthly: 0, annual: 0 },
-  pro:  { monthly: 89, annual: 69 },
-  ent:  { monthly: 189, annual: 149 },
+  min: { monthly: "68,90", annual: "68,90" },
+  pro: { monthly: "129,80", annual: "129,80" },
+  max: { monthly: "299,79", annual: "299,79" },
 };
 
 const FREE_FEATURES = [
@@ -103,46 +105,49 @@ export function PricingCardsSection({ annual }) {
       <div className="mx-auto max-w-6xl">
         <div className="grid gap-6 md:grid-cols-3 md:items-start">
           <PlanCard
-            tier="Grátis"
+            tier="Plano MIN"
             icon={<IconUtensils />}
             iconBg="rgba(13,31,51,0.06)"
             iconColor="#4A6278"
-            desc="Perfeito para começar a digitalizar seu restaurante sem nenhum custo."
-            price={PRICES.free[k]}
+            desc="Perfeito para começar a digitalizar seu restaurante."
+            price={PRICES.min[k]}
             savingsNote={null}
             features={FREE_FEATURES}
-            ctaLabel="Começar grátis"
+            ctaLabel="Assinar plano"
             ctaVariant="ghost"
             microCopy="Sem cartão de crédito"
+            priceId="min_monthly"
           />
 
           <PlanCard
-            tier="Pro"
+            tier="Plano PRO"
             icon={<IconTrendingUp />}
             iconBg="rgba(14,165,233,0.10)"
             iconColor="#0EA5E9"
             desc="Para restaurantes que querem crescer com controle total da operação."
             price={PRICES.pro[k]}
-            savingsNote={annual ? { orig: "R$ 89/mês", saving: "Economize R$ 240/ano" } : null}
+            savingsNote={null}
             features={PRO_FEATURES}
-            ctaLabel="Assinar Pro"
+            ctaLabel="Assinar plano"
             ctaVariant="primary"
             microCopy="30 dias grátis · sem cartão"
             popular
+            priceId="pro_monthly"
           />
 
           <PlanCard
-            tier="Empresarial"
+            tier="Plano MAX"
             icon={<IconBuilding />}
             iconBg="rgba(56,189,248,0.10)"
             iconColor="#0EA5E9"
             desc="Para redes e restaurantes de alta performance que exigem o máximo."
-            price={PRICES.ent[k]}
-            savingsNote={annual ? { orig: "R$ 189/mês", saving: "Economize R$ 480/ano" } : null}
+            price={PRICES.max[k]}
+            savingsNote={null}
             features={ENT_FEATURES}
-            ctaLabel="Falar com vendas"
+            ctaLabel="Assinar plano"
             ctaVariant="blue"
             microCopy="Onboarding dedicado incluso"
+            priceId="max_monthly"
           />
         </div>
 
@@ -152,7 +157,7 @@ export function PricingCardsSection({ annual }) {
   );
 }
 
-function PlanCard({ tier, icon, iconBg, iconColor, desc, price, savingsNote, features, ctaLabel, ctaVariant, microCopy, popular }) {
+function PlanCard({ tier, icon, iconBg, iconColor, desc, price, savingsNote, features, ctaLabel, ctaVariant, microCopy, popular, priceId }) {
   return (
     <div
       className="group relative flex flex-col rounded-2xl bg-white transition-all duration-200"
@@ -161,7 +166,7 @@ function PlanCard({ tier, icon, iconBg, iconColor, desc, price, savingsNote, fea
         boxShadow: popular
           ? "0 4px 24px rgba(14,165,233,0.14)"
           : "0 1px 4px rgba(13,31,51,0.06)",
-        order: popular ? -1 : undefined,
+        order: undefined,
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = "translateY(-3px)";
@@ -259,7 +264,7 @@ function PlanCard({ tier, icon, iconBg, iconColor, desc, price, savingsNote, fea
         </ul>
 
         <div className="space-y-2">
-          <CtaButton variant={ctaVariant} label={ctaLabel} />
+          <CtaButton variant={ctaVariant} label={ctaLabel} priceId={priceId} />
           {microCopy && (
             <p className="text-center text-[11px]" style={{ color: "#8A9AB0" }}>
               {microCopy}
@@ -271,18 +276,43 @@ function PlanCard({ tier, icon, iconBg, iconColor, desc, price, savingsNote, fea
   );
 }
 
-function CtaButton({ variant, label }) {
+function CtaButton({ variant, label, priceId }) {
+  const [loading, setLoading] = useState(false);
   const base = "block w-full rounded-xl py-3.5 text-center text-sm font-bold transition-all duration-150";
+
+  const handleClick = async () => {
+    try { localStorage.setItem('pendingPriceId', priceId); } catch (_) {}
+
+    const token = (() => { try { return localStorage.getItem('authToken'); } catch (_) { return null; } })();
+    const slug = (() => { try { return localStorage.getItem('tenantSlug') || localStorage.getItem('authTenantSlug'); } catch (_) { return null; } })();
+
+    if (token && slug) {
+      setLoading(true);
+      try {
+        const res = await api.post('/subscriptions/checkout', { priceId });
+        if (res?.url) { window.location.href = res.url; return; }
+      } catch (_) {}
+      window.location.href = `/${slug}/dashboard/settings`;
+      return;
+    }
+
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    await loginWithRedirect(`${origin}/onboarding/start`);
+  };
+
+  const text = loading ? 'Redirecionando...' : label;
 
   if (variant === "primary") {
     return (
       <button
         className={base}
-        style={{ background: "#0EA5E9", color: "#fff" }}
-        onMouseEnter={(e) => { e.currentTarget.style.background = "#0284C7"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+        style={{ background: "#0EA5E9", color: "#fff", opacity: loading ? 0.7 : 1 }}
+        disabled={loading}
+        onClick={handleClick}
+        onMouseEnter={(e) => { if (!loading) { e.currentTarget.style.background = "#0284C7"; e.currentTarget.style.transform = "translateY(-1px)"; } }}
         onMouseLeave={(e) => { e.currentTarget.style.background = "#0EA5E9"; e.currentTarget.style.transform = "translateY(0)"; }}
       >
-        {label}
+        {text}
       </button>
     );
   }
@@ -291,11 +321,13 @@ function CtaButton({ variant, label }) {
     return (
       <button
         className={base}
-        style={{ background: "#FFFFFF", color: "#0EA5E9", border: "1.5px solid rgba(14,165,233,0.35)" }}
-        onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(14,165,233,0.06)"; e.currentTarget.style.borderColor = "#0EA5E9"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+        style={{ background: "#FFFFFF", color: "#0EA5E9", border: "1.5px solid rgba(14,165,233,0.35)", opacity: loading ? 0.7 : 1 }}
+        disabled={loading}
+        onClick={handleClick}
+        onMouseEnter={(e) => { if (!loading) { e.currentTarget.style.background = "rgba(14,165,233,0.06)"; e.currentTarget.style.borderColor = "#0EA5E9"; e.currentTarget.style.transform = "translateY(-1px)"; } }}
         onMouseLeave={(e) => { e.currentTarget.style.background = "#FFFFFF"; e.currentTarget.style.borderColor = "rgba(14,165,233,0.35)"; e.currentTarget.style.transform = "translateY(0)"; }}
       >
-        {label}
+        {text}
       </button>
     );
   }
@@ -303,11 +335,13 @@ function CtaButton({ variant, label }) {
   return (
     <button
       className={base}
-      style={{ background: "#FFFFFF", color: "#4A6278", border: "1.5px solid rgba(13,31,51,0.18)" }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(13,31,51,0.04)"; e.currentTarget.style.color = "#0D1F33"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+      style={{ background: "#FFFFFF", color: "#4A6278", border: "1.5px solid rgba(13,31,51,0.18)", opacity: loading ? 0.7 : 1 }}
+      disabled={loading}
+      onClick={handleClick}
+      onMouseEnter={(e) => { if (!loading) { e.currentTarget.style.background = "rgba(13,31,51,0.04)"; e.currentTarget.style.color = "#0D1F33"; e.currentTarget.style.transform = "translateY(-1px)"; } }}
       onMouseLeave={(e) => { e.currentTarget.style.background = "#FFFFFF"; e.currentTarget.style.color = "#4A6278"; e.currentTarget.style.transform = "translateY(0)"; }}
     >
-      {label}
+      {text}
     </button>
   );
 }
