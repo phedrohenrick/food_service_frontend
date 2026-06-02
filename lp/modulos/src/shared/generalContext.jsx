@@ -1094,6 +1094,7 @@ export const StorefrontProvider = ({ children }) => {
           ...b,
           tenant_id: b.tenantId || b.tenant_id,
           banner_image: b.bannerImage || b.banner_image,
+          product_link: b.productLink || b.product_link,
       })) : [];
 
       // Carregar Carrinho Ativo
