@@ -169,7 +169,16 @@ export default function Mesas() {
         <div className="flex items-center gap-2 flex-wrap">
           {tables.length > 0 && (
             <button
-              onClick={() => setPrintSheetOpen(true)}
+              data-wizard="tables-print-qr"
+              onClick={() => {
+                setPrintSheetOpen(true);
+                try {
+                  if (tenant?.id) {
+                    localStorage.setItem(`onboarding-checklist:${tenant.id}:qr-printed`, '1');
+                    window.dispatchEvent(new Event('priatoo:onboarding-progress'));
+                  }
+                } catch (_) {}
+              }}
               className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -179,6 +188,7 @@ export default function Mesas() {
             </button>
           )}
           <button
+            data-wizard="tables-create"
             onClick={handleNewTableClick}
             className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-700 transition-colors"
           >

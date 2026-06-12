@@ -104,7 +104,23 @@ const FirstAccessWizard = ({
       };
     }
 
-    if (step?.placement === 'side') {
+    if (step?.placement === 'anchor-right') {
+      const gap = 16;
+      const horizontalBudget = window.innerWidth - targetRect.right - gap - 16;
+      if (horizontalBudget >= 240) {
+        const panelWidth = Math.min(360, horizontalBudget);
+        const top = clamp(targetRect.top, 80, Math.max(80, window.innerHeight - 460));
+        return {
+          top,
+          left: targetRect.right + gap,
+          width: panelWidth,
+          maxHeight: window.innerHeight - 96,
+          overflowY: 'auto',
+        };
+      }
+    }
+
+    if (step?.placement === 'side' || step?.placement === 'anchor-right') {
       const sideWidth = Math.min(360, window.innerWidth - 32);
       const left = Math.max(16, window.innerWidth - sideWidth - 24);
       const top = clamp(targetRect.top, 80, Math.max(80, window.innerHeight - 460));

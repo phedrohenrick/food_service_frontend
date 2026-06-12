@@ -915,7 +915,7 @@ const Settings = () => {
                   {neighborhoodsSorted.length > 0 && (
                     <div className="hidden lg:flex items-center gap-2 px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
                       <span className="flex-1">Bairro</span>
-                      <span className="w-32 text-right">Taxa de entrega (R$)</span>
+                      <span className="w-32 text-right">Taxa de entrega</span>
                       <span className="w-[160px]" aria-hidden="true" />
                     </div>
                   )}

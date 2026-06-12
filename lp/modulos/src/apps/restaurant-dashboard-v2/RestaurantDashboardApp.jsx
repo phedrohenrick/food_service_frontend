@@ -63,16 +63,24 @@ const RestaurantDashboard = () => {
     {
       route: `${basePrefix}/settings`,
       targetSelector: '[data-wizard="store-slug"]',
+      placement: 'anchor-right',
       title: 'Defina o link da sua loja',
       description: 'Esse é o link público que você vai divulgar para os clientes — Instagram, WhatsApp, Google Maps, panfleto. Escolha algo curto e próximo da marca: sem espaços, sem acentos, só letras minúsculas, números e hífen.',
       validate: () => {
         const el = document.querySelector('[data-wizard="store-slug"] input');
         const val = (el?.value || '').trim();
         if (val.length < 3 || !/^[a-z][a-z0-9-]*$/.test(val)) return false;
-        if (tenant?.slug && val === tenant.slug) return true;
+        if (tenant?.slug && val === tenant.slug) return false;
         return slugCheck.slug === val && slugCheck.status === 'available';
       },
       validateHint: (() => {
+        const liveEl = typeof document !== 'undefined'
+          ? document.querySelector('[data-wizard="store-slug"] input')
+          : null;
+        const liveVal = (liveEl?.value || '').trim();
+        if (tenant?.slug && liveVal === tenant.slug) {
+          return 'Escolha um link novo, diferente do atual, para personalizar a loja.';
+        }
         if (slugCheck.status === 'checking') return 'Verificando disponibilidade do link...';
         if (slugCheck.status === 'taken') return `O link "${slugCheck.slug}" já está em uso. Escolha outro.`;
         return 'Defina um link válido (mín. 3 letras, sem espaços) e disponível para continuar.';
@@ -81,7 +89,7 @@ const RestaurantDashboard = () => {
     {
       route: `${basePrefix}/settings`,
       targetSelector: '[data-wizard="store-document"]',
-      placement: 'side',
+      placement: 'anchor-right',
       title: 'Preencha CPF ou CNPJ',
       description: 'Esse campo é obrigatório para fechar o cadastro base da operação e evitar ajustes manuais depois.',
       validate: () => {
@@ -103,7 +111,7 @@ const RestaurantDashboard = () => {
       targetSelector: '[data-wizard="brand-identity"]',
       title: 'Monte sua identidade visual',
       description: 'Aqui você ajusta foto da loja e cor principal do seu site. Esses elementos aparecem no dashboard e ajudam o app do cliente a ficar com a cara do seu restaurante.',
-      placement: 'side',
+      placement: 'anchor-right',
     },
     {
       route: `${basePrefix}/settings`,
@@ -111,7 +119,7 @@ const RestaurantDashboard = () => {
       title: 'Configure o delivery',
       description: 'Defina método de entrega, taxa de serviço, meios de pagamento, horários e áreas atendidas. Essa parte impacta diretamente a experiência do pedido.',
       note: 'Se você entrega por bairros, cadastre cada região e o respectivo valor antes de começar a operar.',
-      placement: 'side',
+      placement: 'anchor-right',
     },
     {
       route: `${basePrefix}/menu`,
@@ -130,6 +138,7 @@ const RestaurantDashboard = () => {
       targetSelector: '[data-wizard="menu-overview"]',
       title: 'Adicione itens ao cardápio',
       description: 'Nesta tela você adiciona itens ao cardápio. Cada item pode ter foto, descrição, preço e grupos de opções para variações como tamanhos, adicionais ou combos.',
+      placement: 'anchor-right',
     },
     {
       route: `${basePrefix}/menu`,
@@ -282,8 +291,24 @@ const RestaurantDashboard = () => {
         localStorage.removeItem(`${wizardStoragePrefix}:step`);
       } catch (_) {}
     }
+    // Force the onboarding checklist to be visible the next time it mounts.
+    // The checklist is unmounted during the tour, so a runtime event would
+    // miss the listener — clear the dismissed flag directly on localStorage
+    // so the checklist's mount-time read picks it up.
+    try {
+      const tenantKey = tenant?.id;
+      if (tenantKey) {
+        localStorage.removeItem(`onboarding-checklist:${tenantKey}:dismissed`);
+        localStorage.setItem(`onboarding-checklist:${tenantKey}:collapsed`, '0');
+      }
+    } catch (_) {}
     setWizardActive(false);
-  }, [wizardStoragePrefix]);
+    // Fire the event too, in case the checklist is already mounted (e.g. tour
+    // restarted from a page where the checklist was visible).
+    try {
+      window.dispatchEvent(new Event('priatoo:onboarding-checklist:show'));
+    } catch (_) {}
+  }, [wizardStoragePrefix, tenant?.id]);
 
   const handleWizardFinish = useCallback(() => {
     markWizardDone();

@@ -418,9 +418,9 @@ const Menu = () => {
 
   return (
     <div className="space-y-6 rounded-[32px] bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.96),_rgba(241,245,249,0.92)_44%,_rgba(226,232,240,0.95)_100%)] bg-fixed p-1">
-      <div className="rounded-[32px] border border-slate-200/80 bg-white/90 px-6 py-6 shadow-[0_24px_70px_-36px_rgba(15,23,42,0.45)] backdrop-blur-sm" >
+      <div className="rounded-[32px] border border-slate-200/80 bg-white/90 px-6 py-6 shadow-[0_24px_70px_-36px_rgba(15,23,42,0.45)] backdrop-blur-sm" data-wizard="menu-start">
         <div className="flex flex-wrap items-center justify-between gap-4" >
-          <div data-wizard="menu-start">
+          <div>
             <p className="text-sm font-medium tracking-[0.18em] text-slate-500 uppercase">Curadoria do cardápio</p>
             <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">Categorias de Produtos</h1>
           </div>
