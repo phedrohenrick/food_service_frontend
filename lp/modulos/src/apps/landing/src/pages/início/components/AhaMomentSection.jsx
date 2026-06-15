@@ -67,16 +67,6 @@ export function AhaMomentSection() {
       <div className="relative z-10 mx-auto max-w-7xl">
         {/* Header */}
         <div className="mb-14 text-center">
-          <span
-            className="inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-bold uppercase tracking-[0.15em]"
-            style={{
-              borderColor: "rgba(200,80,30,0.3)",
-              background: "rgba(217,95,42,0.10)",
-              color: "#C04A18",
-            }}
-          >
-            ★ Exclusivo Priatoo
-          </span>
           <h2
             className="mt-4 text-3xl font-extrabold leading-tight sm:text-4xl lg:text-5xl"
             style={{ fontFamily: "'Helvetica Neue', 'Segoe UI', Arial, sans-serif", letterSpacing: "-0.02em", color: "#1A0B05" }}

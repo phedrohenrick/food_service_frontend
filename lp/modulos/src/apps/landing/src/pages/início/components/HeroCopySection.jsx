@@ -43,26 +43,6 @@ export function HeroCopySection() {
       <div className="relative z-10 mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-2 lg:gap-16">
         {/* LEFT — copy */}
         <div className="space-y-7">
-          <div
-            className="inline-flex items-center gap-3 rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-[0.18em]"
-            style={{
-              borderColor: "rgba(255,127,39,0.35)",
-              background: "rgba(255,127,39,0.08)",
-              color: "rgba(255,200,150,0.9)",
-            }}
-          >
-            <span className="relative flex h-2 w-2">
-              <span
-                className="absolute inline-flex h-full w-full animate-ping rounded-full"
-                style={{ background: "#FF7F27", opacity: 0.7 }}
-              />
-              <span
-                className="relative inline-flex h-2 w-2 rounded-full"
-                style={{ background: "#FF7F27" }}
-              />
-            </span>
-            Sistema para restaurantes
-          </div>
 
           <h1
             className="text-4xl font-extrabold leading-[1.04] tracking-tight text-white sm:text-5xl lg:text-[3.4rem]"
@@ -96,7 +76,7 @@ export function HeroCopySection() {
                 boxShadow: "0 12px 32px rgba(255,127,39,0.38), 0 4px 12px rgba(0,0,0,0.3)",
               }}
             >
-              Começar grátis por 30 dias
+               Conheça mais sobre o Priatoo
             </button>
             <button
               onClick={() => scrollTo("demo")}
