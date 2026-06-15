@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
 
@@ -21,6 +21,7 @@ const Home = () => {
   const { tenant, banners, menuCategories, getMenuItemsByCategory } = useStorefront();
   const [searchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('todos');
+  const [activeBannerIndex, setActiveBannerIndex] = useState(0);
 
   const filteredCategories = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -40,6 +41,20 @@ const Home = () => {
       })
       .filter((category) => category.items.length > 0);
   }, [menuCategories, categoryFilter, searchTerm, getMenuItemsByCategory]);
+
+  useEffect(() => {
+    setActiveBannerIndex(0);
+  }, [banners.length]);
+
+  useEffect(() => {
+    if (banners.length <= 1) return undefined;
+
+    const intervalId = window.setInterval(() => {
+      setActiveBannerIndex((current) => (current + 1) % banners.length);
+    }, 4500);
+
+    return () => window.clearInterval(intervalId);
+  }, [banners.length]);
 
   const basePrefix = (() => {
     const p = window.location?.pathname || '';
@@ -85,33 +100,59 @@ const Home = () => {
         </div>
       </div>
 
-      <section
-        className={`mx-auto grid gap-4 ${banners.length > 1 ? 'xl:grid-cols-2' : 'max-w-4xl'}`}
-      >
-        {banners.map((banner) => (
-          <Link
-            key={banner.id}
-            to={resolveBannerTarget(banner.product_link, basePrefix)}
-            className="relative overflow-hidden rounded-2xl border border-gray-100 bg-white shadow transition hover:-translate-y-1 hover:shadow-lg"
-          >
-            <div className="absolute inset-0">
-              <img src={banner.banner_image} alt={banner.title} className="h-full w-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent" />
+      {banners.length > 0 && (
+        <section className="mx-auto w-full max-w-4xl">
+          <div className="overflow-hidden rounded-2xl">
+            <div
+              className="flex transition-transform duration-700 ease-out"
+              style={{ transform: `translateX(-${activeBannerIndex * 100}%)` }}
+            >
+              {banners.map((banner) => (
+                <div key={banner.id} className="w-full shrink-0">
+                  <Link
+                    to={resolveBannerTarget(banner.product_link, basePrefix)}
+                    className="relative block aspect-[2/1] min-h-48 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow transition hover:shadow-lg"
+                  >
+                    <div className="absolute inset-0">
+                      <img src={banner.banner_image} alt={banner.title} className="h-full w-full object-cover" />
+                      <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent" />
+                    </div>
+                    <div className="relative space-y-2 p-6 text-[var(--accent-contrast)]">
+                      <span className="inline-flex rounded-full bg-[var(--accent)] px-3 py-1 text-xs uppercase tracking-wide text-background-white">
+                        {banner.badge}
+                      </span>
+                      <h3 className="text-2xl font-semibold">{banner.title}</h3>
+                      <p className="text-sm text-white/80">{banner.subtitle}</p>
+                      <p className="text-sm text-white/70">{banner.description}</p>
+                      <span className="inline-flex items-center text-sm font-semibold">
+                        Ver produto →
+                      </span>
+                    </div>
+                  </Link>
+                </div>
+              ))}
             </div>
-            <div className="relative p-6 text-[var(--accent-contrast)] space-y-2">
-              <span className="inline-flex rounded-full bg-[var(--accent)] px-3 py-1 text-xs uppercase tracking-wide text-background-white">
-                {banner.badge}
-              </span>
-              <h3 className="text-2xl font-semibold">{banner.title}</h3>
-              <p className="text-sm text-white/80">{banner.subtitle}</p>
-              <p className="text-sm text-white/70">{banner.description}</p>
-              <span className="inline-flex items-center text-sm font-semibold">
-                Ver produto →
-              </span>
+          </div>
+
+          {banners.length > 1 && (
+            <div className="mt-3 flex justify-center gap-2">
+              {banners.map((banner, index) => (
+                <button
+                  key={banner.id}
+                  type="button"
+                  onClick={() => setActiveBannerIndex(index)}
+                  aria-label={`Mostrar promocao ${index + 1}`}
+                  className={`h-2.5 rounded-full transition-all ${
+                    activeBannerIndex === index
+                      ? 'w-8 bg-[var(--accent)]'
+                      : 'w-2.5 bg-gray-300 hover:bg-gray-400'
+                  }`}
+                />
+              ))}
             </div>
-          </Link>
-        ))}
-      </section>
+          )}
+        </section>
+      )}
 
       <section className="space-y-6">
         <div className="flex flex-wrap items-center gap-3 xl:justify-center">
@@ -156,7 +197,7 @@ const Home = () => {
                   <Link
                     key={item.id}
                     to={`${basePrefix}/produto/${item.id}`}
-                    className="group flex flex-col rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg sm:flex-row"
+                    className="group flex flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg sm:flex-row"
                   >
                     <div className="flex flex-1 flex-col gap-3 p-5">
                       <div className="flex flex-wrap items-center gap-2">
@@ -177,7 +218,7 @@ const Home = () => {
                         R$ {(item.price ?? 0).toFixed(2)}
                       </p>
                     </div>
-                    <div className="h-48 w-full overflow-hidden rounded-2xl sm:h-auto sm:w-48">
+                    <div className="aspect-square w-full shrink-0 overflow-hidden bg-gray-100 sm:w-48">
                       <img
                         src={item.photo_url}
                         alt={item.name}
