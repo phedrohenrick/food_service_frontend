@@ -33,8 +33,8 @@ export function HowItWorksSection() {
           >
             Setup em 15 minutos
           </h2>
-          <p className="mt-4 text-base sm:text-lg" style={{ color: "#6b7280" }}>
-            Se você usa celular, você configura o Priatoo.
+          <p className="mt-4 text-base sm:text-lg" style={{ color: "#0f1f3f" }}>
+            Com teste grátis, sem compromisso, sem adicionar o cartão de crédito.
           </p>
         </div>
 

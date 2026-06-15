@@ -99,10 +99,10 @@ const BrandPreviewPhone = ({ tenantSlug, mainColor }) => {
             <Smartphone className="h-4 w-4" />
           </span>
           <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 leading-tight">
+            <p className="text-sm font-semibold text-slate-900 leading-tight truncate">
               Pré-visualização ao vivo
             </p>
-            <p className="text-sm font-semibold text-slate-900 leading-tight truncate">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-800 leading-tight ">
               Visão do cliente
             </p>
           </div>
@@ -125,7 +125,7 @@ const BrandPreviewPhone = ({ tenantSlug, mainColor }) => {
             style={{ backgroundColor: mainColor || '#EA1D2C' }}
           />
           <span className="text-[11px] font-medium text-slate-500 truncate">
-            Cor aplicada · <span className="text-slate-800">{(mainColor || '').toUpperCase() || '#EA1D2C'}</span>
+            Link da loja : https://priatoo.com.br/pizzadoze/app
           </span>
         </div>
       </div>
