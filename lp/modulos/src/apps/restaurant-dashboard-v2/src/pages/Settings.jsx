@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Copy, Check } from 'lucide-react';
-import { Button, Input } from '../../../../shared/components/ui';
+import { Button, Input, R2ImageUpload } from '../../../../shared/components/ui';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
 import api from '../../../../shared/services/api';
 import { validateCpfOrCnpj } from '../../../../shared/utils/validators';

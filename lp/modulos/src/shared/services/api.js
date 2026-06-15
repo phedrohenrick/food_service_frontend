@@ -129,6 +129,34 @@ class ApiService {
       method: 'DELETE',
     });
   }
+
+  async uploadImage(file, target) {
+    if (!file) {
+      throw new Error('Arquivo de imagem obrigatório');
+    }
+
+    const presigned = await this.post('/uploads/presign', {
+      fileName: file.name,
+      contentType: file.type,
+      size: file.size,
+      target,
+    });
+
+    const uploadResponse = await fetch(presigned.uploadUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': file.type,
+      },
+      body: file,
+    });
+
+    if (!uploadResponse.ok) {
+      const errorBody = await uploadResponse.text().catch(() => '');
+      throw new Error(`Falha ao enviar imagem para o R2: ${uploadResponse.status} ${errorBody}`);
+    }
+
+    return presigned;
+  }
 }
 
 export default new ApiService();

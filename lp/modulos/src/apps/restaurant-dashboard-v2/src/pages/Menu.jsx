@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Smartphone, Sparkles, X } from 'lucide-react';
-import { Button, Input, Modal } from '../../../../shared/components/ui';
+import { Button, Input, Modal, R2ImageUpload } from '../../../../shared/components/ui';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
 import MobilePreviewWidget from '../components/MobilePreviewWidget';
 
@@ -730,9 +730,17 @@ const Menu = () => {
           <div className="h-80 w-80 align-middle overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-inner">
             <img
               src={itemForm.photo_url || productImageFallback}
+              alt={itemForm.name || 'Imagem do produto'}
               className="h-full w-full object-cover transition-transform duration-300"
             />
           </div>
+          <R2ImageUpload
+            label="Enviar foto do produto"
+            target="menu-item"
+            value={itemForm.photo_url}
+            onChange={(publicUrl) => setItemForm((current) => ({ ...current, photo_url: publicUrl }))}
+            previewClassName="hidden"
+          />
           <Input
             label="URL da foto"
             value={itemForm.photo_url}
@@ -973,6 +981,13 @@ const Menu = () => {
 
       <Modal isOpen={isBannerModalOpen} onClose={() => setIsBannerModalOpen(false)} title="Novo Banner">
         <div className="space-y-4">
+          <R2ImageUpload
+            label="Enviar imagem do banner"
+            target="banner"
+            value={newBanner.banner_image}
+            onChange={(publicUrl) => setNewBanner((current) => ({ ...current, banner_image: publicUrl }))}
+            previewClassName="hidden"
+          />
           <Input
             label="URL da Imagem"
             value={newBanner.banner_image}
