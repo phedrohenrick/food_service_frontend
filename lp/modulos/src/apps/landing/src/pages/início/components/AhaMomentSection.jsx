@@ -76,7 +76,7 @@ export function AhaMomentSection() {
             {" "}
           </h2>
           <p className="mt-4 mx-auto max-w-2xl text-base sm:text-lg" style={{ color: "#6B3A20" }}>
-            Escolha as cores da sua marca. Seu cliente vai pensar que o sistema foi feito exclusivamente para você.
+            Escolha as cores da sua marca. Um sistema feito exclusivamente para sua loja.
           </p>
         </div>
 

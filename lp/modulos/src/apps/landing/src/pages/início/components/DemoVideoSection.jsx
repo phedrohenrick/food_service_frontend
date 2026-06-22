@@ -9,12 +9,7 @@ export function DemoVideoSection() {
   return (
     <section id="demo" className="px-[5%] py-20 md:py-28" style={{ background: "#1a0e0d" }}>
       <div className="mx-auto max-w-5xl text-center">
-        <p
-          className="text-xs font-bold uppercase tracking-[0.18em]"
-          style={{ color: "#FF7F27" }}
-        >
-          Demo do produto
-        </p>
+
         <h2
           className="mt-3 text-3xl font-extrabold text-white sm:text-4xl lg:text-5xl"
           style={{

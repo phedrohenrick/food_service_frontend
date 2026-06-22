@@ -17,7 +17,7 @@ export function CalculatorSection() {
       id="planos"
       className="px-[5%] py-20 md:py-28"
       style={{
-        background: "#0f0705",
+        background: "#fdfbfa",
         borderTop: "2px solid #FF7F27",
       }}
     >
@@ -30,7 +30,7 @@ export function CalculatorSection() {
             Calculadora de economia
           </p>
           <h2
-            className="mt-3 text-3xl font-extrabold text-white sm:text-4xl lg:text-5xl"
+            className="mt-3 text-3xl font-extrabold text-[#1a0e0d] sm:text-4xl lg:text-5xl"
             style={{
               fontFamily: "'Helvetica Neue', 'Segoe UI', Arial, sans-serif",
               letterSpacing: "-0.02em",
@@ -45,20 +45,21 @@ export function CalculatorSection() {
         <div
           className="rounded-2xl p-6 md:p-10 space-y-8"
           style={{
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(255,255,255,0.08)",
+            background: "#ffffff",
+            border: "1px solid rgba(0,0,0,0.08)",
+            boxShadow: "0 10px 40px rgba(26,14,13,0.06)",
           }}
         >
           {/* Slider 1 */}
           <div>
             <div className="mb-3 flex items-center justify-between">
-              <label className="text-sm font-semibold" style={{ color: "rgba(255,255,255,0.65)" }}>
+              <label className="text-sm font-semibold" style={{ color: "#4b5563" }}>
                 Faturamento mensal em delivery
               </label>
               <span
                 className="text-xl font-extrabold"
                 style={{
-                  color: "#FFC300",
+                  color: "#DD6B0C",
                   fontFamily: "'Helvetica Neue', 'Segoe UI', Arial, sans-serif",
                 }}
               >
@@ -68,7 +69,7 @@ export function CalculatorSection() {
             <div className="relative">
               <div
                 className="mb-1 h-2 rounded-full"
-                style={{ background: "rgba(255,255,255,0.1)" }}
+                style={{ background: "rgba(0,0,0,0.08)" }}
               >
                 <div
                   className="h-2 rounded-full transition-all duration-150"
@@ -89,7 +90,7 @@ export function CalculatorSection() {
                 style={{ margin: 0 }}
               />
             </div>
-            <div className="mt-1 flex justify-between text-xs" style={{ color: "rgba(255,255,255,0.28)" }}>
+            <div className="mt-1 flex justify-between text-xs" style={{ color: "rgba(0,0,0,0.35)" }}>
               <span>R$ 5.000</span>
               <span>R$ 100.000</span>
             </div>
@@ -98,7 +99,7 @@ export function CalculatorSection() {
           {/* Slider 2 */}
           <div>
             <div className="mb-3 flex items-center justify-between">
-              <label className="text-sm font-semibold" style={{ color: "rgba(255,255,255,0.65)" }}>
+              <label className="text-sm font-semibold" style={{ color: "#4b5563" }}>
                 Taxa média da plataforma
               </label>
               <span
@@ -114,7 +115,7 @@ export function CalculatorSection() {
             <div className="relative">
               <div
                 className="mb-1 h-2 rounded-full"
-                style={{ background: "rgba(255,255,255,0.1)" }}
+                style={{ background: "rgba(0,0,0,0.08)" }}
               >
                 <div
                   className="h-2 rounded-full transition-all duration-150"
@@ -135,7 +136,7 @@ export function CalculatorSection() {
                 style={{ margin: 0 }}
               />
             </div>
-            <div className="mt-1 flex justify-between text-xs" style={{ color: "rgba(255,255,255,0.28)" }}>
+            <div className="mt-1 flex justify-between text-xs" style={{ color: "rgba(0,0,0,0.35)" }}>
               <span>10%</span>
               <span>27% (iFood)</span>
             </div>
@@ -145,11 +146,11 @@ export function CalculatorSection() {
           <div
             className="rounded-xl p-6 text-center transition-all duration-300"
             style={{
-              background: "rgba(234,29,44,0.1)",
-              border: "1px solid rgba(234,29,44,0.25)",
+              background: "rgba(234,29,44,0.06)",
+              border: "1px solid rgba(234,29,44,0.2)",
             }}
           >
-            <p className="mb-1 text-sm font-medium" style={{ color: "rgba(255,255,255,0.55)" }}>
+            <p className="mb-1 text-sm font-medium" style={{ color: "#6b7280" }}>
               Você pagaria de comissão por mês
             </p>
             <p
@@ -162,18 +163,18 @@ export function CalculatorSection() {
             >
               R$ {comissaoMensal.toLocaleString("pt-BR")}
             </p>
-            <p className="mt-2 text-sm" style={{ color: "rgba(255,255,255,0.42)" }}>
+            <p className="mt-2 text-sm" style={{ color: "#6b7280" }}>
               Ou{" "}
-              <span className="font-bold" style={{ color: "rgba(255,255,255,0.72)" }}>
+              <span className="font-bold" style={{ color: "#1a0e0d" }}>
                 R$ {comissaoAnual.toLocaleString("pt-BR")}
               </span>{" "}
               por ano
             </p>
           </div>
 
-          <p className="text-center text-sm" style={{ color: "rgba(255,255,255,0.45)" }}>
+          <p className="text-center text-sm" style={{ color: "#6b7280" }}>
             Com o Priatoo você paga mensalidade fixa.{" "}
-            <span className="font-semibold" style={{ color: "rgba(255,255,255,0.75)" }}>
+            <span className="font-semibold" style={{ color: "#1a0e0d" }}>
               Quanto mais vende, mais economiza.
             </span>
           </p>

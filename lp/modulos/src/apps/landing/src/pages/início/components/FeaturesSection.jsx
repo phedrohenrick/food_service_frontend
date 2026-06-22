@@ -84,17 +84,7 @@ export function FeaturesSection() {
 
       <div className="relative mx-auto max-w-7xl">
         {/* Header */}
-        <div className="mb-14 max-w-2xl">
-          <span
-            className="inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-bold uppercase tracking-[0.15em]"
-            style={{
-              borderColor: "rgba(165,42,42,0.2)",
-              background: "rgba(165,42,42,0.06)",
-              color: "#A52A2A",
-            }}
-          >
-            Funcionalidades
-          </span>
+        <div className="mb-14 mx-auto max-w-2xl text-center">
           <h2
             className="mt-4 text-3xl font-extrabold leading-tight text-[#1a0e0d] sm:text-4xl lg:text-[2.8rem]"
             style={{
@@ -117,7 +107,7 @@ export function FeaturesSection() {
             sistema oferece
           </h2>
           <p className="mt-4 text-base sm:text-lg" style={{ color: "#6b7280" }}>
-            Cada funcionalidade foi construída pensando no dono do restaurante — não na plataforma.
+            Cada funcionalidade foi construída pensando no dono do restaurante.
           </p>
         </div>
 
