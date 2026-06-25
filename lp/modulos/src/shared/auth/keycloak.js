@@ -193,6 +193,15 @@ export async function loginWithRedirect(redirectUri, options = {}) {
   try {
     const instance = ensureKeycloak(redirectUri);
     setLoginInProgress(true);
+    // createLoginUrl/login dependem dos endpoints carregados no init(). Em páginas públicas
+    // (ex.: tela de planos) o adapter ainda não foi inicializado — sem isto, createLoginUrl
+    // lança e o clique "não faz nada". check-sso inicializa sem forçar login nem redirecionar.
+    if (!initialized) {
+      try {
+        await instance.init({ onLoad: 'check-sso', checkLoginIframe: false, pkceMethod: 'S256' });
+        initialized = true;
+      } catch (_) {}
+    }
     const loginOpts = { redirectUri };
     if (forcePrompt) loginOpts.prompt = 'login';
     const url = await instance.createLoginUrl(loginOpts);

@@ -6,40 +6,47 @@ import api from '../../../../../../shared/services/api';
 import { loginWithRedirect } from '../../../../../../shared/auth/keycloak';
 
 const PRICES = {
-  min: { monthly: "68,90", annual: "68,90" },
-  pro: { monthly: "129,80", annual: "129,80" },
-  max: { monthly: "299,79", annual: "299,79" },
+  start: { monthly: "25,90", annual: "25,90" },
+  delivery: { monthly: "79,90", annual: "79,90" },
+  completo: { monthly: "129,90", annual: "129,90" },
+  max: { monthly: "299,90", annual: "299,90" },
 };
 
-const FREE_FEATURES = [
-  { text: "Cardápio digital (até 30 itens)", included: true },
-  { text: "1 mesa cadastrada", included: true },
-  { text: "QR Code do cardápio", included: true },
-  { text: "Suporte por e-mail", included: true },
-  { text: "Pedidos online", included: false },
-  { text: "Controle de garçons", included: false },
+const START_FEATURES = [
+  { text: "Cardápio digital (até 40 itens)", included: true },
+  { text: "Link da loja + QR Code", included: true },
+  { text: "Pedidos pelo WhatsApp", included: true },
+  { text: "Taxa de entrega por bairro", included: true },
+  { text: "Pedidos pelo sistema (painel)", included: false },
   { text: "Métricas e relatórios", included: false },
+  { text: "Controle de mesas e garçom", included: false },
 ];
 
-const PRO_FEATURES = [
+const DELIVERY_FEATURES = [
   { text: "Cardápio digital ilimitado", included: true },
-  { text: "Até 20 mesas cadastradas", included: true },
-  { text: "Pedidos online pelo cardápio", included: true },
-  { text: "Painel de métricas básico", included: true },
-  { text: "Controle de garçons", included: true },
-  { text: "Integração WhatsApp básica", included: true },
-  { text: "Suporte prioritário por chat", included: true },
+  { text: "Pedidos online pelo sistema", included: true },
+  { text: "Link da loja + QR Code", included: true },
+  { text: "Pedidos pelo WhatsApp", included: true },
+  { text: "Métricas básicas", included: true },
+  { text: "Suporte prioritário", included: true },
+  { text: "Controle de mesas e garçom", included: false },
 ];
 
-const ENT_FEATURES = [
-  { text: "Tudo do Pro, mais:", included: true },
-  { text: "Mesas ilimitadas", included: true },
-  { text: "Multi-unidades (até 5 restaurantes)", included: true },
-  { text: "Painel de métricas avançado", included: true },
-  { text: "Relatórios personalizados", included: true },
+const COMPLETO_FEATURES = [
+  { text: "Tudo do Delivery, mais:", included: true },
+  { text: "Controle de mesas e comandas", included: true },
+  { text: "App do garçom", included: true },
+  { text: "Relatórios avançados", included: true },
+  { text: "Integração WhatsApp avançada", included: true },
+  { text: "Suporte prioritário", included: true },
+];
+
+const MAX_FEATURES = [
+  { text: "Tudo do Completo, mais:", included: true },
+  { text: "Multi-unidades (até 4 restaurantes)", included: true },
   { text: "API de integração", included: true },
+  { text: "Integração iFood", included: true },
   { text: "Gerente de conta dedicado", included: true },
-  { text: "Suporte 24/7", included: true },
 ];
 
 const TRUST_ITEMS = [
@@ -73,6 +80,14 @@ function IconBuilding() {
   );
 }
 
+function IconCrown() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 18h20l-2-11-5 5-3-7-3 7-5-5z" /><path d="M2 18v2h20v-2" />
+    </svg>
+  );
+}
+
 function IconDiamond() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -102,51 +117,66 @@ export function PricingCardsSection({ annual }) {
 
   return (
     <section className="px-[5%] pb-24" style={{ background: "#FFFFFF" }}>
-      <div className="mx-auto max-w-6xl">
-        <div className="grid gap-6 md:grid-cols-3 md:items-start">
+      <div className="mx-auto max-w-7xl">
+        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 md:items-start">
           <PlanCard
-            tier="Plano MIN"
+            tier="Plano START"
             icon={<IconUtensils />}
             iconBg="rgba(13,31,51,0.06)"
             iconColor="#4A6278"
-            desc="Perfeito para começar a digitalizar seu restaurante."
-            price={PRICES.min[k]}
+            desc="Coloque seu restaurante online e receba pedidos pelo WhatsApp."
+            price={PRICES.start[k]}
             savingsNote={null}
-            features={FREE_FEATURES}
+            features={START_FEATURES}
             ctaLabel="Assinar plano"
             ctaVariant="ghost"
-            microCopy="Sem cartão de crédito"
-            priceId="min_monthly"
+            microCopy="Menos de R$1 por dia"
+            priceId="start_monthly"
           />
 
           <PlanCard
-            tier="Plano PRO"
+            tier="Plano DELIVERY"
             icon={<IconTrendingUp />}
             iconBg="rgba(14,165,233,0.10)"
             iconColor="#0EA5E9"
-            desc="Para restaurantes que querem crescer com controle total da operação."
-            price={PRICES.pro[k]}
+            desc="Para quem vive de delivery: receba e gerencie pedidos no sistema."
+            price={PRICES.delivery[k]}
             savingsNote={null}
-            features={PRO_FEATURES}
+            features={DELIVERY_FEATURES}
+            ctaLabel="Assinar plano"
+            ctaVariant="ghost"
+            microCopy="Sem comissão por pedido"
+            priceId="delivery_monthly"
+          />
+
+          <PlanCard
+            tier="Plano COMPLETO"
+            icon={<IconBuilding />}
+            iconBg="rgba(14,165,233,0.10)"
+            iconColor="#0EA5E9"
+            desc="Salão e delivery num lugar só: mesas, garçom e métricas."
+            price={PRICES.completo[k]}
+            savingsNote={null}
+            features={COMPLETO_FEATURES}
             ctaLabel="Assinar plano"
             ctaVariant="primary"
-            microCopy="30 dias grátis · sem cartão"
+            microCopy="O mais escolhido pelos restaurantes"
             popular
-            priceId="pro_monthly"
+            priceId="completo_monthly"
           />
 
           <PlanCard
             tier="Plano MAX"
-            icon={<IconBuilding />}
+            icon={<IconCrown />}
             iconBg="rgba(56,189,248,0.10)"
             iconColor="#0EA5E9"
-            desc="Para redes e restaurantes de alta performance que exigem o máximo."
+            desc="Para redes: gerencie todas as suas unidades num painel só."
             price={PRICES.max[k]}
             savingsNote={null}
-            features={ENT_FEATURES}
+            features={MAX_FEATURES}
             ctaLabel="Assinar plano"
             ctaVariant="blue"
-            microCopy="Onboarding dedicado incluso"
+            microCopy="Mais de 4 unidades? Fale com um consultor"
             priceId="max_monthly"
           />
         </div>
