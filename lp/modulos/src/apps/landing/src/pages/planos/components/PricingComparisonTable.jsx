@@ -68,26 +68,29 @@ const CATEGORY_ICONS = {
 
 const ROWS = [
   { category: "Cardápio Digital" },
-  { feature: "Itens no cardápio", free: "Até 30", pro: "Ilimitado", ent: "Ilimitado" },
-  { feature: "QR Code do cardápio", free: true, pro: true, ent: true },
-  { feature: "Pedidos online", free: false, pro: true, ent: true },
+  { feature: "Itens no cardápio", start: "Até 40", delivery: "Ilimitado", completo: "Ilimitado", max: "Ilimitado" },
+  { feature: "Link da loja + QR Code", start: true, delivery: true, completo: true, max: true },
+  { feature: "Pedidos pelo WhatsApp", start: true, delivery: true, completo: true, max: true },
+  { feature: "Pedidos online (no sistema)", start: false, delivery: true, completo: true, max: true },
+  { feature: "Taxa de entrega por bairro", start: true, delivery: true, completo: true, max: true },
 
   { category: "Gestão de Mesas" },
-  { feature: "Mesas cadastradas", free: "1 mesa", pro: "Até 20", ent: "Ilimitadas" },
-  { feature: "Controle de garçons", free: false, pro: true, ent: true },
+  { feature: "Mesas e comandas", start: false, delivery: false, completo: true, max: true },
+  { feature: "Controle de garçons", start: false, delivery: false, completo: true, max: true },
 
   { category: "Métricas & Relatórios" },
-  { feature: "Painel de métricas", free: false, pro: "Básico", ent: "Avançado" },
-  { feature: "Relatórios personalizados", free: false, pro: false, ent: true },
+  { feature: "Painel de métricas", start: false, delivery: "Básico", completo: "Avançado", max: "Avançado" },
+  { feature: "Relatórios personalizados", start: false, delivery: false, completo: true, max: true },
 
   { category: "Integrações" },
-  { feature: "Integração WhatsApp", free: false, pro: "Básica", ent: "Completa" },
-  { feature: "API de integração", free: false, pro: false, ent: true },
-  { feature: "Multi-unidades", free: false, pro: false, ent: "Até 5 restaurantes" },
+  { feature: "Integração WhatsApp", start: "Básica", delivery: "Básica", completo: "Avançada", max: "Avançada" },
+  { feature: "Integração iFood", start: false, delivery: false, completo: false, max: true },
+  { feature: "API de integração", start: false, delivery: false, completo: false, max: true },
+  { feature: "Multi-unidades", start: false, delivery: false, completo: false, max: "Até 4 restaurantes" },
 
   { category: "Suporte" },
-  { feature: "Canal de atendimento", free: "E-mail", pro: "Chat prioritário", ent: "24/7 dedicado" },
-  { feature: "Gerente de conta", free: false, pro: false, ent: true },
+  { feature: "Canal de atendimento", start: "E-mail", delivery: "Prioritário", completo: "Prioritário", max: "Dedicado" },
+  { feature: "Gerente de conta", start: false, delivery: false, completo: false, max: true },
 ];
 
 export function PricingComparisonTable() {
@@ -141,16 +144,16 @@ export function PricingComparisonTable() {
                 >
                   Recursos
                 </th>
-                {(["Grátis", "Pro", "Empresarial"]).map((label) => (
+                {(["Start", "Delivery", "Completo", "MAX"]).map((label) => (
                   <th
                     key={label}
-                    className="px-5 py-5 text-center text-xs font-bold"
+                    className="px-4 py-5 text-center text-xs font-bold"
                     style={{
-                      background: label === "Pro" ? "rgba(255,127,39,0.05)" : "rgba(13,31,51,0.03)",
-                      color: label === "Pro" ? "#DD3F0C" : "#8A9AB0",
+                      background: label === "Completo" ? "rgba(14,165,233,0.06)" : "rgba(13,31,51,0.03)",
+                      color: label === "Completo" ? "#0EA5E9" : "#8A9AB0",
                       borderBottom: "1.5px solid rgba(13,31,51,0.08)",
-                      borderLeft: label === "Pro" ? "1.5px solid rgba(255,127,39,0.2)" : undefined,
-                      borderRight: label === "Pro" ? "1.5px solid rgba(255,127,39,0.2)" : undefined,
+                      borderLeft: label === "Completo" ? "1.5px solid rgba(14,165,233,0.25)" : undefined,
+                      borderRight: label === "Completo" ? "1.5px solid rgba(14,165,233,0.25)" : undefined,
                     }}
                   >
                     {label}
@@ -164,7 +167,7 @@ export function PricingComparisonTable() {
                   return (
                     <tr key={`cat-${i}`}>
                       <td
-                        colSpan={4}
+                        colSpan={5}
                         className="pl-7 py-3"
                         style={{
                           background: "rgba(13,31,51,0.025)",
@@ -195,21 +198,24 @@ export function PricingComparisonTable() {
                     <td className="pl-7 pr-5 py-4 text-left" style={{ color: "#4A6278" }}>
                       {row.feature}
                     </td>
-                    <td className="px-5 py-4 text-center">
-                      <CellValue value={row.free} />
+                    <td className="px-4 py-4 text-center">
+                      <CellValue value={row.start} />
+                    </td>
+                    <td className="px-4 py-4 text-center">
+                      <CellValue value={row.delivery} />
                     </td>
                     <td
-                      className="px-5 py-4 text-center"
+                      className="px-4 py-4 text-center"
                       style={{
-                        borderLeft: "1.5px solid rgba(255,127,39,0.15)",
-                        borderRight: "1.5px solid rgba(255,127,39,0.15)",
-                        background: "rgba(255,127,39,0.02)",
+                        borderLeft: "1.5px solid rgba(14,165,233,0.15)",
+                        borderRight: "1.5px solid rgba(14,165,233,0.15)",
+                        background: "rgba(14,165,233,0.03)",
                       }}
                     >
-                      <CellValue value={row.pro} />
+                      <CellValue value={row.completo} />
                     </td>
-                    <td className="px-5 py-4 text-center">
-                      <CellValue value={row.ent} />
+                    <td className="px-4 py-4 text-center">
+                      <CellValue value={row.max} />
                     </td>
                   </tr>
                 );
