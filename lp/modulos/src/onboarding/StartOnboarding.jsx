@@ -7,6 +7,14 @@ const genSlugCandidate = () => {
   return `minha-loja-${rand}`;
 };
 
+// Conclui o onboarding. Opção A (trial sem cartão): o lojista vai direto pro dashboard,
+// começando no período de trial. O plano escolhido na tela de planos fica salvo em
+// localStorage.pendingPriceId para o CTA "Ativar assinatura" no Settings (sem fricção de cartão agora).
+async function finishOnboarding(slug) {
+  try { localStorage.setItem('tenantSlug', slug); } catch (_) {}
+  window.location.assign(`/${slug}/dashboard`);
+}
+
 export default function StartOnboarding() {
   const [state, setState] = useState({ status: 'init', message: '' });
   const guard = useRef(false);
@@ -37,8 +45,7 @@ export default function StartOnboarding() {
               });
             }
           } catch (_) {}
-          try { localStorage.setItem('tenantSlug', existing.slug); } catch (_) {}
-          window.location.assign(`/${existing.slug}/dashboard`);
+          await finishOnboarding(existing.slug);
           return;
         }
       } catch (_) {}
@@ -73,8 +80,7 @@ export default function StartOnboarding() {
             }
           } catch (_) {}
         }
-        try { localStorage.setItem('tenantSlug', createdSlug); } catch (_) {}
-        window.location.assign(`/${createdSlug}/dashboard`);
+        await finishOnboarding(createdSlug);
       } catch (e) {
         setState({ status: 'error', message: 'Não foi possível criar sua loja automaticamente. Tente novamente.' });
       }
