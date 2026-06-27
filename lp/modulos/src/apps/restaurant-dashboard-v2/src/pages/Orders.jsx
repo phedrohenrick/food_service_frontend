@@ -1,7 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Input, Modal } from '../../../../shared/components/ui';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
 import { formatOrderStatus } from '../../../../shared/utils/orderStatus';
+import FeatureLock from '../components/FeatureLock';
+import { Inbox, Utensils, Printer } from 'lucide-react';
+import { useThermalPrinter } from '../hooks/useThermalPrinter';
 
 // Estilos para colunas da pipeline
 const pipelineStyles = {
@@ -71,7 +74,7 @@ const nextStatus = (current) => {
 };
 
 const Orders = () => {
-  const { orders, user, tenant, updateTenant, maps, getOrderDetailed, addOrderStatus, updateOrderStatus, reloadOrders } = useStorefront();
+  const { orders, user, tenant, maps, getOrderDetailed, addOrderStatus, updateOrderStatus, reloadOrders, canUseFeature, entitlements } = useStorefront();
   const [filter, setFilter] = useState('todos');
   const [originFilter, setOriginFilter] = useState('todos');
   const [expanded, setExpanded] = useState(null);
@@ -88,14 +91,19 @@ const Orders = () => {
   const [exportSending, setExportSending] = useState(false);
   const [exportMessage, setExportMessage] = useState('');
 
+  // Polling estável: guarda a referência mais recente de reloadOrders num ref e cria UM
+  // único intervalo (deps []). loadData muda de identidade a cada dispatch; sem o ref, o
+  // efeito recriava o intervalo a cada render — empilhando polls e estourando conexões
+  // (ERR_INSUFFICIENT_RESOURCES / tela piscando).
+  const reloadRef = useRef(reloadOrders);
+  useEffect(() => { reloadRef.current = reloadOrders; }, [reloadOrders]);
   useEffect(() => {
-    if (!reloadOrders) return;
-    reloadOrders();
-    const intervalId = setInterval(() => {
-      reloadOrders();
-    }, 5000);
-    return () => clearInterval(intervalId);
-  }, [reloadOrders]);
+    let alive = true;
+    const tick = () => { if (alive) reloadRef.current?.(); };
+    tick();
+    const intervalId = setInterval(tick, 12000);
+    return () => { alive = false; clearInterval(intervalId); };
+  }, []);
 
   const isToday = (iso) => {
     const d = new Date(iso);
@@ -169,12 +177,54 @@ const Orders = () => {
         setExportSending(false);
         return;
       }
-      // Simular envio de PDF por e-mail (placeholder de integração backend)
-      // Aqui poderíamos fazer um POST para um endpoint: /api/export-orders
-      await new Promise((res) => setTimeout(res, 800));
-      setExportMessage(`Exportação agendada: ${dayOrders.length} pedidos serão enviados para ${user?.email || 'email do restaurante'}.`);
+
+      // CSV pronto pra Excel/Sheets em pt-BR: separador ";", decimais com vírgula e BOM p/ acentos.
+      const csvCell = (v) => {
+        const s = String(v ?? '');
+        return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+      };
+      const num = (v) => (Number(v) || 0).toFixed(2).replace('.', ',');
+
+      const header = ['Pedido', 'Data/Hora', 'Origem', 'Cliente/Mesa', 'Status', 'Subtotal', 'Taxa serviço', 'Entrega', 'Desconto', 'Total', 'Pagamento'];
+      const rows = dayOrders
+        .slice()
+        .sort((a, b) => new Date(a.order.created_at) - new Date(b.order.created_at))
+        .map(({ order, lastStatus }) => {
+          const isTable = order.tab_id != null;
+          const who = isTable
+            ? (order.customer_name || `Mesa ${order.table_number ?? ''}`)
+            : (user?.name || 'Cliente');
+          const serviceFee = order.service_fee ?? (order.subtotal || 0) * 0.08;
+          return [
+            order.id,
+            fmtDate(order.created_at),
+            isTable ? 'Mesa' : 'Delivery',
+            who,
+            formatOrderStatus(lastStatus),
+            num(order.subtotal),
+            num(serviceFee),
+            num(order.delivery_fee),
+            num(order.discount),
+            num(order.total),
+            (order.payment_channel || '').toUpperCase(),
+          ].map(csvCell).join(';');
+        });
+      const totalDia = dayOrders.reduce((s, { order }) => s + (Number(order.total) || 0), 0);
+      const csv = '﻿' + [header.join(';'), ...rows, `Total do dia;;;;;;;;;${num(totalDia)};`].join('\r\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `pedidos-${exportDate}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      setExportMessage(`${dayOrders.length} pedido(s) exportado(s) — baixando "pedidos-${exportDate}.csv".`);
     } catch (e) {
-      setExportMessage('Falha ao agendar exportação. Tente novamente.');
+      setExportMessage('Falha ao exportar. Tente novamente.');
     } finally {
       setExportSending(false);
     }
@@ -187,55 +237,138 @@ const Orders = () => {
   const subtleButtonClass =
     'border border-slate-200 bg-white text-slate-700 shadow-sm hover:border-slate-300 hover:bg-slate-50';
 
+  // Impressão térmica (Bluetooth/ESC-POS). A fila do serviço serializa os jobs — sem
+  // concorrência mesmo com vários aceites ao mesmo tempo.
+  const {
+    supported: printerSupported,
+    supportedSerial,
+    supportedBluetooth,
+    status: printerStatus,
+    deviceName,
+    error: printerError,
+    queueLength: printerQueue,
+    isConnected: printerConnected,
+    autoPrint,
+    setAutoPrint,
+    connectSerial,
+    connectBluetooth,
+    tryAutoConnect,
+    printReceipt,
+  } = useThermalPrinter();
+
+  // Monta o modelo do cupom a partir da linha do pedido (pedido + detalhado + mapas).
+  const buildReceiptModel = (row) => {
+    const { order, detailed } = row;
+    const isTable = order.tab_id != null;
+    const address = maps.addressMap[order.address_id];
+    const neighborhood = address ? maps.neighborhoodMap[address.neighborhood_id] : null;
+    const addressText = address
+      ? `${address.street}, ${address.street_number} - ${neighborhood?.name || ''}` +
+        `${address.complement ? ' (' + address.complement + ')' : ''} - ${address.city || ''}`
+      : '';
+    const items = (detailed?.items || []).map((it) => ({
+      quantity: it.quantity,
+      name: it.item_name_snapshot,
+      unitPrice: it.unit_price,
+      notes: it.notes,
+      options: (it.options || []).map((op) => ({
+        name: (op.groupName ? op.groupName + ': ' : '') + (op.option?.name || op.option_name_snapshot || ''),
+        charge: op.option?.additional_charge ?? op.additional_charge ?? 0,
+      })),
+    }));
+    return {
+      tenantName: tenant?.name || 'Restaurante',
+      tenantDoc: tenant?.cnpj_cpf,
+      tenantPhone: tenant?.whatsapp_phone || tenant?.phone,
+      orderId: order.id,
+      createdAt: fmtDate(order.created_at),
+      origin: isTable ? 'Mesa' : 'Delivery',
+      tableNumber: order.table_number,
+      customerName: isTable ? (order.customer_name || '') : (user?.name || ''),
+      customerPhone: isTable ? '' : (user?.phone || ''),
+      address: isTable ? '' : addressText,
+      items,
+      subtotal: order.subtotal,
+      serviceFee: order.service_fee ?? (order.subtotal || 0) * 0.08,
+      deliveryFee: order.delivery_fee,
+      discount: order.discount,
+      total: order.total,
+      payment: order.payment_channel,
+      change: order.change,
+    };
+  };
+
+  // Impressão manual (reimpressão): conecta sob demanda usando o gesto do clique.
+  // Prioriza a porta serial (caso da maioria das mini 58mm SPP); cai pra BLE se for o caso.
+  const handlePrint = async (row) => {
+    try {
+      if (!printerConnected) {
+        if (supportedSerial) await connectSerial();
+        else await connectBluetooth();
+      }
+      await printReceipt(buildReceiptModel(row));
+    } catch (_) {
+      /* erro já refletido no status da impressora */
+    }
+  };
+
+  // Avança o status; ao ACEITAR (CREATED -> ACCEPTED), imprime o cupom automaticamente
+  // se o toggle estiver ligado — reconectando sozinho se a porta tiver caído.
+  const handleAdvance = async (row) => {
+    const { order, lastStatus } = row;
+    const wasAccept = lastStatus === 'CREATED';
+    const ok = await updateOrderStatus(order.id, nextStatus(lastStatus));
+    if (!(ok && wasAccept && autoPrint)) return;
+    try {
+      if (!printerConnected) {
+        const reconnected = await tryAutoConnect(); // silencioso (porta já autorizada)
+        if (!reconnected) {
+          // Primeira vez na sessão: usa o gesto do próprio clique de aceitar pra conectar.
+          if (supportedSerial) await connectSerial();
+          else await connectBluetooth();
+        }
+      }
+      await printReceipt(buildReceiptModel(row));
+    } catch (_) {
+      /* erro já refletido no status da impressora */
+    }
+  };
+
+  // Bloqueio do painel de pedidos (online_orders) para planos sem acesso. Avalia só após
+  // os entitlements carregarem (evita piscar o overlay no load).
+  const entitlementsLoaded = entitlements && Object.keys(entitlements).length > 0;
+  const ordersAllowed = !entitlementsLoaded || canUseFeature('online_orders');
+  const lockStatus = tenant?.subscription_status;
+  const isInactive = lockStatus === 'PAST_DUE' || lockStatus === 'CANCELED';
+  const lockTitle = lockStatus === 'TRIALING'
+    ? 'Período de teste expirado'
+    : isInactive ? 'Assinatura inativa' : 'Seu plano não cobre esse recurso';
+  const lockMessage = lockStatus === 'TRIALING'
+    ? 'Seu período de avaliação gratuito terminou. Ative um plano para receber pedidos no painel.'
+    : isInactive
+      ? 'Regularize sua assinatura para voltar a receber pedidos no painel.'
+      : 'O painel de pedidos online está disponível a partir do plano Delivery.';
+  const lockCta = (lockStatus === 'TRIALING' || isInactive) ? 'Ativar assinatura' : 'Ver planos';
+  const lockBadge = lockStatus === 'TRIALING'
+    ? 'Período grátis expirado'
+    : isInactive ? 'Assinatura inativa' : 'Recurso bloqueado';
+
   return (
+    <FeatureLock
+      locked={!ordersAllowed}
+      title={lockTitle}
+      benefit="Receba e gerencie seus pedidos em tempo real, sem depender do WhatsApp."
+      message={lockMessage}
+      ctaLabel={lockCta}
+      badgeLabel={lockBadge}
+    >
     <div className="space-y-6 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.96),_rgba(241,245,249,0.92)_44%,_rgba(226,232,240,0.95)_100%)] p-1 rounded-[30px] ">
-      {/* Banner de Status da Loja */}
-      <div
-        className={`rounded-[30px] border px-6 py-5 flex flex-wrap items-center justify-between gap-4 shadow-[0_24px_70px_-36px_rgba(15,23,42,0.45)] backdrop-blur-sm transition-colors ${
-          tenant?.is_open
-            ? 'bg-emerald-50/95 border-emerald-200'
-            : 'bg-rose-50/95 border-rose-200'
-        }`}
-      >
-        <div>
-          <h2
-            className={`text-xl font-semibold tracking-tight ${
-              tenant?.is_open ? 'text-emerald-900' : 'text-rose-900'
-            }`}
-          >
-            {tenant?.is_open ? 'Loja aberta' : 'Loja fechada'}
-          </h2>
-          <p
-            className={`mt-1 text-sm ${
-              tenant?.is_open ? 'text-emerald-700' : 'text-rose-700'
-            }`}
-          >
-            {tenant?.is_open
-              ? 'Recebendo pedidos em tempo real'
-              : 'Não está recebendo novos pedidos'}
-          </p>
-        </div>
-        <Button
-          variant="ghost"
-          className={`border ${
-            tenant?.is_open
-              ? 'border-emerald-200 bg-white text-emerald-700 shadow-sm hover:bg-emerald-100'
-              : 'border-rose-200 bg-white text-rose-700 shadow-sm hover:bg-rose-100'
-          }`}
-          onClick={() => updateTenant({ is_open: !tenant?.is_open })}
-        >
-          {tenant?.is_open ? 'Fechar loja' : 'Abrir loja'}
-        </Button>
-      </div>
 
       <div className={`${sectionCardClass} px-6 py-6`}>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-sm font-medium tracking-[0.18em] text-slate-500 uppercase">Pedidos em andamento</p>
             <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">Trilha de preparação do dia</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-              Acompanhe a operação por etapa, priorize novos pedidos e mantenha a equipe alinhada no ritmo do expediente.
-            </p>
           </div>
           <div className="flex gap-2">
             <Button variant="ghost" className={subtleButtonClass} onClick={() => setExportOpen(true)}>Exportar</Button>
@@ -248,6 +381,79 @@ const Orders = () => {
             </Button>
           </div>
         </div>
+
+        {/* Barra da impressora térmica */}
+        {printerSupported ? (
+          <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-slate-200/70 pt-4">
+            <div className="flex items-center gap-2">
+              <Printer className="h-4 w-4 text-slate-500" strokeWidth={2} />
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Impressora</span>
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
+                  printerConnected
+                    ? 'bg-emerald-100 text-emerald-700'
+                    : printerStatus === 'connecting'
+                    ? 'bg-amber-100 text-amber-700'
+                    : printerStatus === 'error'
+                    ? 'bg-red-100 text-red-700'
+                    : 'bg-slate-100 text-slate-600'
+                }`}
+              >
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${
+                    printerConnected ? 'bg-emerald-500' : printerStatus === 'error' ? 'bg-red-500' : 'bg-slate-400'
+                  }`}
+                />
+                {printerStatus === 'printing'
+                  ? `Imprimindo…${printerQueue > 1 ? ` (${printerQueue} na fila)` : ''}`
+                  : printerConnected
+                  ? deviceName || 'Conectada'
+                  : printerStatus === 'connecting'
+                  ? 'Conectando…'
+                  : 'Desconectada'}
+              </span>
+            </div>
+            {supportedSerial && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className={subtleButtonClass}
+                title="Impressoras USB/cabo (profissionais) ou a porta COM do Bluetooth pareado"
+                onClick={() => connectSerial().catch(() => {})}
+              >
+                {printerConnected ? 'Trocar impressora' : 'Conectar impressora (USB / cabo / Bluetooth)'}
+              </Button>
+            )}
+            {supportedBluetooth && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className={subtleButtonClass}
+                title="Apenas impressoras que falam Bluetooth BLE"
+                onClick={() => connectBluetooth().catch(() => {})}
+              >
+                Conectar (Bluetooth BLE)
+              </Button>
+            )}
+            <label className="flex cursor-pointer select-none items-center gap-2 text-sm text-slate-600">
+              <input
+                type="checkbox"
+                checked={autoPrint}
+                onChange={(e) => setAutoPrint(e.target.checked)}
+                className="h-4 w-4 rounded border-slate-300 text-[var(--accent)] focus:ring-[var(--accent)]"
+              />
+              Imprimir cupom ao aceitar
+            </label>
+            {printerError && <span className="text-xs text-red-600">{printerError}</span>}
+            <p className="w-full text-[11px] text-slate-400">
+              A impressora reconecta sozinha após a 1ª vez. Use <strong>Conectar impressora</strong> para escolher ou trocar de equipamento — serve para as mais profissionais por USB/cabo ao lado do PC.
+            </p>
+          </div>
+        ) : (
+          <div className="mt-5 border-t border-slate-200/70 pt-4 text-xs text-slate-500">
+            Impressão indisponível neste navegador. Use <strong>Chrome</strong> ou <strong>Edge</strong> no PC para conectar a impressora (USB/cabo ou Bluetooth).
+          </div>
+        )}
       </div>
 
       {confirmClose && (
@@ -268,9 +474,8 @@ const Orders = () => {
 
       <Modal isOpen={exportOpen} onClose={() => { setExportOpen(false); setExportMessage(''); }} title="Exportar pedidos do dia" size="md">
         <div className="space-y-3">
-          <p className="text-sm text-gray-600">Selecione o dia e confirme para enviar um PDF com os pedidos para o e-mail do restaurante.</p>
+          <p className="text-sm text-gray-600">Selecione o dia e baixe uma planilha (CSV) com todos os pedidos — pronta para abrir no Excel ou Google Sheets.</p>
           <Input label="Dia para exportar" type="date" value={exportDate} onChange={(e) => setExportDate(e.target.value)} />
-          <Input label="E-mail de destino" type="email" value={user?.email || ''} disabled />
           {exportMessage && (
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700">
               {exportMessage}
@@ -278,7 +483,7 @@ const Orders = () => {
           )}
           <div className="flex flex-wrap gap-2">
             <Button onClick={handleConfirmExport} disabled={exportSending}>
-              {exportSending ? 'Enviando…' : 'Confirmar envio'}
+              {exportSending ? 'Exportando…' : 'Baixar CSV'}
             </Button>
             <Button variant="ghost" className={subtleButtonClass} onClick={() => { setExportOpen(false); setExportMessage(''); }}>
               Cancelar
@@ -338,9 +543,17 @@ const Orders = () => {
               </span>
             </div>
 
-            {filteredOrders
-              .filter((row) => pipelineKeyForStatus(row.lastStatus) === column.key)
-              .map(({ order, detailed, lastStatus, lastAt }) => {
+            {(() => {
+              const colOrders = filteredOrders.filter((row) => pipelineKeyForStatus(row.lastStatus) === column.key);
+              if (colOrders.length === 0) {
+                return (
+                  <div className="flex flex-col items-center justify-center rounded-[20px] border border-dashed border-slate-200 py-10 text-center">
+                    <Inbox className="h-7 w-7 text-slate-300" strokeWidth={1.5} />
+                    <p className="mt-2 text-xs font-medium text-slate-400">Nenhum pedido aqui</p>
+                  </div>
+                );
+              }
+              return colOrders.map(({ order, detailed, lastStatus, lastAt }) => {
                 const address = maps.addressMap[order.address_id];
                 const neighborhood = address ? maps.neighborhoodMap[address.neighborhood_id] : null;
                 const statusClass = statusPills[lastStatus] || 'bg-gray-100 text-gray-700';
@@ -375,7 +588,7 @@ const Orders = () => {
                                 color: 'var(--accent)',
                               }}
                             >
-                              🍽 Mesa {order.table_number ?? '?'}
+                              <Utensils className="h-3 w-3" strokeWidth={2.5} /> Mesa {order.table_number ?? '?'}
                             </span>
                           )}
                         </div>
@@ -527,12 +740,22 @@ const Orders = () => {
                       >
                         {isExpanded ? 'Ocultar' : 'Detalhes'}
                       </Button>
+                      {printerSupported && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className={subtleButtonClass}
+                          onClick={() => handlePrint({ order, detailed, lastStatus, lastAt })}
+                        >
+                          <Printer className="mr-1 h-3.5 w-3.5" strokeWidth={2} /> Imprimir
+                        </Button>
+                      )}
                       {!isClosed(lastStatus) && (
                         <>
                           <Button
                             size="sm"
                             className="flex-1 min-w-[160px]"
-                            onClick={() => updateOrderStatus(order.id, nextStatus(lastStatus))}
+                            onClick={() => handleAdvance({ order, detailed, lastStatus, lastAt })}
                           >
                             {lastStatus === 'CREATED' ? 'Aceitar pedido' : 'Avançar etapa'}
                           </Button>
@@ -566,11 +789,13 @@ const Orders = () => {
                     </div>
                   </div>
                 );
-              })}
+              });
+            })()}
           </div>
         ))}
       </div>
     </div>
+    </FeatureLock>
   );
 };
 
