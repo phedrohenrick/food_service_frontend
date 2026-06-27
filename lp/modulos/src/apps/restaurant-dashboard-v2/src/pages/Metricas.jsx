@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
 import api from '../../../../shared/services/api';
+import FeatureLock from '../components/FeatureLock';
+import { Lock } from 'lucide-react';
 
 const formatCurrency = (n) =>
   (Number(n) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -86,14 +88,80 @@ function FeedbackCard({ msg }) {
   );
 }
 
+const TEASER_SECTIONS = [
+  { title: 'Hoje em destaque', sub: 'Faturamento, pedidos e ticket médio do dia' },
+  { title: 'Insights estratégicos', sub: 'Recomendações pra vender mais' },
+  { title: 'Tendência de receita', sub: 'Sua evolução de vendas no período' },
+  { title: 'Horários de pico', sub: 'Quando seu restaurante mais vende' },
+  { title: 'Itens campeões de venda', sub: 'Seus pratos que mais dão lucro' },
+  { title: 'Itens com baixa saída', sub: 'O que está parado no cardápio' },
+];
+
+// Teaser exibido quando as métricas estão bloqueadas: mostra só os TÍTULOS do que o
+// lojista teria, pra deixar claro o que ele está perdendo (sem revelar os dados).
+function MetricsTeaser() {
+  return (
+    <div className="w-full space-y-6 px-4 pb-8 pt-1 sm:px-6 lg:px-8">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Métricas</h1>
+        <p className="mt-1 text-sm text-slate-500">Insights para aumentar o lucro do restaurante</p>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {TEASER_SECTIONS.map((s) => (
+          <div key={s.title} className={`${panelClass} p-5`}>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-base font-semibold text-slate-900">{s.title}</h2>
+                <p className="mt-0.5 text-xs text-slate-500">{s.sub}</p>
+              </div>
+              <span
+                className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg"
+                style={{ background: 'rgba(255,127,39,0.12)', color: '#EA1D2C' }}
+              >
+                <Lock className="h-3.5 w-3.5" strokeWidth={2.5} />
+              </span>
+            </div>
+            <div className="mt-4 flex items-end gap-1.5" aria-hidden="true">
+              {[40, 70, 30, 85, 55, 65, 45].map((h, i) => (
+                <div
+                  key={i}
+                  className="flex-1 rounded-t"
+                  style={{ height: `${h * 0.5}px`, background: 'linear-gradient(to top, rgba(13,31,51,0.10), rgba(13,31,51,0.03))' }}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function Metricas() {
-  const { tenant, canUseFeature } = useStorefront();
+  const { tenant, canUseFeature, entitlements } = useStorefront();
   const [days, setDays] = useState(30);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const isBlocked = BLOCKED_STATUSES.includes(tenant?.subscription_status) || !canUseFeature('analytics');
+  // Só bloqueia depois que os entitlements carregaram (evita piscar o overlay no load).
+  const entitlementsLoaded = entitlements && Object.keys(entitlements).length > 0;
+  const isInactive = BLOCKED_STATUSES.includes(tenant?.subscription_status);
+  const isBlocked = isInactive || (entitlementsLoaded && !canUseFeature('analytics'));
+
+  const lockStatus = tenant?.subscription_status;
+  const lockTitle = lockStatus === 'TRIALING'
+    ? 'Período de teste expirado'
+    : isInactive ? 'Assinatura inativa' : 'Seu plano não cobre esse recurso';
+  const lockMessage = lockStatus === 'TRIALING'
+    ? 'Seu período de avaliação gratuito terminou. Ative um plano para acompanhar suas métricas e relatórios.'
+    : isInactive
+      ? 'Regularize sua assinatura para voltar a acessar os relatórios.'
+      : 'Métricas e relatórios estão disponíveis a partir do plano Delivery.';
+  const lockCta = (lockStatus === 'TRIALING' || isInactive) ? 'Ativar assinatura' : 'Ver planos';
+  const lockBadge = lockStatus === 'TRIALING'
+    ? 'Período grátis expirado'
+    : isInactive ? 'Assinatura inativa' : 'Recurso bloqueado';
 
   useEffect(() => {
     if (isBlocked) return;
@@ -141,26 +209,17 @@ export default function Metricas() {
 
   if (isBlocked) {
     return (
-      <div className="w-full px-4 pb-8 pt-1 sm:px-6 lg:px-8">
-        <div className={`${panelClass} p-10 text-center`}>
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--accent)]/10">
-            <svg className="h-8 w-8 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-          </div>
-          <h2 className="text-2xl font-bold text-slate-900">Métricas bloqueadas</h2>
-          <p className="mt-2 text-slate-500">
-            Sua assinatura está {tenant?.subscription_status === 'PAST_DUE' ? 'com pagamento pendente' : 'cancelada'}.
-            Renove o plano para acessar os relatórios de insights.
-          </p>
-          <a
-            href="/planos"
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-6 py-3 text-sm font-semibold text-[var(--accent-contrast)] shadow-lg shadow-[var(--accent)]/25 transition hover:opacity-90"
-          >
-            Ver planos
-          </a>
-        </div>
-      </div>
+      <FeatureLock
+        locked
+        blur={false}
+        title={lockTitle}
+        benefit="Veja seus horários de pico, pratos campeões e onde está o seu lucro."
+        message={lockMessage}
+        ctaLabel={lockCta}
+        badgeLabel={lockBadge}
+      >
+        <MetricsTeaser />
+      </FeatureLock>
     );
   }
 
