@@ -22,6 +22,49 @@ const navItems = [
   { label: 'Configurações', suffix: 'settings', icon: <MdOutlineSettings /> },
 ];
 
+// Banner de assinatura: durante o trial mostra os dias restantes; se inativa, pede ativação.
+// "Ativar assinatura" leva para /planos, onde o usuário logado vai direto ao checkout do Stripe.
+function TrialBanner() {
+  const [sub, setSub] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    api.get('/subscriptions/current').then((d) => { if (alive) setSub(d); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
+  if (!sub || sub.status === 'ACTIVE') return null;
+
+  const isTrial = sub.status === 'TRIALING';
+  let daysLeft = null;
+  if (sub.trialEndsAt) {
+    daysLeft = Math.max(0, Math.ceil((new Date(sub.trialEndsAt).getTime() - Date.now()) / 86400000));
+  }
+  const message = isTrial
+    ? (daysLeft != null
+        ? `Você está no período de avaliação — ${daysLeft} ${daysLeft === 1 ? 'dia restante' : 'dias restantes'}.`
+        : 'Você está no período de avaliação gratuito.')
+    : 'Sua assinatura está inativa. Ative um plano para manter todos os recursos.';
+  const bg = isTrial ? '#EFF6FF' : '#FEF2F2';
+  const border = isTrial ? '#BFDBFE' : '#FECACA';
+  const color = isTrial ? '#1E40AF' : '#B91C1C';
+
+  return (
+    <div
+      className="mx-6 mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl px-5 py-3"
+      style={{ background: bg, border: `1px solid ${border}` }}
+    >
+      <span className="text-sm font-medium" style={{ color }}>{message}</span>
+      <a
+        href="/planos"
+        className="inline-flex items-center rounded-xl px-4 py-2 text-sm font-semibold text-white transition-colors"
+        style={{ background: '#0EA5E9' }}
+      >
+        Ativar assinatura
+      </a>
+    </div>
+  );
+}
+
 const DashboardLayoutv2 = ({ children, onHelp }) => {
   const { tenant, user, updateTenant, canUseFeature } = useStorefront();
   const navigate = useNavigate();
@@ -388,6 +431,7 @@ const DashboardLayoutv2 = ({ children, onHelp }) => {
             </div>
           )}
 
+          <TrialBanner />
           <main className="p-6 space-y-6">{children}</main>
         </div>
       </div>
