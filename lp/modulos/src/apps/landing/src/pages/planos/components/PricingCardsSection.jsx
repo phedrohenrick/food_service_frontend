@@ -18,6 +18,7 @@ const START_FEATURES = [
   { text: "Pedidos pelo WhatsApp", included: true },
   { text: "Taxa de entrega por bairro", included: true },
   { text: "Pedidos pelo sistema (painel)", included: false },
+  { text: "Impressão automática de cupons", included: false },
   { text: "Métricas e relatórios", included: false },
   { text: "Controle de mesas e garçom", included: false },
 ];
@@ -25,6 +26,7 @@ const START_FEATURES = [
 const DELIVERY_FEATURES = [
   { text: "Cardápio digital ilimitado", included: true },
   { text: "Pedidos online pelo sistema", included: true },
+  { text: "Impressão automática de cupons", included: true },
   { text: "Link da loja + QR Code", included: true },
   { text: "Pedidos pelo WhatsApp", included: true },
   { text: "Métricas básicas", included: true },

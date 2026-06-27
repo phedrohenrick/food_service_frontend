@@ -72,6 +72,7 @@ const ROWS = [
   { feature: "Link da loja + QR Code", start: true, delivery: true, completo: true, max: true },
   { feature: "Pedidos pelo WhatsApp", start: true, delivery: true, completo: true, max: true },
   { feature: "Pedidos online (no sistema)", start: false, delivery: true, completo: true, max: true },
+  { feature: "Impressão automática de cupons", start: false, delivery: true, completo: true, max: true },
   { feature: "Taxa de entrega por bairro", start: true, delivery: true, completo: true, max: true },
 
   { category: "Gestão de Mesas" },
