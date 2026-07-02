@@ -3,7 +3,7 @@ import { Button, Input, Modal } from '../../../../shared/components/ui';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
 import { formatOrderStatus } from '../../../../shared/utils/orderStatus';
 import FeatureLock from '../components/FeatureLock';
-import { Inbox, Utensils, Printer } from 'lucide-react';
+import { Inbox, Utensils, Printer, Lock } from 'lucide-react';
 import { useThermalPrinter } from '../hooks/useThermalPrinter';
 
 // Estilos para colunas da pipeline
@@ -73,6 +73,75 @@ const nextStatus = (current) => {
   }
 };
 
+// Colunas da pipeline (também usadas pelo teaser de bloqueio).
+const PIPELINE_COLUMNS = [
+  { key: 'novo', title: 'Novos', helper: 'chegaram agora' },
+  { key: 'preparando', title: 'Preparando', helper: 'na cozinha' },
+  { key: 'pronto', title: 'Prontos', helper: 'para retirar' },
+  { key: 'enviado', title: 'Em entrega', helper: 'a caminho' },
+];
+
+// Silhueta de um card de pedido — placeholder borrado pra dar a sensação de
+// "tem algo aqui" sem revelar dados reais.
+function GhostOrderCard() {
+  return (
+    <div className="space-y-3 rounded-[26px] border border-slate-200 bg-white p-4">
+      <div className="flex items-center justify-between">
+        <div className="space-y-1.5">
+          <div className="h-2 w-16 rounded bg-slate-200/80" />
+          <div className="h-3 w-24 rounded bg-slate-200" />
+        </div>
+        <div className="h-5 w-16 rounded-full bg-slate-100" />
+      </div>
+      <div className="space-y-2 rounded-2xl border border-slate-100 bg-slate-50 p-3">
+        <div className="h-2 w-full rounded bg-slate-200/70" />
+        <div className="h-2 w-3/4 rounded bg-slate-200/70" />
+      </div>
+      <div className="flex items-center justify-between">
+        <div className="h-2 w-12 rounded bg-slate-200/70" />
+        <div className="h-2 w-16 rounded bg-slate-200/70" />
+      </div>
+    </div>
+  );
+}
+
+// Teaser exibido quando o painel de pedidos está bloqueado: o cabeçalho e as
+// colunas (títulos/indicações) ficam NÍTIDOS pra instigar o upgrade; apenas o
+// recurso em si (os cards de pedido) fica borrado com um cadeado.
+function OrdersTeaser() {
+  return (
+    <div className="space-y-6 rounded-[30px] bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.96),_rgba(241,245,249,0.92)_44%,_rgba(226,232,240,0.95)_100%)] p-1">
+      <div className="rounded-[30px] border border-slate-200/80 bg-white/95 px-6 py-6 shadow-[0_28px_70px_-34px_rgba(15,23,42,0.35)] backdrop-blur-sm">
+        <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">Trilha de pedidos do dia</h1>
+        <p className="mt-1 text-sm text-slate-500">Receba pedidos do delivery e das mesas e acompanhe cada etapa em tempo real.</p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
+        {PIPELINE_COLUMNS.map((column, ci) => (
+          <div key={column.key} className="space-y-4 rounded-[30px] border border-slate-200/80 bg-white/95 p-4 shadow-[0_24px_60px_-34px_rgba(15,23,42,0.35)]">
+            <div className="flex items-center justify-between rounded-[24px] border border-slate-200 bg-slate-50/80 px-4 py-3">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">{column.helper}</p>
+                <h3 className="mt-1 text-lg font-semibold text-slate-950">{column.title}</h3>
+              </div>
+              <span
+                className="flex h-7 w-7 items-center justify-center rounded-lg"
+                style={{ background: 'rgba(255,127,39,0.12)', color: '#EA1D2C' }}
+              >
+                <Lock className="h-3.5 w-3.5" strokeWidth={2.5} />
+              </span>
+            </div>
+            <div className="space-y-3 blur-[3px] select-none pointer-events-none" aria-hidden="true">
+              <GhostOrderCard />
+              {ci === 0 && <GhostOrderCard />}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const Orders = () => {
   const { orders, user, tenant, maps, getOrderDetailed, addOrderStatus, updateOrderStatus, reloadOrders, canUseFeature, entitlements } = useStorefront();
   const [filter, setFilter] = useState('todos');
@@ -113,15 +182,7 @@ const Orders = () => {
     return d >= start && d < end;
   };
 
-  const columns = useMemo(
-    () => [
-      { key: 'novo', title: 'Novos', helper: 'chegaram agora' },
-      { key: 'preparando', title: 'Preparando', helper: 'na cozinha' },
-      { key: 'pronto', title: 'Prontos', helper: 'para retirar' },
-      { key: 'enviado', title: 'Em entrega', helper: 'a caminho' },
-    ],
-    []
-  );
+  const columns = PIPELINE_COLUMNS;
 
   const ordersWithLast = useMemo(() => {
     return (orders || []).map((o) => {
@@ -353,15 +414,23 @@ const Orders = () => {
     ? 'Período grátis expirado'
     : isInactive ? 'Assinatura inativa' : 'Recurso bloqueado';
 
+  if (!ordersAllowed) {
+    return (
+      <FeatureLock
+        locked
+        blur={false}
+        title={lockTitle}
+        benefit="Receba e gerencie seus pedidos em tempo real, sem depender do WhatsApp."
+        message={lockMessage}
+        ctaLabel={lockCta}
+        badgeLabel={lockBadge}
+      >
+        <OrdersTeaser />
+      </FeatureLock>
+    );
+  }
+
   return (
-    <FeatureLock
-      locked={!ordersAllowed}
-      title={lockTitle}
-      benefit="Receba e gerencie seus pedidos em tempo real, sem depender do WhatsApp."
-      message={lockMessage}
-      ctaLabel={lockCta}
-      badgeLabel={lockBadge}
-    >
     <div className="space-y-6 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.96),_rgba(241,245,249,0.92)_44%,_rgba(226,232,240,0.95)_100%)] p-1 rounded-[30px] ">
 
       <div className={`${sectionCardClass} px-6 py-6`}>
@@ -795,7 +864,6 @@ const Orders = () => {
         ))}
       </div>
     </div>
-    </FeatureLock>
   );
 };
 
