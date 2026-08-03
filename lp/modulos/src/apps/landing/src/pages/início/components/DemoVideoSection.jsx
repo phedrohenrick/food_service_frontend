@@ -80,7 +80,7 @@ export function DemoVideoSection() {
                 className="absolute inset-0 h-full w-full object-cover"
                 autoPlay
                 controls
-                src="assets/images/lp/loading.mp4"
+                src="https://pub-5bfc09d8d56c442bace0412c2e59b571.r2.dev/videos/landingpages/0719.mp4"
               />
             </div>
           )}
