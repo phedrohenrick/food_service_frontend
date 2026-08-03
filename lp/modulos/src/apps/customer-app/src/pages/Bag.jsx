@@ -722,6 +722,14 @@ const Bag = () => {
         <p className="text-xs text-gray-500">
           Ao finalizar, você será direcionado para acompanhar o status em tempo real.
         </p>
+        <p className="text-[11px] leading-relaxed text-gray-400">
+          Seus dados (nome, contato e endereço) são usados apenas para processar e entregar
+          este pedido, conforme a{' '}
+          <a href="/privacidade" target="_blank" rel="noreferrer" className="underline">
+            Política de Privacidade
+          </a>
+          . O restaurante é o responsável pelos seus dados; a Priatoo atua como operadora.
+        </p>
 
         {whatsappAvailable && (
           <>
