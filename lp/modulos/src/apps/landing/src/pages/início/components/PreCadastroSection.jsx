@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "@relume_io/relume-ui";
 import { HiOutlineSparkles, HiOutlineChatBubbleLeftRight } from "react-icons/hi2";
-import { BsShieldCheck } from "react-icons/bs";
+import { BsShieldCheck, BsCheckCircleFill } from "react-icons/bs";
 
 export const leadFields = {
   lojista: [
@@ -32,12 +32,8 @@ export const leadFields = {
       placeholder: "São Paulo / SP",
       required: true,
     },
-    {
-      name: "faturamento",
-      label: "Faturamento mensal médio (opcional)",
-      placeholder: "Ex: R$ 80.000",
-    },
   ],
+  // Mantido para o LeadPopup (o formulário desta seção usa apenas "lojista").
   entregador: [
     {
       name: "nomeCompleto",
@@ -85,7 +81,7 @@ export const googleFields = {
   },
 };
 
-export const getInitialFormState = (type) => {
+export const getInitialFormState = (type = "lojista") => {
   return leadFields[type].reduce(
     (acc, field) => ({
       ...acc,
@@ -95,32 +91,26 @@ export const getInitialFormState = (type) => {
   );
 };
 
+const USER_TYPE = "lojista";
+
 export function PreCadastroSection() {
-  const [userType, setUserType] = useState("lojista");
-  const [formData, setFormData] = useState(() => getInitialFormState("lojista"));
+  const [formData, setFormData] = useState(() => getInitialFormState(USER_TYPE));
   const [status, setStatus] = useState({ state: "idle", message: "" });
   const [isSubmitting, setSubmitting] = useState(false);
+  const [toast, setToast] = useState("hidden"); // "hidden" | "in" | "out"
+
+  // Toast de sucesso: aparece, some sozinho após ~4,5s (faz a saída antes de desmontar).
+  useEffect(() => {
+    if (toast !== "in") return;
+    const leave = setTimeout(() => setToast("out"), 4500);
+    const done = setTimeout(() => setToast("hidden"), 5000);
+    return () => { clearTimeout(leave); clearTimeout(done); };
+  }, [toast]);
 
   const endpoint = process.env.REACT_APP_LEAD_ENDPOINT;
   const googleFormAction = process.env.REACT_APP_GOOGLE_FORM_ACTION;
 
-  useEffect(() => {
-    const handleLeadType = (event) => {
-      if (!event.detail?.type) return;
-      const nextType = event.detail.type;
-      setUserType(nextType);
-    };
-
-    document.addEventListener("lead:type", handleLeadType);
-    return () => document.removeEventListener("lead:type", handleLeadType);
-  }, []);
-
-  useEffect(() => {
-    setFormData(getInitialFormState(userType));
-    setStatus({ state: "idle", message: "" });
-  }, [userType]);
-
-  const activeFields = useMemo(() => leadFields[userType], [userType]);
+  const activeFields = leadFields[USER_TYPE];
 
   const handleFieldChange = (event) => {
     const { name, value } = event.target;
@@ -152,7 +142,7 @@ export function PreCadastroSection() {
     try {
       const payload = {
         ...formData,
-        tipo: userType,
+        tipo: USER_TYPE,
         submittedAt: new Date().toISOString(),
       };
 
@@ -167,7 +157,7 @@ export function PreCadastroSection() {
           throw new Error("Não foi possível enviar seus dados agora.");
         }
       } else if (googleFormAction) {
-        const googleBody = mapToGooglePayload(userType, formData);
+        const googleBody = mapToGooglePayload(USER_TYPE, formData);
 
         if (!googleBody) {
           throw new Error("Configuração do formulário temporário inválida.");
@@ -186,18 +176,15 @@ export function PreCadastroSection() {
         window.localStorage.setItem("fs-pre-cadastros", JSON.stringify(leads));
       }
 
-      setStatus({
-        state: "success",
-        message:
-          "Recebemos seu interesse! Nossa equipe vai chamar você para as condições especiais de lançamento.",
-      });
-      setFormData(getInitialFormState(userType));
+      setStatus({ state: "idle", message: "" });
+      setToast("in");
+      setFormData(getInitialFormState(USER_TYPE));
     } catch (error) {
       setStatus({
         state: "error",
         message:
           error.message ||
-          "Opa, tivemos um pico de acessos. Tente novamente em instantes ou fale com a gente via WhatsApp.",
+          "Opa, tivemos um pico de acessos. Tente novamente em instantes.",
       });
     } finally {
       setSubmitting(false);
@@ -225,7 +212,7 @@ export function PreCadastroSection() {
               letterSpacing: "-0.02em",
             }}
           >
-            Fale com a gente antes de começar
+            Quer falar com a gente antes de começar?
           </h2>
         </div>
 
@@ -252,7 +239,7 @@ export function PreCadastroSection() {
               ].map((item) => (
                 <div
                   key={item.title}
-                  className="flex items-start gap-4 rounded-2xl p-5"
+                  className="flex items-start gap-4 rounded-2xl p-5 transition-transform duration-200 hover:-translate-y-0.5"
                   style={{
                     background: "white",
                     border: "1px solid #f0ece8",
@@ -276,36 +263,6 @@ export function PreCadastroSection() {
               ))}
             </div>
 
-            {/* WhatsApp alternative */}
-            <div
-              className="flex items-center gap-4 rounded-2xl p-5"
-              style={{
-                background: "rgba(37,211,102,0.06)",
-                border: "1px solid rgba(37,211,102,0.2)",
-              }}
-            >
-              <div
-                className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl"
-                style={{ background: "rgba(37,211,102,0.12)" }}
-              >
-                <HiOutlineChatBubbleLeftRight className="h-5 w-5" style={{ color: "#16a34a" }} />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-[#1a0e0d]">
-                  Prefere pelo WhatsApp?
-                </p>
-                <a
-                  href="https://wa.me/5500000000000"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm font-medium transition hover:underline"
-                  style={{ color: "#16a34a" }}
-                >
-                  Chamar no WhatsApp →
-                </a>
-              </div>
-            </div>
-
             <p className="text-xs" style={{ color: "#9ca3af" }}>
               Respondemos em até 2 horas nos dias úteis. Zero spam.
             </p>
@@ -313,117 +270,136 @@ export function PreCadastroSection() {
 
           {/* Right: form */}
           <div
-            className="rounded-3xl p-8 shadow-sm md:p-10"
+            className="relative overflow-hidden rounded-3xl shadow-[0_24px_60px_-30px_rgba(26,14,13,0.35)]"
             style={{ background: "white", border: "1px solid #f0ece8" }}
           >
-            <h3 className="text-xl font-bold text-[#1a0e0d]">
-              Quero saber mais
-            </h3>
-            <p className="mt-1 text-sm" style={{ color: "#9ca3af" }}>
-              Preencha em 30 segundos e nosso time entra em contato.
-            </p>
+            {/* Filete de atenção (sólido, sem degradê) */}
+            <div aria-hidden="true" style={{ height: 5, background: "#EA1D2C" }} />
 
-            {/* Segment toggle */}
-            <div
-              className="mt-6 grid grid-cols-2 gap-2 rounded-full p-1.5"
-              style={{ background: "#f5f0ee" }}
-            >
-              {["lojista", "entregador"].map((type) => {
-                const isActive = userType === type;
-                const labels = {
-                  lojista: "Sou lojista",
-                  entregador: "Sou entregador",
-                };
-                return (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => setUserType(type)}
-                    data-segment={type}
-                    className="rounded-full py-2 text-sm font-semibold transition-all duration-200"
-                    style={
-                      isActive
-                        ? { background: "#EA1D2C", color: "white", boxShadow: "0 2px 8px rgba(234,29,44,0.3)" }
-                        : { color: "#6b7280" }
-                    }
-                  >
-                    {labels[type]}
-                  </button>
-                );
-              })}
-            </div>
+            <div className="p-8 md:p-10">
 
-            <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-              {activeFields.map((field) => (
-                <div key={field.name} className="space-y-1.5">
-                  <label
-                    htmlFor={field.name}
-                    className="block text-sm font-semibold"
-                    style={{ color: "#374151" }}
+              <h3 className="mt-4 text-2xl font-extrabold text-[#1a0e0d]" style={{ letterSpacing: "-0.01em" }}>
+                Peça seu acesso
+              </h3>
+              <p className="mt-1.5 text-sm" style={{ color: "#6b7280" }}>
+                Preencha em 30 segundos. Sem cartão, sem compromisso — nosso time entra em contato.
+              </p>
+
+              <form onSubmit={handleSubmit} className="mt-7 space-y-5">
+                {activeFields.map((field) => (
+                  <div key={field.name} className="space-y-1.5">
+                    <label
+                      htmlFor={field.name}
+                      className="flex items-center gap-1 text-sm font-semibold"
+                      style={{ color: "#374151" }}
+                    >
+                      {field.label}
+                      {field.required && <span style={{ color: "#EA1D2C" }}>*</span>}
+                      {field.optional && (
+                        <span className="text-xs font-normal" style={{ color: "#9ca3af" }}>
+                          (opcional)
+                        </span>
+                      )}
+                    </label>
+                    <input
+                      id={field.name}
+                      name={field.name}
+                      required={Boolean(field.required)}
+                      placeholder={field.placeholder}
+                      value={formData[field.name] ?? ""}
+                      onChange={handleFieldChange}
+                      inputMode={field.inputMode}
+                      className="w-full rounded-xl px-4 py-3 text-base outline-none transition-all"
+                      style={{
+                        border: "1.5px solid #e5e0dc",
+                        color: "#1a0e0d",
+                        background: "#fafaf8",
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = "#EA1D2C";
+                        e.target.style.background = "white";
+                        e.target.style.boxShadow = "0 0 0 4px rgba(234,29,44,0.10)";
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = "#e5e0dc";
+                        e.target.style.background = "#fafaf8";
+                        e.target.style.boxShadow = "none";
+                      }}
+                    />
+                  </div>
+                ))}
+
+                <div className="space-y-3 pt-1">
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting}
+                    data-form-type={USER_TYPE}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-base font-bold text-white transition-all hover:opacity-95 disabled:opacity-60"
+                    style={{ background: "#EA1D2C", boxShadow: "0 8px 20px -6px rgba(234,29,44,0.45)" }}
                   >
-                    {field.label}
-                  </label>
-                  <input
-                    id={field.name}
-                    name={field.name}
-                    required={Boolean(field.required)}
-                    placeholder={field.placeholder}
-                    value={formData[field.name] ?? ""}
-                    onChange={handleFieldChange}
-                    inputMode={field.inputMode}
-                    className="w-full rounded-xl px-4 py-3 text-base outline-none transition-all"
-                    style={{
-                      border: "1.5px solid #e5e0dc",
-                      color: "#1a0e0d",
-                      background: "#fafaf8",
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = "#EA1D2C";
-                      e.target.style.background = "white";
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = "#e5e0dc";
-                      e.target.style.background = "#fafaf8";
-                    }}
-                  />
+                    {isSubmitting ? "Enviando..." : "Quero saber mais"}
+                    {!isSubmitting && <span aria-hidden="true">→</span>}
+                  </Button>
+                  <p className="flex items-center justify-center gap-1.5 text-center text-xs" style={{ color: "#9ca3af" }}>
+                    <BsShieldCheck style={{ color: "#16a34a" }} />
+                    Seus dados são usados apenas para contato. Zero spam.
+                  </p>
                 </div>
-              ))}
+              </form>
 
-              <div className="space-y-3 pt-1">
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  data-form-type={userType}
-                  className="w-full rounded-xl py-3.5 text-base font-bold text-white transition-all hover:opacity-90 disabled:opacity-60"
-                  style={{ background: "#EA1D2C", boxShadow: "0 4px 16px rgba(234,29,44,0.28)" }}
+              {status.state === "error" && (
+                <div
+                  className="mt-4 rounded-xl p-4 text-sm font-medium"
+                  style={{ background: "#fff1f2", color: "#be123c" }}
                 >
-                  {isSubmitting ? "Enviando..." : "Quero saber mais"}
-                </Button>
-                <p className="text-center text-xs" style={{ color: "#9ca3af" }}>
-                  Prometemos zero spam. Usaremos seus dados apenas para contato.
-                </p>
-              </div>
-            </form>
-
-            {status.state === "success" && (
-              <div
-                className="mt-4 rounded-xl p-4 text-sm font-medium"
-                style={{ background: "#f0fdf4", color: "#15803d" }}
-              >
-                {status.message}
-              </div>
-            )}
-            {status.state === "error" && (
-              <div
-                className="mt-4 rounded-xl p-4 text-sm font-medium"
-                style={{ background: "#fff1f2", color: "#be123c" }}
-              >
-                {status.message}
-              </div>
-            )}
+                  {status.message}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Toast de sucesso — sobe de baixo pra cima */}
+      {toast !== "hidden" && (
+        <>
+          <style>{`
+            @keyframes preToastUp { from { opacity: 0; transform: translateY(140%); } to { opacity: 1; transform: translateY(0); } }
+            @keyframes preToastDown { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(140%); } }
+            .pre-toast-in { animation: preToastUp .5s cubic-bezier(.2,.9,.25,1) both; }
+            .pre-toast-out { animation: preToastDown .4s ease-in both; }
+            @media (prefers-reduced-motion: reduce) {
+              .pre-toast-in, .pre-toast-out { animation: none !important; }
+            }
+          `}</style>
+          <div className="pointer-events-none fixed inset-x-0 bottom-6 z-[9999] flex justify-center px-4">
+            <div
+              role="status"
+              aria-live="polite"
+              className={`pointer-events-auto flex items-center gap-3 rounded-full py-3.5 pl-4 pr-5 ${toast === "out" ? "pre-toast-out" : "pre-toast-in"}`}
+              style={{ background: "#16a34a", color: "white", boxShadow: "0 16px 40px -12px rgba(22,163,74,0.55)" }}
+            >
+              <span
+                className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full"
+                style={{ background: "rgba(255,255,255,0.18)" }}
+              >
+                <BsCheckCircleFill className="h-4.5 w-4.5" style={{ fontSize: 18 }} />
+              </span>
+              <p className="max-w-xs text-sm font-semibold leading-snug">
+                Recebemos seu interesse — em breve entramos em contato.
+              </p>
+              <button
+                type="button"
+                onClick={() => setToast("out")}
+                aria-label="Fechar"
+                className="ml-1 flex-shrink-0 text-white/70 transition-colors hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </section>
   );
 }
