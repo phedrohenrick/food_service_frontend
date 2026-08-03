@@ -36,9 +36,9 @@ export function CalculatorSection() {
               letterSpacing: "-0.02em",
             }}
           >
-            Quanto você está{" "}
-            <span style={{ color: "#EA1D2C" }}>perdendo</span>
-            {" "}em comissão?
+            Quanto você{" "}
+            <span style={{ color: "#EA1D2C" }}>economiza</span>
+            {" "}com o Priatoo
           </h2>
         </div>
 
@@ -100,7 +100,7 @@ export function CalculatorSection() {
           <div>
             <div className="mb-3 flex items-center justify-between">
               <label className="text-sm font-semibold" style={{ color: "#4b5563" }}>
-                Taxa média da plataforma
+                Taxa média de outras plataformas
               </label>
               <span
                 className="text-xl font-extrabold"
@@ -138,7 +138,7 @@ export function CalculatorSection() {
             </div>
             <div className="mt-1 flex justify-between text-xs" style={{ color: "rgba(0,0,0,0.35)" }}>
               <span>10%</span>
-              <span>27% (iFood)</span>
+              <span>27%</span>
             </div>
           </div>
 
@@ -151,7 +151,7 @@ export function CalculatorSection() {
             }}
           >
             <p className="mb-1 text-sm font-medium" style={{ color: "#6b7280" }}>
-              Você pagaria de comissão por mês
+              Quanto você pagaria de comissão por mês sem o PRIATOO
             </p>
             <p
               className="text-5xl font-extrabold transition-all duration-300"

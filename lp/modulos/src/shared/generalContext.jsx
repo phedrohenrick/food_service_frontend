@@ -1694,6 +1694,7 @@ export const StorefrontProvider = ({ children }) => {
       dataLoaded,
 
       // entitlements
+      entitlements: state.entitlements,
       canUseFeature,
       getEntitlementValue,
       getEntitlementLimit,

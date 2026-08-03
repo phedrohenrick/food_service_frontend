@@ -1,3 +1,10 @@
 # https://www.robotstxt.org/robotstxt.html
 User-agent: *
-Disallow:
+Allow: /
+
+# Áreas de aplicação/autenticação não precisam ser indexadas
+Disallow: /dashboard
+Disallow: /onboarding
+Disallow: /checkout
+
+Sitemap: https://priatoo.com.br/sitemap.xml

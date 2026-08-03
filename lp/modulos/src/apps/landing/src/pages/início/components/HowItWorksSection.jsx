@@ -4,7 +4,7 @@ import React from "react";
 
 const STEPS = [
   { num: "01", title: "Crie sua conta", time: "2 minutos", highlight: false },
-  { num: "02", title: "Escolha suas cores", time: "3 minutos ★", highlight: true },
+  { num: "02", title: "crie o visual da sua loja", time: "3 minutos ★", highlight: true },
   { num: "03", title: "Monte o cardápio", time: "10 minutos", highlight: false },
   { num: "04", title: "Compartilhe e receba", time: "Pronto!", highlight: false },
 ];
@@ -34,7 +34,7 @@ export function HowItWorksSection() {
             Setup em 15 minutos
           </h2>
           <p className="mt-4 text-base sm:text-lg" style={{ color: "#0f1f3f" }}>
-            Com teste grátis, sem compromisso, sem adicionar o cartão de crédito.
+            Com 30 dias de teste grátis, sem compromisso, sem adicionar o cartão de crédito.
           </p>
         </div>
 

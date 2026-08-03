@@ -17,6 +17,42 @@ const resolveBannerTarget = (productLink, basePrefix) => {
   return `${basePrefix}/produto/${productLink}`;
 };
 
+// Imagem do produto com apresentação consistente em qualquer tamanho:
+// - mobile: banner no topo com proporção fixa 16/10;
+// - desktop: coluna de largura fixa que acompanha a altura do card (object-cover, sem distorcer).
+// Mostra um placeholder da marca quando o produto não tem foto (ou a imagem falha).
+function ProductImage({ src, alt }) {
+  const [failed, setFailed] = useState(false);
+  const showPlaceholder = !src || failed;
+
+  return (
+    <div className="relative w-full shrink-0 overflow-hidden bg-gray-100 aspect-[16/10] sm:aspect-auto sm:w-48 sm:self-stretch sm:min-h-[10rem]">
+      {showPlaceholder ? (
+        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            className="h-9 w-9 text-gray-300"
+            aria-hidden="true"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 3v7a2 2 0 002 2h0a2 2 0 002-2V3M6 12v9M18 3c-1.66 0-3 2.24-3 5s1.34 5 3 5m0 0v8" />
+          </svg>
+        </div>
+      ) : (
+        <img
+          src={src}
+          alt={alt}
+          loading="lazy"
+          onError={() => setFailed(true)}
+          className="absolute inset-0 h-full w-full object-cover transition duration-300 group-hover:scale-105"
+        />
+      )}
+    </div>
+  );
+}
+
 const Home = () => {
   const { tenant, banners, menuCategories, getMenuItemsByCategory } = useStorefront();
   const [searchTerm] = useState('');
@@ -197,7 +233,7 @@ const Home = () => {
                   <Link
                     key={item.id}
                     to={`${basePrefix}/produto/${item.id}`}
-                    className="group flex flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg sm:flex-row"
+                    className="group flex flex-col-reverse overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg sm:flex-row"
                   >
                     <div className="flex flex-1 flex-col gap-3 p-5">
                       <div className="flex flex-wrap items-center gap-2">
@@ -218,13 +254,7 @@ const Home = () => {
                         R$ {(item.price ?? 0).toFixed(2)}
                       </p>
                     </div>
-                    <div className="aspect-square w-full shrink-0 overflow-hidden bg-gray-100 sm:w-48">
-                      <img
-                        src={item.photo_url}
-                        alt={item.name}
-                        className="h-full w-full object-cover transition duration-200 group-hover:scale-105"
-                      />
-                    </div>
+                    <ProductImage src={item.photo_url} alt={item.name} />
                   </Link>
                 ))}
               </div>

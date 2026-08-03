@@ -1,12 +1,14 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { StorefrontProvider } from './shared/generalContext.jsx';
+import CookieBanner from './shared/components/CookieBanner';
 
 // Landing Pages
 import LandingPage from './apps/landing/src/pages/HomePage';
 import AboutPage from './apps/landing/src/pages/sobre-nós';
 import PricingPage from './apps/landing/src/pages/PricingPage';
 import StartOnboarding from './onboarding/StartOnboarding.jsx';
+import LegalPage from './apps/landing/src/pages/legal/LegalPage';
 
 // Restaurant Dashboard (lazy loading)
 const RestaurantDashboard = React.lazy(() => import('./apps/restaurant-dashboard-v2/RestaurantDashboardApp'));
@@ -54,6 +56,13 @@ function App() {
             <Route path="/sobre-nos" element={<AboutPage />} />
             <Route path="/planos" element={<PricingPage />} />
             <Route path="/onboarding/start" element={<StartOnboarding />} />
+
+            {/* Documentos legais (LGPD) */}
+            <Route path="/termos" element={<LegalPage doc="terms" />} />
+            <Route path="/privacidade" element={<LegalPage doc="privacy" />} />
+            <Route path="/contrato" element={<LegalPage doc="subscription" />} />
+            <Route path="/dpa" element={<LegalPage doc="dpa" />} />
+            <Route path="/cookies" element={<LegalPage doc="cookies" />} />
             
             {/* Auth Routes */}
             <Route path="/login" element={<LoginPage />} />
@@ -77,6 +86,7 @@ function App() {
             <Route path="/:slug/mesa/:tableId/*" element={<CustomerTableApp />} />
           </Routes>
         </React.Suspense>
+        <CookieBanner />
       </Router>
     </StorefrontProvider>
   );

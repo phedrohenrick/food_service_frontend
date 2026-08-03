@@ -18,6 +18,7 @@ const START_FEATURES = [
   { text: "Pedidos pelo WhatsApp", included: true },
   { text: "Taxa de entrega por bairro", included: true },
   { text: "Pedidos pelo sistema (painel)", included: false },
+  { text: "Impressão automática de cupons", included: false },
   { text: "Métricas e relatórios", included: false },
   { text: "Controle de mesas e garçom", included: false },
 ];
@@ -25,6 +26,7 @@ const START_FEATURES = [
 const DELIVERY_FEATURES = [
   { text: "Cardápio digital ilimitado", included: true },
   { text: "Pedidos online pelo sistema", included: true },
+  { text: "Impressão automática de cupons", included: true },
   { text: "Link da loja + QR Code", included: true },
   { text: "Pedidos pelo WhatsApp", included: true },
   { text: "Métricas básicas", included: true },
@@ -300,6 +302,12 @@ function PlanCard({ tier, icon, iconBg, iconColor, desc, price, savingsNote, fea
               {microCopy}
             </p>
           )}
+          <p className="text-center text-[10px] leading-relaxed" style={{ color: "#8A9AB0" }}>
+            Ao assinar, você concorda com o{' '}
+            <a href="/contrato" target="_blank" rel="noreferrer" className="underline">Contrato de Assinatura</a>{' '}
+            e a{' '}
+            <a href="/privacidade" target="_blank" rel="noreferrer" className="underline">Política de Privacidade</a>.
+          </p>
         </div>
       </div>
     </div>
@@ -319,6 +327,20 @@ function CtaButton({ variant, label, priceId }) {
     if (token && slug) {
       setLoading(true);
       try {
+        // Registra o aceite do Contrato de Assinatura (clickwrap) antes de ir ao pagamento.
+        let subVersion = '2026-07-01';
+        try {
+          const docs = await api.get('/consents/documents');
+          const sub = Array.isArray(docs) ? docs.find((d) => d.type === 'SUBSCRIPTION') : null;
+          if (sub?.version) subVersion = sub.version;
+        } catch (_) {}
+        api.post('/consents', {
+          documentType: 'SUBSCRIPTION',
+          documentVersion: subVersion,
+          accepted: true,
+          subjectType: 'LOJISTA',
+        }).catch(() => {});
+
         const res = await api.post('/subscriptions/checkout', { priceId });
         if (res?.url) { window.location.href = res.url; return; }
       } catch (_) {}

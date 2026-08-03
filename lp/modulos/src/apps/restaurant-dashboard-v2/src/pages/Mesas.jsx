@@ -4,6 +4,7 @@ import api from '../../../../shared/services/api';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
 import { UpgradeCTA, UpgradeRequiredModal } from '../../../../shared/components/ui';
 import MesaQrCard from '../components/MesaQrCard';
+import { Lock } from 'lucide-react';
 
 const formatCurrency = (n) =>
   (Number(n) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -22,7 +23,7 @@ const POLLING_INTERVAL = 15000;
 export default function Mesas() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { tenant, canUseFeature, getEntitlementLimit } = useStorefront();
+  const { tenant, canUseFeature, getEntitlementLimit, entitlements } = useStorefront();
   const [tables, setTables] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddTable, setShowAddTable] = useState(false);
@@ -147,6 +148,10 @@ export default function Mesas() {
     );
   }
 
+  // Bloqueio por mesa quando o recurso não está no plano (avalia só após os entitlements carregarem).
+  const entitlementsLoaded = entitlements && Object.keys(entitlements).length > 0;
+  const tablesLocked = entitlementsLoaded && !canUseFeature('table_management');
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -226,19 +231,26 @@ export default function Mesas() {
               return (
                 <div
                   key={table.id}
-                  onClick={() => navigate(`${basePrefix}/mesas/${table.id}`)}
-                  className={`relative rounded-2xl border-2 p-4 transition-all duration-200 select-none cursor-pointer ${
+                  onClick={() => {
+                    if (tablesLocked) { window.location.href = '/planos'; return; }
+                    navigate(`${basePrefix}/mesas/${table.id}`);
+                  }}
+                  className={`relative overflow-hidden rounded-2xl border-2 p-4 transition-all duration-200 select-none cursor-pointer ${
                     occupied
-                      ? 'border-red-200 bg-red-50 hover:shadow-lg hover:border-red-300'
-                      : 'border-green-200 bg-green-50 hover:shadow-md hover:border-green-300'
+                      ? 'border-red-300 bg-red-50 hover:shadow-lg hover:border-red-400'
+                      : 'border-emerald-300 bg-emerald-50 hover:shadow-lg hover:border-emerald-400'
                   }`}
                 >
                   <div className="flex items-start justify-between">
-                    <div
-                      className={`w-3 h-3 rounded-full mt-0.5 ${
-                        occupied ? 'bg-red-500' : 'bg-green-500'
+                    {/* Selo de status — sólido, com personalidade */}
+                    <span
+                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wide text-white shadow-sm ${
+                        occupied ? 'bg-red-500' : 'bg-emerald-500'
                       }`}
-                    />
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                      {occupied ? 'Ocupada' : 'Livre'}
+                    </span>
                     <div className="flex items-center gap-1.5">
                       <button
                         onClick={(e) => { e.stopPropagation(); setQrModalTable(table); }}
@@ -261,14 +273,14 @@ export default function Mesas() {
                     </div>
                   </div>
 
-                  <p className="text-3xl font-bold text-gray-900 mt-2">{table.number}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <p className="mt-3 text-4xl font-black tracking-tight text-gray-900">{table.number}</p>
+                  <p className="text-xs font-medium text-gray-500 mt-0.5">
                     {table.capacity ? `${table.capacity} lugares` : 'Mesa'}
                   </p>
 
                   {occupied && (
                     <div className="mt-3 space-y-1">
-                      <p className="text-xs font-semibold text-red-700">
+                      <p className="text-sm font-bold text-red-700">
                         {formatCurrency(table.currentTabTotal)}
                       </p>
                       <p className="text-xs text-gray-500">
@@ -279,8 +291,16 @@ export default function Mesas() {
                     </div>
                   )}
 
-                  {!occupied && (
-                    <p className="mt-3 text-xs font-medium text-green-700">Disponível</p>
+                  {/* Cadeado por mesa quando o recurso está fora do plano */}
+                  {tablesLocked && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-white/55 backdrop-blur-[2px]">
+                      <span
+                        className="flex h-10 w-10 items-center justify-center rounded-xl"
+                        style={{ background: 'linear-gradient(135deg, #FF7F27, #EA1D2C)', boxShadow: '0 8px 20px -6px rgba(234,29,44,0.55)' }}
+                      >
+                        <Lock className="h-4 w-4 text-white" strokeWidth={2.5} />
+                      </span>
+                    </div>
                   )}
                 </div>
               );
