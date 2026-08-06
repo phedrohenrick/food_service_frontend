@@ -953,8 +953,6 @@ export const StorefrontProvider = ({ children }) => {
               table_number: o.tableNumber ?? o.table_number ?? null,
               customer_name: o.customerName ?? o.customer_name ?? null,
               payment_channel: o.paymentChannel || o.payment_channel,
-              service_fee: o.serviceFee || o.service_fee,
-              delivery_fee: o.deliveryFee || o.delivery_fee,
               created_at: o.createdAt || o.created_at,
               // Ensure numbers for calculations
               subtotal: Number(o.subtotal),
