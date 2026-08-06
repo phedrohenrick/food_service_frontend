@@ -318,8 +318,6 @@ const DashboardLayoutv2 = ({ children, onHelp }) => {
                   </button>
                 )}
                 <div className="hidden sm:flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-xl">
-                  <span className="text-sm text-gray-500">Tempo médio</span>
-                  <span className="text-sm font-semibold text-gray-900">32 min</span>
                 </div>
                 <div ref={dropdownRef} className="relative">
                   <button
