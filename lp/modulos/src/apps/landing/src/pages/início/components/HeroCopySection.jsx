@@ -68,7 +68,7 @@ export function HeroCopySection() {
 
           <div className="flex flex-col gap-3 sm:flex-row">
             <button
-              onClick={() => { try { window.location.assign("/onboarding/start"); } catch (_) {} }}
+              onClick={() => scrollTo("funcionalidades")}
               data-cta="hero-lojista"
               className="rounded-xl px-8 py-4 text-base font-bold text-white transition-all duration-300 hover:opacity-90 hover:scale-[1.02]"
               style={{
