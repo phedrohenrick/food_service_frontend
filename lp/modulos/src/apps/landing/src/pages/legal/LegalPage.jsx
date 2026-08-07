@@ -404,13 +404,6 @@ export default function LegalPage({ doc }) {
 
       <main className="mx-auto max-w-3xl px-[5%] py-12 md:py-16">
         {/* Aviso de minuta */}
-        <div
-          className="mb-8 rounded-2xl px-5 py-4 text-sm"
-          style={{ background: "rgba(255,127,39,0.08)", border: "1px solid rgba(255,127,39,0.25)", color: "#A52A2A" }}
-        >
-          <strong>Minuta provisória.</strong> Este documento está em revisão jurídica e pode
-          mudar. Não constitui, por enquanto, aconselhamento jurídico.
-        </div>
 
         <p className="text-xs font-bold uppercase tracking-[0.18em]" style={{ color: "#A52A2A" }}>
           Documento legal
