@@ -54,7 +54,7 @@ export function FinalCTASection() {
 
         <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           <button
-            onClick={() => { try { window.location.assign("/onboarding/start"); } catch (_) {} }}
+            onClick={() => { try { window.location.assign("/planos"); } catch (_) {} }}
             data-cta="final-cta-primary"
             className="w-full rounded-xl px-10 py-4 text-base font-bold text-white transition-all duration-300 hover:opacity-90 hover:scale-[1.02] sm:w-auto"
             style={{
@@ -62,7 +62,7 @@ export function FinalCTASection() {
               boxShadow: "0 12px 32px rgba(255,127,39,0.38)",
             }}
           >
-            Criar minha conta grátis
+             Testar com um mês grátis.
           </button>
           <button
             onClick={() => scrollTo("demo")}

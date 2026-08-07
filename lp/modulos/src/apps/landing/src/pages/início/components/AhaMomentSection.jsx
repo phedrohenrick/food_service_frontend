@@ -71,7 +71,7 @@ export function AhaMomentSection() {
             className="mt-4 text-3xl font-extrabold leading-tight sm:text-4xl lg:text-5xl"
             style={{ fontFamily: "'Helvetica Neue', 'Segoe UI', Arial, sans-serif", letterSpacing: "-0.02em", color: "#1A0B05" }}
           >
-            O cardápio com a cara do{" "}
+            O sistema com a cara do{" "}
             <span style={{ color: "#D95F2A" }}>seu restaurante</span>
             {" "}
           </h2>
@@ -95,7 +95,7 @@ export function AhaMomentSection() {
                 className="mb-4 text-xs font-bold uppercase tracking-[0.15em]"
                 style={{ color: "#8B4520" }}
               >
-                Escolha as cores da sua marca
+                Faça você a identidade da sua marca
               </p>
               <div className="flex gap-3 flex-wrap">
                 {COLORS.map((opt, i) => (
