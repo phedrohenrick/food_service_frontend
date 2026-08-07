@@ -13,7 +13,7 @@ const PRICES = {
 };
 
 const START_FEATURES = [
-  { text: "Cardápio digital (até 40 itens)", included: true },
+  { text: "Cardápio digital (até 30 itens)", included: true },
   { text: "Link da loja + QR Code", included: true },
   { text: "Pedidos pelo WhatsApp", included: true },
   { text: "Taxa de entrega por bairro", included: true },
@@ -44,7 +44,7 @@ const COMPLETO_FEATURES = [
 ];
 
 const MAX_FEATURES = [
-  { text: "Tudo do Completo, mais:", included: true },
+  { text: "Tudo do Gerenciamento, mais:", included: true },
   { text: "Multi-unidades (até 4 restaurantes)", included: true },
   { text: "API de integração", included: true },
   { text: "Integração iFood", included: true },
@@ -122,7 +122,7 @@ export function PricingCardsSection({ annual }) {
       <div className="mx-auto max-w-7xl">
         <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 md:items-start">
           <PlanCard
-            tier="Plano START"
+            tier="Plano MARKETING"
             icon={<IconUtensils />}
             iconBg="rgba(13,31,51,0.06)"
             iconColor="#4A6278"
@@ -133,7 +133,7 @@ export function PricingCardsSection({ annual }) {
             ctaLabel="Assinar plano"
             ctaVariant="ghost"
             microCopy="Menos de R$1 por dia"
-            priceId="start_monthly"
+            priceId={`marketing_${k}`}
           />
 
           <PlanCard
@@ -148,11 +148,11 @@ export function PricingCardsSection({ annual }) {
             ctaLabel="Assinar plano"
             ctaVariant="ghost"
             microCopy="Sem comissão por pedido"
-            priceId="delivery_monthly"
+            priceId={`delivery_${k}`}
           />
 
           <PlanCard
-            tier="Plano COMPLETO"
+            tier="Plano GERENCIAMENTO"
             icon={<IconBuilding />}
             iconBg="rgba(14,165,233,0.10)"
             iconColor="#0EA5E9"
@@ -164,7 +164,7 @@ export function PricingCardsSection({ annual }) {
             ctaVariant="primary"
             microCopy="O mais escolhido pelos restaurantes"
             popular
-            priceId="completo_monthly"
+            priceId={`gerenciamento_${k}`}
           />
 
           <PlanCard
@@ -172,14 +172,14 @@ export function PricingCardsSection({ annual }) {
             icon={<IconCrown />}
             iconBg="rgba(56,189,248,0.10)"
             iconColor="#0EA5E9"
-            desc="Para redes: gerencie todas as suas unidades num painel só."
+            desc="Gerencie todas seu negócio num painel só. Acesso completo a todos os benefícios do sistema"
             price={PRICES.max[k]}
             savingsNote={null}
             features={MAX_FEATURES}
             ctaLabel="Assinar plano"
             ctaVariant="blue"
             microCopy="Mais de 4 unidades? Fale com um consultor"
-            priceId="max_monthly"
+            priceId={`max_${k}`}
           />
         </div>
 

@@ -68,7 +68,7 @@ const CATEGORY_ICONS = {
 
 const ROWS = [
   { category: "Cardápio Digital" },
-  { feature: "Itens no cardápio", start: "Até 40", delivery: "Ilimitado", completo: "Ilimitado", max: "Ilimitado" },
+  { feature: "Itens no cardápio", start: "Até 30", delivery: "Ilimitado", completo: "Ilimitado", max: "Ilimitado" },
   { feature: "Link da loja + QR Code", start: true, delivery: true, completo: true, max: true },
   { feature: "Pedidos pelo WhatsApp", start: true, delivery: true, completo: true, max: true },
   { feature: "Pedidos online (no sistema)", start: false, delivery: true, completo: true, max: true },
@@ -99,12 +99,6 @@ export function PricingComparisonTable() {
     <section className="px-[5%] pb-24" style={{ background: "#FFFFFF" }}>
       <div className="mx-auto max-w-6xl">
         <div className="mb-12 text-center">
-          <p
-            className="mb-4 text-[11px] font-bold uppercase tracking-[0.1em]"
-            style={{ color: "#DD3F0C" }}
-          >
-            Compare os planos
-          </p>
           <h2
             className="mb-4 font-extrabold tracking-tight"
             style={{
@@ -145,16 +139,16 @@ export function PricingComparisonTable() {
                 >
                   Recursos
                 </th>
-                {(["Start", "Delivery", "Completo", "MAX"]).map((label) => (
+                {(["Marketing", "Delivery", "Gerenciamento", "MAX"]).map((label) => (
                   <th
                     key={label}
                     className="px-4 py-5 text-center text-xs font-bold"
                     style={{
-                      background: label === "Completo" ? "rgba(14,165,233,0.06)" : "rgba(13,31,51,0.03)",
-                      color: label === "Completo" ? "#0EA5E9" : "#8A9AB0",
+                      background: label === "Gerenciamento" ? "rgba(14,165,233,0.06)" : "rgba(13,31,51,0.03)",
+                      color: label === "Gerenciamento" ? "#0EA5E9" : "#8A9AB0",
                       borderBottom: "1.5px solid rgba(13,31,51,0.08)",
-                      borderLeft: label === "Completo" ? "1.5px solid rgba(14,165,233,0.25)" : undefined,
-                      borderRight: label === "Completo" ? "1.5px solid rgba(14,165,233,0.25)" : undefined,
+                      borderLeft: label === "Gerenciamento" ? "1.5px solid rgba(14,165,233,0.25)" : undefined,
+                      borderRight: label === "Gerenciamento" ? "1.5px solid rgba(14,165,233,0.25)" : undefined,
                     }}
                   >
                     {label}
