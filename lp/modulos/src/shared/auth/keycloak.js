@@ -1,7 +1,7 @@
 import Keycloak from 'keycloak-js';
 
 const kcBaseConfig = {
-  url: process.env.REACT_APP_KC_URL || ' https://auth.priatoo.com.br',
+  url: process.env.REACT_APP_KC_URL || 'https://auth.priatoo.com.br',
   realm: process.env.REACT_APP_KC_REALM || 'priatoo',
 };
 const defaultClientId = process.env.REACT_APP_KC_CLIENT_ID || 'frontend-web';
