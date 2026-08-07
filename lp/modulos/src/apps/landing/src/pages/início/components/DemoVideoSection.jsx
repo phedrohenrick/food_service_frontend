@@ -88,7 +88,7 @@ export function DemoVideoSection() {
 
         <div className="mt-8">
           <button
-            onClick={() => { try { window.location.assign("/onboarding/start"); } catch (_) {} }}
+            onClick={() => { try { window.location.assign("/planos"); } catch (_) {} }}
             data-cta="demo-cta"
             className="rounded-xl px-8 py-4 text-base font-bold text-white transition-all duration-300 hover:opacity-90 hover:scale-[1.02]"
             style={{

@@ -236,6 +236,18 @@ export function FeaturesSection() {
             ))}
           </div>
         </div>
+
+        {/* CTAs */}
+        <div className="mt-14 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <button
+            onClick={() => { try { window.location.assign("/planos"); } catch (_) {} }}
+            data-cta="features-planos"
+            className="w-full rounded-xl px-8 py-4 text-base font-bold text-white transition-all duration-200 hover:opacity-90 hover:scale-[1.02] sm:w-auto"
+            style={{ background: "#FF7F27", boxShadow: "0 10px 28px rgba(255,127,39,0.35)" }}
+          >
+            Ver planos
+          </button>
+        </div>
       </div>
     </section>
   );

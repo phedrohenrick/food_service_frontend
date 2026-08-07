@@ -11,6 +11,7 @@ import { Testimonial17 } from "./components/testimonial-17";
 import { PreCadastroSection } from "./components/PreCadastroSection";
 import { FinalCTASection } from "./components/FinalCTASection";
 import { Footer1 } from "./components/footer-01";
+import { WhatsappFab } from "./components/WhatsappFab";
 
 export default function Page() {
   return (
@@ -27,6 +28,7 @@ export default function Page() {
       <PreCadastroSection />
       <FinalCTASection />
       <Footer1 />
+      <WhatsappFab />
     </div>
   );
 }
