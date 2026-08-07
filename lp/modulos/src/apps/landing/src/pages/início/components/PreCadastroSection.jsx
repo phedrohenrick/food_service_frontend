@@ -269,7 +269,20 @@ export function PreCadastroSection() {
           </div>
 
           {/* Right: form */}
+          <style>{`
+            @keyframes leadFormPulse {
+              0%   { box-shadow: 0 0 0 0 rgba(234,29,44,0.55); }
+              70%  { box-shadow: 0 0 0 16px rgba(234,29,44,0); }
+              100% { box-shadow: 0 0 0 0 rgba(234,29,44,0); }
+            }
+            #lead-form.lead-form-highlight {
+              outline: 3px solid #EA1D2C;
+              outline-offset: 4px;
+              animation: leadFormPulse 1.3s ease-out 2;
+            }
+          `}</style>
           <div
+            id="lead-form"
             className="relative overflow-hidden rounded-3xl shadow-[0_24px_60px_-30px_rgba(26,14,13,0.35)]"
             style={{ background: "white", border: "1px solid #f0ece8" }}
           >
@@ -279,7 +292,7 @@ export function PreCadastroSection() {
             <div className="p-8 md:p-10">
 
               <h3 className="mt-4 text-2xl font-extrabold text-[#1a0e0d]" style={{ letterSpacing: "-0.01em" }}>
-                Peça seu acesso
+                Fale com a gente
               </h3>
               <p className="mt-1.5 text-sm" style={{ color: "#6b7280" }}>
                 Preencha em 30 segundos. Sem cartão, sem compromisso — nosso time entra em contato.
