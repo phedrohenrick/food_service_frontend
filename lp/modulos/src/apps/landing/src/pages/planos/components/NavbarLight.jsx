@@ -2,6 +2,14 @@
 
 import React, { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
+import { loginWithRedirect } from "../../../../../../shared/auth/keycloak";
+
+// Login do lojista direto no Keycloak. No retorno, /onboarding/start roteia
+// (loja existente -> dashboard; sem loja -> onboarding).
+const goToMerchantLogin = () => {
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  loginWithRedirect(`${origin}/onboarding/start`);
+};
 
 const NAV_LINKS = [
   { label: "Recursos", href: "/#funcionalidades" },
@@ -57,7 +65,8 @@ export function NavbarLight() {
 
         <div className="hidden items-center gap-3 lg:flex">
           <a
-            href="/login"
+            href="/onboarding/start"
+            onClick={(e) => { e.preventDefault(); goToMerchantLogin(); }}
             className="rounded-full border px-5 py-2 text-sm font-semibold transition-all duration-150"
             style={{ borderColor: "rgba(255,255,255,0.5)", color: "#FFFFFF" }}
             onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.12)"; e.currentTarget.style.borderColor = "#FFFFFF"; }}
@@ -104,7 +113,8 @@ export function NavbarLight() {
             ))}
             <div className="mt-5 flex flex-col gap-3">
               <a
-                href="/login"
+                href="/onboarding/start"
+                onClick={(e) => { e.preventDefault(); goToMerchantLogin(); }}
                 className="w-full rounded-xl border py-3 text-center text-sm font-semibold"
                 style={{ borderColor: "rgba(255,255,255,0.5)", color: "#FFFFFF" }}
               >

@@ -2,6 +2,14 @@
 
 import React, { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { loginWithRedirect } from "../../../../../../shared/auth/keycloak";
+
+// Leva direto ao login do lojista no Keycloak (client do lojista). No retorno,
+// /onboarding/start roteia: loja existente -> dashboard; sem loja -> onboarding.
+const goToMerchantLogin = () => {
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  loginWithRedirect(`${origin}/onboarding/start`);
+};
 
 export function Navbar1() {
   const [scrolled, setScrolled] = useState(false);
@@ -65,7 +73,7 @@ export function Navbar1() {
 
         <div className="hidden items-center gap-3 lg:flex">
           <button
-            onClick={() => { try { window.location.assign("/login"); } catch (_) {} }}
+            onClick={goToMerchantLogin}
             className="rounded-full border border-white/30 px-5 py-2 text-sm font-semibold text-white/80 transition hover:border-white/60 hover:text-white hover:bg-white/8"
           >
             Entrar
@@ -131,7 +139,7 @@ export function Navbar1() {
               </a>
               <div className="mt-5 flex flex-col gap-3">
                 <button
-                  onClick={() => { try { window.location.assign("/login"); } catch (_) {} }}
+                  onClick={goToMerchantLogin}
                   className="w-full rounded-xl border border-white/30 py-3 text-sm font-semibold text-white/80"
                 >
                   Entrar
