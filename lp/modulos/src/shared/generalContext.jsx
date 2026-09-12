@@ -1611,7 +1611,8 @@ export const StorefrontProvider = ({ children }) => {
     if (!state.cartItems.length) return null;
 
     try {
-      const parsedTenantId = Number(state.tenant?.id);
+      // tenantId é UUID (string opaca) — não coagir para Number.
+      const parsedTenantId = state.tenant?.id ?? null;
       const parsedUserId = Number(state.user?.id);
       const parsedAddressId =
         state.cart.address_id != null && state.cart.address_id !== ''
@@ -1644,7 +1645,7 @@ export const StorefrontProvider = ({ children }) => {
       });
 
       const payload = {
-        tenantId: Number.isFinite(parsedTenantId) ? parsedTenantId : null,
+        tenantId: parsedTenantId,
         userId: Number.isFinite(parsedUserId) ? parsedUserId : null,
         addressId: Number.isFinite(parsedAddressId) ? parsedAddressId : null,
         subtotal: cartTotals.subtotal,
