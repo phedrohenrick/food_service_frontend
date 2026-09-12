@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import DashboardLayout from './src/components/layout/DashboardLayout';
 import FirstAccessWizard from './src/components/FirstAccessWizard';
+import MobileFirstAccessForm from './src/components/MobileFirstAccessForm';
 import WizardCompletionModal from './src/components/WizardCompletionModal';
 import OnboardingChecklist from './src/components/OnboardingChecklist';
 import { Dashboard } from './src/pages';
@@ -28,6 +29,24 @@ const RestaurantDashboard = () => {
   const initGuard = useRef(false);
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Em telas pequenas (<768px) o tour ancorado (FirstAccessWizard) quebra: o card
+  // de dica cobre os campos. Nesses casos usamos um formulário de tela cheia
+  // (MobileFirstAccessForm) em vez do tour.
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      ? window.matchMedia('(max-width: 767px)').matches
+      : false
+  );
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
+    const mql = window.matchMedia('(max-width: 767px)');
+    const handler = (e) => setIsMobile(e.matches);
+    try { mql.addEventListener('change', handler); } catch (_) { mql.addListener(handler); }
+    return () => {
+      try { mql.removeEventListener('change', handler); } catch (_) { mql.removeListener(handler); }
+    };
+  }, []);
 
   const basePrefix = useMemo(() => {
     const path = location.pathname || '';
@@ -155,6 +174,7 @@ const RestaurantDashboard = () => {
   ]), [basePrefix, slugCheck, tenant?.slug]);
 
   useEffect(() => {
+    if (isMobile) return undefined;
     if (!wizardReady || !wizardActive) return undefined;
     if (wizardStep !== 2) return undefined;
 
@@ -261,13 +281,14 @@ const RestaurantDashboard = () => {
   }, [ready, tenant?.id, wizardStoragePrefix, wizardSteps.length]);
 
   useEffect(() => {
+    if (isMobile) return;
     if (!wizardReady || !wizardActive) return;
     const currentStep = wizardSteps[wizardStep];
     if (!currentStep?.route) return;
     if (location.pathname !== currentStep.route) {
       navigate(currentStep.route, { replace: true });
     }
-  }, [wizardReady, wizardActive, wizardStep, wizardSteps, location.pathname, navigate]);
+  }, [isMobile, wizardReady, wizardActive, wizardStep, wizardSteps, location.pathname, navigate]);
 
   useEffect(() => {
     if (!wizardReady || !wizardStoragePrefix) return;
@@ -312,6 +333,24 @@ const RestaurantDashboard = () => {
 
   const handleWizardFinish = useCallback(() => {
     markWizardDone();
+    setWizardCompleted(true);
+  }, [markWizardDone]);
+
+  // Conclusão do fluxo mobile: marca o tour como concluído (chave por tenant.id,
+  // sobrevive a reload) e, se o slug mudou, recarrega na nova URL — senão a rota
+  // /:slug/... e o /tenants/by-slug ficam apontando pro slug antigo.
+  const handleMobileComplete = useCallback(({ oldSlug, newSlug } = {}) => {
+    markWizardDone();
+    if (oldSlug && newSlug && oldSlug !== newSlug && typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('tenantSlug', newSlug);
+        localStorage.setItem('authTenantSlug', newSlug);
+      } catch (_) {}
+      const path = window.location.pathname || '';
+      const newPath = path.replace(new RegExp(`^/${oldSlug}(?=/|$)`), `/${newSlug}`);
+      window.location.replace(newPath + (window.location.search || '') + (window.location.hash || ''));
+      return;
+    }
     setWizardCompleted(true);
   }, [markWizardDone]);
 
@@ -407,17 +446,24 @@ const RestaurantDashboard = () => {
 
   return (
     <DashboardLayout onHelp={restartWizard}>
-      <FirstAccessWizard
-        active={wizardReady && wizardActive}
-        step={wizardSteps[wizardStep]}
-        stepIndex={wizardStep}
-        totalSteps={wizardSteps.length}
-        onNext={handleWizardNext}
-        onPrev={handleWizardPrev}
-        onFinish={handleWizardFinish}
-        onSkip={canSkipWizard ? handleWizardSkip : null}
-        skipDisabledHint={canSkipWizard ? null : 'Defina o nome e o slug da loja para liberar o atalho de pular o tour.'}
-      />
+      {isMobile ? (
+        <MobileFirstAccessForm
+          active={wizardReady && wizardActive}
+          onComplete={handleMobileComplete}
+        />
+      ) : (
+        <FirstAccessWizard
+          active={wizardReady && wizardActive}
+          step={wizardSteps[wizardStep]}
+          stepIndex={wizardStep}
+          totalSteps={wizardSteps.length}
+          onNext={handleWizardNext}
+          onPrev={handleWizardPrev}
+          onFinish={handleWizardFinish}
+          onSkip={canSkipWizard ? handleWizardSkip : null}
+          skipDisabledHint={canSkipWizard ? null : 'Defina o nome e o slug da loja para liberar o atalho de pular o tour.'}
+        />
+      )}
       {wizardCompleted && (
         <WizardCompletionModal
           tenant={tenant}
