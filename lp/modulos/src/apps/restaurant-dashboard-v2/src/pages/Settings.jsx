@@ -769,7 +769,21 @@ const Settings = () => {
 
               <div className="space-y-4">
                 <div className={`${subtleCardClass} p-5`}>
-                  <Input label="Foto (URL)" value={tenantForm.photo_url} onChange={onTenantChange('photo_url')} />
+                  <R2ImageUpload
+                    label="Foto da loja"
+                    target="tenant"
+                    value={tenantForm.photo_url}
+                    onChange={(publicUrl) => setTenantForm((prev) => ({ ...prev, photo_url: publicUrl }))}
+                    previewClassName="hidden"
+                  />
+                  <div className="mt-3">
+                    <Input
+                      label="Ou cole uma URL"
+                      value={tenantForm.photo_url}
+                      onChange={onTenantChange('photo_url')}
+                      placeholder="https://..."
+                    />
+                  </div>
                 </div>
                 <div className={`${subtleCardClass} p-5`}>
                   <p className="mb-3 text-sm font-medium text-slate-700">Cor principal do sistema</p>
