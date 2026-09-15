@@ -3,7 +3,7 @@ import { Button, Input, Modal } from '../../../../shared/components/ui';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
 import { formatOrderStatus } from '../../../../shared/utils/orderStatus';
 import FeatureLock from '../components/FeatureLock';
-import { Inbox, Utensils, Printer, Lock } from 'lucide-react';
+import { Inbox, Utensils, Printer, Lock, X } from 'lucide-react';
 import { useThermalPrinter } from '../hooks/useThermalPrinter';
 
 // Estilos para colunas da pipeline
@@ -876,30 +876,34 @@ const Orders = () => {
         ))}
       </div>
 
-      {printNotice && (
-        <div className="fixed bottom-6 right-6 z-[60] max-w-sm">
-          <div
-            className={`flex items-start gap-3 rounded-2xl px-5 py-4 text-sm font-medium text-white shadow-2xl ${
-              printNotice.type === 'error'
-                ? 'bg-red-500'
-                : printNotice.type === 'success'
-                  ? 'bg-green-600'
-                  : 'bg-amber-500'
-            }`}
-          >
-            <span className="mt-0.5 shrink-0">⚠️</span>
-            <span className="flex-1">{printNotice.message}</span>
-            <button
-              type="button"
-              onClick={() => setPrintNotice(null)}
-              className="shrink-0 text-white/80 hover:text-white"
-              aria-label="Fechar aviso"
-            >
-              ✕
-            </button>
+      {printNotice && (() => {
+        const tone = printNotice.type === 'error'
+          ? { border: 'border-red-200', badge: 'bg-red-50 text-red-600' }
+          : printNotice.type === 'success'
+            ? { border: 'border-emerald-200', badge: 'bg-emerald-50 text-emerald-600' }
+            : { border: 'border-amber-200', badge: 'bg-amber-50 text-amber-600' };
+        return (
+          <div className="fixed bottom-6 right-6 z-[60] max-w-sm">
+            <div className={`flex items-start gap-3 rounded-2xl border ${tone.border} bg-white px-4 py-3.5 shadow-[0_22px_55px_rgba(15,23,42,0.12)]`}>
+              <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${tone.badge}`}>
+                <Printer className="h-4 w-4" />
+              </span>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-slate-900">Impressão</p>
+                <p className="mt-0.5 text-sm leading-relaxed text-slate-600">{printNotice.message}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPrintNotice(null)}
+                className="shrink-0 text-slate-400 transition-colors hover:text-slate-600"
+                aria-label="Fechar aviso"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };
