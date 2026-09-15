@@ -913,7 +913,9 @@ export const StorefrontProvider = ({ children }) => {
         (Array.isArray(rawOrdersList) ? rawOrdersList : [])
         .filter((o) => {
           const oTenantId = o.tenantId ?? o.tenant_id;
-          return !tenantId || oTenantId == null || Number(oTenantId) === Number(tenantId);
+          // Comparar como string: ids de tenant agora são UUID e Number(uuid) === NaN
+          // (e NaN !== NaN), o que descartava todos os pedidos.
+          return !tenantId || oTenantId == null || String(oTenantId) === String(tenantId);
         })
         .map(async (o) => {
              try {
@@ -1993,7 +1995,7 @@ export const StorefrontProvider = ({ children }) => {
           if (hasRealId) {
             const payload = {
               id: Number(neighborhood.id),
-              tenantId: Number(tenantId),
+              tenantId: tenantId,
               name: neighborhood.name,
               price: Number(neighborhood.price) || 0,
             };
@@ -2001,7 +2003,7 @@ export const StorefrontProvider = ({ children }) => {
             await api.put(`/neighborhoods/${payload.id}`, payload);
           } else {
             const payload = {
-              tenantId: Number(tenantId),
+              tenantId: tenantId,
               name: neighborhood.name,
               price: Number(neighborhood.price) || 0,
             };
