@@ -816,6 +816,7 @@ const reducer = (state, action) => {
 
 export const StorefrontProvider = ({ children }) => {
   const [dataLoaded, setDataLoaded] = React.useState(false);
+  const [tenantNotFound, setTenantNotFound] = React.useState(false);
   const [state, dispatch] = useReducer(reducer, {
     tenant: initialTenant,
     banners: initialBanners,
@@ -839,10 +840,14 @@ export const StorefrontProvider = ({ children }) => {
   const loadData = async () => {
     try {
       let urlSlug = null;
+      let isStorefront = false;
       if (typeof window !== 'undefined' && window.location) {
         const p = window.location.pathname || '';
         let m = /^\/([^/]+)\/dashboard(\/|$)/i.exec(p);
-        if (!m) m = /^\/([^/]+)\/app(\/|$)/i.exec(p);
+        if (!m) {
+          m = /^\/([^/]+)\/app(\/|$)/i.exec(p);
+          if (m) isStorefront = true;
+        }
         if (m && m[1]) urlSlug = m[1];
       }
       const slug = urlSlug || ((typeof window !== 'undefined' && window.localStorage) ? localStorage.getItem('tenantSlug') : null);
@@ -857,6 +862,12 @@ export const StorefrontProvider = ({ children }) => {
         rawTenant = await api.get(`/tenants/by-slug/${slug}`).catch(() => null);
         if (rawTenant && rawTenant.id) {
           tenantId = rawTenant.id;
+        } else if (isStorefront) {
+          // Storefront com slug inexistente: não cai no tenant mock (Aurora) —
+          // sinaliza "loja não encontrada" e para por aqui.
+          setTenantNotFound(true);
+          setDataLoaded(true);
+          return;
         }
       }
       if (!rawTenant) {
@@ -1693,6 +1704,7 @@ export const StorefrontProvider = ({ children }) => {
       maps,
       cartTotals,
       dataLoaded,
+      tenantNotFound,
 
       // entitlements
       entitlements: state.entitlements,
@@ -2043,6 +2055,7 @@ export const StorefrontProvider = ({ children }) => {
       maps,
       cartTotals,
       dataLoaded,
+      tenantNotFound,
     ]
   );
 
