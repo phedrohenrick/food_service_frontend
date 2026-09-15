@@ -16,7 +16,7 @@ import { ensureSso } from '../../shared/auth/keycloak';
 import { resolveAccent } from '../../shared/utils/accentColor';
 
 const CustomerApp = () => {
-  const { reloadOrders, dataLoaded } = useStorefront();
+  const { reloadOrders, dataLoaded, tenantNotFound } = useStorefront();
   const reloadOrdersRef = React.useRef(reloadOrders);
 
   const isPreview = useMemo(() => {
@@ -75,6 +75,35 @@ const CustomerApp = () => {
           <div className="max-w-md rounded-2xl bg-white/90 p-6 shadow text-center space-y-3">
             <h2 className="text-xl font-semibold text-gray-900">Priatoo</h2>
             <p className="text-sm text-gray-600">Carregando o cardápio…</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (tenantNotFound) {
+    return (
+      <div className="relative min-h-screen overflow-hidden">
+        <video
+          className="absolute inset-0 h-full w-full object-cover"
+          autoPlay
+          muted
+          loop
+          playsInline
+          src="/assets/images/lp/loading.mp4"
+        />
+        <div className="absolute inset-0 bg-black/50" />
+        <div className="relative z-10 flex min-h-screen items-center justify-center px-4">
+          <div className="w-full max-w-md rounded-2xl bg-white/95 p-8 text-center shadow-xl backdrop-blur-sm">
+            <img
+              src="/sadicon.jpg"
+              alt="Página não encontrada"
+              className="mx-auto mb-5 h-28 w-28 object-contain"
+            />
+            <h2 className="text-xl font-bold tracking-tight text-gray-900">Página não encontrada</h2>
+            <p className="mt-2 text-sm leading-relaxed text-gray-600">
+              Desculpe, não conseguimos encontrar esta página. Por favor entre em contato com o suporte.
+            </p>
           </div>
         </div>
       </div>
