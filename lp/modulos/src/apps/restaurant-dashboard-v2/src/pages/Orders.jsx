@@ -3,7 +3,7 @@ import { Button, Input, Modal } from '../../../../shared/components/ui';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
 import { formatOrderStatus } from '../../../../shared/utils/orderStatus';
 import FeatureLock from '../components/FeatureLock';
-import { Inbox, Utensils, Printer, Lock } from 'lucide-react';
+import { Inbox, Utensils, Printer, Lock, X } from 'lucide-react';
 import { useThermalPrinter } from '../hooks/useThermalPrinter';
 
 // Estilos para colunas da pipeline
@@ -159,6 +159,14 @@ const Orders = () => {
   });
   const [exportSending, setExportSending] = useState(false);
   const [exportMessage, setExportMessage] = useState('');
+  // Aviso não-bloqueante da impressão (impressora desconectada ou falha de impressão).
+  const [printNotice, setPrintNotice] = useState(null); // { message, type }
+  const printNoticeTimer = useRef(null);
+  const showPrintNotice = (message, type = 'warning') => {
+    setPrintNotice({ message, type });
+    if (printNoticeTimer.current) clearTimeout(printNoticeTimer.current);
+    printNoticeTimer.current = setTimeout(() => setPrintNotice(null), 6000);
+  };
 
   // Polling estável: guarda a referência mais recente de reloadOrders num ref e cria UM
   // único intervalo (deps []). loadData muda de identidade a cada dispatch; sem o ref, o
@@ -379,19 +387,23 @@ const Orders = () => {
     const { order, lastStatus } = row;
     const wasAccept = lastStatus === 'CREATED';
     const ok = await updateOrderStatus(order.id, nextStatus(lastStatus));
+    // O pedido SEMPRE avança. A impressão é best-effort: nunca bloqueia o fluxo
+    // e nunca abre prompt de conexão — só avisa na tela quando não dá pra imprimir.
     if (!(ok && wasAccept && autoPrint)) return;
+
+    // Tenta reconectar em silêncio (porta já autorizada). Não abre o seletor de porta.
+    let connected = printerConnected;
+    if (!connected) {
+      try { connected = await tryAutoConnect(); } catch (_) { connected = false; }
+    }
+    if (!connected) {
+      showPrintNotice('Pedido aceito. A impressora não está conectada — o cupom não foi impresso. Conecte a impressora (botão no topo) para imprimir os próximos.', 'warning');
+      return;
+    }
     try {
-      if (!printerConnected) {
-        const reconnected = await tryAutoConnect(); // silencioso (porta já autorizada)
-        if (!reconnected) {
-          // Primeira vez na sessão: usa o gesto do próprio clique de aceitar pra conectar.
-          if (supportedSerial) await connectSerial();
-          else await connectBluetooth();
-        }
-      }
       await printReceipt(buildReceiptModel(row));
     } catch (_) {
-      /* erro já refletido no status da impressora */
+      showPrintNotice('Pedido aceito, mas não foi possível imprimir o cupom. Verifique papel, bateria/energia e a conexão da impressora.', 'warning');
     }
   };
 
@@ -863,6 +875,35 @@ const Orders = () => {
           </div>
         ))}
       </div>
+
+      {printNotice && (() => {
+        const tone = printNotice.type === 'error'
+          ? { border: 'border-red-200', badge: 'bg-red-50 text-red-600' }
+          : printNotice.type === 'success'
+            ? { border: 'border-emerald-200', badge: 'bg-emerald-50 text-emerald-600' }
+            : { border: 'border-amber-200', badge: 'bg-amber-50 text-amber-600' };
+        return (
+          <div className="fixed bottom-6 right-6 z-[60] max-w-sm">
+            <div className={`flex items-start gap-3 rounded-2xl border ${tone.border} bg-white px-4 py-3.5 shadow-[0_22px_55px_rgba(15,23,42,0.12)]`}>
+              <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${tone.badge}`}>
+                <Printer className="h-4 w-4" />
+              </span>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-slate-900">Impressão</p>
+                <p className="mt-0.5 text-sm leading-relaxed text-slate-600">{printNotice.message}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPrintNotice(null)}
+                className="shrink-0 text-slate-400 transition-colors hover:text-slate-600"
+                aria-label="Fechar aviso"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };
