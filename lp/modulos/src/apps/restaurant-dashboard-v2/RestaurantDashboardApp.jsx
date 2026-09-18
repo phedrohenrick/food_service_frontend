@@ -450,6 +450,7 @@ const RestaurantDashboard = () => {
         <MobileFirstAccessForm
           active={wizardReady && wizardActive}
           onComplete={handleMobileComplete}
+          onClose={markWizardDone}
         />
       ) : (
         <FirstAccessWizard
