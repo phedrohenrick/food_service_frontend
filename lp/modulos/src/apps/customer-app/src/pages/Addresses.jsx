@@ -5,7 +5,7 @@ import { Button } from '../../../../shared/components/ui';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
 import api from '../../../../shared/services/api';
 import { CiLocationOn } from "react-icons/ci";
-import { loginWithRedirect } from '../../../../shared/auth/keycloak';
+import { loginWithRedirect, getToken } from '../../../../shared/auth/keycloak';
 
 const Addresses = () => {
   const { addresses: addressesList, user, cart, setCartAddress, deleteAddress } = useStorefront();
@@ -22,7 +22,7 @@ const Addresses = () => {
   });
 
   const hasToken = (() => {
-    try { return !!localStorage.getItem('authToken'); } catch (_) { return false; }
+    try { return !!getToken(); } catch (_) { return false; }
   })();
   const hasUser = !!user?.id;
   const isAuthenticated = hasToken && hasUser;

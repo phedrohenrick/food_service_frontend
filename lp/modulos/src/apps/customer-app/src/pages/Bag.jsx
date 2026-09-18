@@ -5,7 +5,7 @@ import { useStorefront } from '../../../../shared/generalContext.jsx';
 import { LiaShoppingBagSolid } from "react-icons/lia";
 import { FaWhatsapp } from "react-icons/fa";
 import api from '../../../../shared/services/api';
-import { loginWithRedirect } from '../../../../shared/auth/keycloak';
+import { loginWithRedirect, getToken } from '../../../../shared/auth/keycloak';
 
 const Bag = () => {
   const navigate = useNavigate();
@@ -62,7 +62,7 @@ const Bag = () => {
     const loadActiveAddresses = async () => {
       try {
         const hasToken = (() => {
-          try { return !!localStorage.getItem('authToken'); } catch (_) { return false; }
+          try { return !!getToken(); } catch (_) { return false; }
         })();
         if (!hasToken) {
           setActiveAddresses([]);
@@ -281,7 +281,7 @@ const Bag = () => {
   };
 
   const hasToken = (() => {
-    try { return !!localStorage.getItem('authToken'); } catch (_) { return false; }
+    try { return !!getToken(); } catch (_) { return false; }
   })();
   const hasUser = !!user?.id;
   const isAuthenticated = hasUser && hasToken;

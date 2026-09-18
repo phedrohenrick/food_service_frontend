@@ -3,13 +3,14 @@
 import React, { useState } from "react";
 import { Lock, CalendarX2, Headphones, BadgeCheck } from "lucide-react";
 import api from '../../../../../../shared/services/api';
-import { loginWithRedirect } from '../../../../../../shared/auth/keycloak';
+import { loginWithRedirect, getToken } from '../../../../../../shared/auth/keycloak';
 
 const PRICES = {
-  start: { monthly: "25,90", annual: "25,90" },
-  delivery: { monthly: "79,90", annual: "79,90" },
-  completo: { monthly: "129,90", annual: "129,90" },
-  max: { monthly: "299,90", annual: "299,90" },
+  // annual = valor por mês cobrado anualmente (2 meses grátis => mensal x 10/12).
+  start: { monthly: "25,90", annual: "21,58" },
+  delivery: { monthly: "79,90", annual: "66,58" },
+  completo: { monthly: "129,90", annual: "108,25" },
+  max: { monthly: "299,90", annual: "249,92" },
 };
 
 const START_FEATURES = [
@@ -128,7 +129,8 @@ export function PricingCardsSection({ annual }) {
             iconColor="#4A6278"
             desc="Coloque seu restaurante online e receba pedidos pelo WhatsApp."
             price={PRICES.start[k]}
-            savingsNote={null}
+            monthlyPrice={PRICES.start.monthly}
+            annual={annual}
             features={START_FEATURES}
             ctaLabel="Assinar plano"
             ctaVariant="ghost"
@@ -143,7 +145,8 @@ export function PricingCardsSection({ annual }) {
             iconColor="#0EA5E9"
             desc="Para quem vive de delivery: receba e gerencie pedidos no sistema."
             price={PRICES.delivery[k]}
-            savingsNote={null}
+            monthlyPrice={PRICES.delivery.monthly}
+            annual={annual}
             features={DELIVERY_FEATURES}
             ctaLabel="Assinar plano"
             ctaVariant="ghost"
@@ -158,7 +161,8 @@ export function PricingCardsSection({ annual }) {
             iconColor="#0EA5E9"
             desc="Salão e delivery num lugar só: mesas, garçom e métricas."
             price={PRICES.completo[k]}
-            savingsNote={null}
+            monthlyPrice={PRICES.completo.monthly}
+            annual={annual}
             features={COMPLETO_FEATURES}
             ctaLabel="Assinar plano"
             ctaVariant="primary"
@@ -174,7 +178,8 @@ export function PricingCardsSection({ annual }) {
             iconColor="#0EA5E9"
             desc="Gerencie todas seu negócio num painel só. Acesso completo a todos os benefícios do sistema"
             price={PRICES.max[k]}
-            savingsNote={null}
+            monthlyPrice={PRICES.max.monthly}
+            annual={annual}
             features={MAX_FEATURES}
             ctaLabel="Assinar plano"
             ctaVariant="blue"
@@ -189,127 +194,159 @@ export function PricingCardsSection({ annual }) {
   );
 }
 
-function PlanCard({ tier, icon, iconBg, iconColor, desc, price, savingsNote, features, ctaLabel, ctaVariant, microCopy, popular, priceId }) {
+function PlanCard({ tier, icon, iconBg, iconColor, desc, price, monthlyPrice, annual, features, ctaLabel, ctaVariant, microCopy, popular, priceId }) {
+  // Identidade Priatoo (laranja) no modo anual; azul continua para o "mais popular".
+  const restBorderColor = annual ? "#FF7F27" : (popular ? "#0EA5E9" : "rgba(13,31,51,0.1)");
+  const restBorderWidth = (annual || popular) ? "2px" : "1.5px";
+  const hoverBorderColor = annual ? "#DD3F0C" : (popular ? "#0EA5E9" : "rgba(14,165,233,0.4)");
+  const restShadow = annual
+    ? "0 4px 24px rgba(255,127,39,0.16)"
+    : (popular ? "0 4px 24px rgba(14,165,233,0.14)" : "0 1px 4px rgba(13,31,51,0.06)");
+  const hoverShadow = annual
+    ? "0 8px 32px rgba(255,127,39,0.24)"
+    : (popular ? "0 8px 32px rgba(14,165,233,0.22)" : "0 4px 16px rgba(13,31,51,0.1)");
+  const priceColor = annual ? "#DD3F0C" : (popular ? "#0EA5E9" : "#0D1F33");
+
   return (
-    <div
-      className="group relative flex flex-col rounded-2xl bg-white transition-all duration-200"
-      style={{
-        border: popular ? "2px solid #0EA5E9" : "1.5px solid rgba(13,31,51,0.1)",
-        boxShadow: popular
-          ? "0 4px 24px rgba(14,165,233,0.14)"
-          : "0 1px 4px rgba(13,31,51,0.06)",
-        order: undefined,
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = "translateY(-3px)";
-        e.currentTarget.style.borderColor = popular ? "#0EA5E9" : "rgba(14,165,233,0.4)";
-        e.currentTarget.style.boxShadow = popular
-          ? "0 8px 32px rgba(14,165,233,0.22)"
-          : "0 4px 16px rgba(13,31,51,0.1)";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = "translateY(0)";
-        e.currentTarget.style.borderColor = popular ? "#0EA5E9" : "rgba(13,31,51,0.1)";
-        e.currentTarget.style.boxShadow = popular
-          ? "0 4px 24px rgba(14,165,233,0.14)"
-          : "0 1px 4px rgba(13,31,51,0.06)";
-      }}
-    >
-      {popular && (
-        <div
-          className="absolute -top-3.5 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full px-4 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-white"
-          style={{ background: "#0EA5E9", whiteSpace: "nowrap" }}
-        >
-          <IconDiamond />
-          Mais popular
-        </div>
-      )}
-
-      <div className="flex flex-1 flex-col p-8">
-        <div
-          className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl"
-          style={{ background: iconBg, color: iconColor }}
-        >
-          {icon}
-        </div>
-
-        <p
-          className="mb-1 text-[11px] font-bold uppercase tracking-[0.12em]"
-          style={{ color: popular ? "#0EA5E9" : "#8A9AB0" }}
-        >
-          {tier}
-        </p>
-
-        <p className="mb-6 text-sm leading-relaxed" style={{ color: "#4A6278" }}>
-          {desc}
-        </p>
-
-        <div className="mb-1 flex items-end gap-0.5 leading-none">
-          <span className="self-start pt-2 text-base font-semibold" style={{ color: "#8A9AB0" }}>
-            R$
-          </span>
-          <span
-            className="font-extrabold tracking-tight"
-            style={{
-              fontSize: "clamp(40px,4vw,52px)",
-              letterSpacing: "-0.04em",
-              color: popular ? "#0EA5E9" : "#0D1F33",
-            }}
+    <div className="flex flex-col">
+      <div
+        className="group relative flex flex-col rounded-2xl bg-white transition-all duration-200"
+        style={{
+          border: `${restBorderWidth} solid ${restBorderColor}`,
+          boxShadow: restShadow,
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = "translateY(-3px)";
+          e.currentTarget.style.borderColor = hoverBorderColor;
+          e.currentTarget.style.boxShadow = hoverShadow;
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = "translateY(0)";
+          e.currentTarget.style.borderColor = restBorderColor;
+          e.currentTarget.style.boxShadow = restShadow;
+        }}
+      >
+        {popular && (
+          <div
+            className="absolute -top-3.5 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full px-4 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-white"
+            style={{ background: annual ? "#FF7F27" : "#0EA5E9", whiteSpace: "nowrap" }}
           >
-            {price}
-          </span>
-          <span className="self-end pb-1.5 text-[15px]" style={{ color: "#8A9AB0" }}>
-            /mês
-          </span>
-        </div>
+            <IconDiamond />
+            Mais popular
+          </div>
+        )}
 
-        <div className="mb-6 min-h-5 text-xs" style={{ color: "#8A9AB0" }}>
-          {savingsNote ? (
-            <>
-              <span className="line-through opacity-60">{savingsNote.orig}</span>
-              {" · "}
-              <span style={{ color: "#0EA5E9", fontWeight: 600 }}>{savingsNote.saving}</span>
-            </>
-          ) : (
-            <span>&nbsp;</span>
-          )}
-        </div>
+        <div className="flex flex-1 flex-col p-8">
+          <div
+            className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl"
+            style={{ background: iconBg, color: iconColor }}
+          >
+            {icon}
+          </div>
 
-        <div className="mb-6 h-px" style={{ background: "rgba(13,31,51,0.08)" }} />
-
-        <ul className="mb-8 flex-1 space-y-3">
-          {features.map((feat) => (
-            <li
-              key={feat.text}
-              className="flex items-start gap-2.5 text-[13.5px] leading-snug"
-              style={{ color: feat.included ? "#0D1F33" : "#8A9AB0" }}
-            >
-              <span className="mt-px flex-shrink-0">
-                {feat.included
-                  ? <IconCheckCircle color="#0EA5E9" />
-                  : <IconMinusCircle />
-                }
-              </span>
-              {feat.text}
-            </li>
-          ))}
-        </ul>
-
-        <div className="space-y-2">
-          <CtaButton variant={ctaVariant} label={ctaLabel} priceId={priceId} />
-          {microCopy && (
-            <p className="text-center text-[11px]" style={{ color: "#8A9AB0" }}>
-              {microCopy}
-            </p>
-          )}
-          <p className="text-center text-[10px] leading-relaxed" style={{ color: "#8A9AB0" }}>
-            Ao assinar, você concorda com o{' '}
-            <a href="/contrato" target="_blank" rel="noreferrer" className="underline">Contrato de Assinatura</a>{' '}
-            e a{' '}
-            <a href="/privacidade" target="_blank" rel="noreferrer" className="underline">Política de Privacidade</a>.
+          <p
+            className="mb-1 text-[11px] font-bold uppercase tracking-[0.12em]"
+            style={{ color: popular ? "#0EA5E9" : "#8A9AB0" }}
+          >
+            {tier}
           </p>
+
+          <p className="mb-4 text-sm leading-relaxed" style={{ color: "#4A6278" }}>
+            {desc}
+          </p>
+
+          {/* Destaque: teste grátis (identidade Priatoo) — só no plano mensal */}
+          {!annual && (
+            <div
+              className="mb-5 inline-flex items-center gap-1.5 self-start rounded-full px-3 py-1 text-xs font-extrabold uppercase tracking-wide"
+              style={{ background: "rgba(255,127,39,0.12)", color: "#DD3F0C" }}
+            >
+              <BadgeCheck className="h-3.5 w-3.5" strokeWidth={2.4} />
+              1 mês de teste grátis
+            </div>
+          )}
+
+          <div className="mb-1 flex items-end gap-0.5 leading-none">
+            <span className="self-start pt-2 text-base font-semibold" style={{ color: "#8A9AB0" }}>
+              R$
+            </span>
+            <span
+              className="font-extrabold tracking-tight"
+              style={{
+                fontSize: "clamp(40px,4vw,52px)",
+                letterSpacing: "-0.04em",
+                color: priceColor,
+              }}
+            >
+              {price}
+            </span>
+            <span className="self-end pb-1.5 text-[15px]" style={{ color: "#8A9AB0" }}>
+              /mês
+            </span>
+          </div>
+
+          <div className="mb-6 min-h-5 text-xs" style={{ color: "#8A9AB0" }}>
+            {annual ? (
+              <>
+                <span className="line-through opacity-80">De R$ {monthlyPrice}/mês</span>
+                {" · "}
+                <span style={{ color: "#DD3F0C", fontWeight: 700 }}>2 meses grátis</span>
+              </>
+            ) : (
+              <span>&nbsp;</span>
+            )}
+          </div>
+
+          <div className="mb-6 h-px" style={{ background: "rgba(13,31,51,0.08)" }} />
+
+          <ul className="mb-8 flex-1 space-y-3">
+            {features.map((feat) => (
+              <li
+                key={feat.text}
+                className="flex items-start gap-2.5 text-[13.5px] leading-snug"
+                style={{ color: feat.included ? "#0D1F33" : "#8A9AB0" }}
+              >
+                <span className="mt-px flex-shrink-0">
+                  {feat.included
+                    ? <IconCheckCircle color={annual ? "#FF7F27" : "#0EA5E9"} />
+                    : <IconMinusCircle />
+                  }
+                </span>
+                {feat.text}
+              </li>
+            ))}
+          </ul>
+
+          <div className="space-y-2">
+            <CtaButton variant={ctaVariant} label={ctaLabel} priceId={priceId} />
+            {microCopy && (
+              <p className="text-center text-[11px]" style={{ color: "#8A9AB0" }}>
+                {microCopy}
+              </p>
+            )}
+            <p className="text-center text-[10px] leading-relaxed" style={{ color: "#8A9AB0" }}>
+              Ao assinar, você concorda com o{' '}
+              <a href="/contrato" target="_blank" rel="noreferrer" className="underline">Contrato de Assinatura</a>{' '}
+              e a{' '}
+              <a href="/privacidade" target="_blank" rel="noreferrer" className="underline">Política de Privacidade</a>.
+            </p>
+          </div>
         </div>
       </div>
+
+      {/* Frase em destaque abaixo do card, só no plano anual */}
+      {annual && (
+        <div
+          className="mt-3 rounded-xl px-4 py-2.5 text-center text-[12.5px] font-bold"
+          style={{
+            background: "rgba(255,127,39,0.10)",
+            color: "#DD3F0C",
+            border: "1px solid rgba(255,127,39,0.28)",
+          }}
+        >
+          Ganhe 2 meses grátis comprando o plano anual
+        </div>
+      )}
     </div>
   );
 }
@@ -321,7 +358,7 @@ function CtaButton({ variant, label, priceId }) {
   const handleClick = async () => {
     try { localStorage.setItem('pendingPriceId', priceId); } catch (_) {}
 
-    const token = (() => { try { return localStorage.getItem('authToken'); } catch (_) { return null; } })();
+    const token = getToken();
     const slug = (() => { try { return localStorage.getItem('tenantSlug') || localStorage.getItem('authTenantSlug'); } catch (_) { return null; } })();
 
     if (token && slug) {

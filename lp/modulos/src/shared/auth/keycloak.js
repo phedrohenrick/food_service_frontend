@@ -106,10 +106,11 @@ function clearAuthCallbackParams() {
   } catch (_) {}
 }
 
-function persistToken(instance) {
-  try {
-    localStorage.setItem('authToken', instance.token || '');
-  } catch (_) {}
+// O access token vive SÓ em memória (instance.token), gerenciado pelo adapter do
+// keycloak-js. Não persistimos mais no localStorage (evita exfiltração por XSS).
+// Mantido como no-op pra não quebrar os call sites existentes.
+function persistToken(_instance) {
+  /* intencionalmente vazio — token permanece em memória (keycloak.token) */
 }
 
 function ensureKeycloak(target) {
@@ -168,6 +169,28 @@ export async function initKeycloak(onReady) {
 
 export function getKeycloak() {
   return ensureKeycloak();
+}
+
+// Token de acesso em memória (fonte única de verdade). Use no lugar de ler
+// localStorage.authToken — que não é mais gravado.
+export function getToken() {
+  try {
+    return (keycloak && keycloak.token) ? keycloak.token : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+// Invalida o token em memória (ex.: após 401 sem refresh possível), pra a próxima
+// request não anexar um Bearer morto.
+export function clearToken() {
+  try {
+    if (keycloak) {
+      keycloak.token = undefined;
+      keycloak.refreshToken = undefined;
+      keycloak.idToken = undefined;
+    }
+  } catch (_) {}
 }
 
 export async function tryRefreshToken() {

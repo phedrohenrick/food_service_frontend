@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '../../../../shared/components/ui';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
 import { GoClock } from "react-icons/go";
-import { loginWithRedirect } from '../../../../shared/auth/keycloak';
+import { loginWithRedirect, getToken } from '../../../../shared/auth/keycloak';
 import { formatOrderStatus } from '../../../../shared/utils/orderStatus';
 
 const statusPills = {
@@ -22,7 +22,7 @@ const statusPills = {
 const Orders = () => {
   const { orders, getOrderDetailed, reloadOrders, user } = useStorefront();
   const hasToken = (() => {
-    try { return !!localStorage.getItem('authToken'); } catch (_) { return false; }
+    try { return !!getToken(); } catch (_) { return false; }
   })();
   const hasUser = !!user?.id;
   const isAuthenticated = hasToken;

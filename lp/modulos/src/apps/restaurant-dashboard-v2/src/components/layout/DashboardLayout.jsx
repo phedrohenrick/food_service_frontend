@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useStorefront } from '../../../../../shared/generalContext.jsx';
-import { getKeycloak } from '../../../../../shared/auth/keycloak';
+import { getKeycloak, clearToken } from '../../../../../shared/auth/keycloak';
 import api from '../../../../../shared/services/api';
 import { RiDashboardHorizontalFill } from "react-icons/ri";
 import { GrRestaurant } from "react-icons/gr";
@@ -160,7 +160,7 @@ const DashboardLayoutv2 = ({ children, onHelp }) => {
   }, [showUserDropdown]);
 
   const handleLogout = () => {
-    try { localStorage.removeItem('authToken'); } catch (_) {}
+    clearToken();
     try { localStorage.removeItem('tenantSlug'); } catch (_) {}
     try { localStorage.removeItem('authTenantSlug'); } catch (_) {}
     getKeycloak().logout({ redirectUri: window.location.origin });

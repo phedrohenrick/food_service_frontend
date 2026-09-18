@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useReducer } from 'react';
 import api from './services/api';
+import { getToken } from './auth/keycloak';
 
 /*
   Context alinhado ao modelo de banco
@@ -851,10 +852,7 @@ export const StorefrontProvider = ({ children }) => {
         if (m && m[1]) urlSlug = m[1];
       }
       const slug = urlSlug || ((typeof window !== 'undefined' && window.localStorage) ? localStorage.getItem('tenantSlug') : null);
-      const authToken = (typeof window !== 'undefined' && window.localStorage)
-        ? localStorage.getItem('authToken')
-        : null;
-      const isAuthenticated = !!authToken;
+      const isAuthenticated = !!getToken();
 
       let tenantId = 1;
       let rawTenant = null;
@@ -1333,8 +1331,7 @@ export const StorefrontProvider = ({ children }) => {
 
   const isAuthenticated = () => {
     const hasUser = !!state?.user?.id;
-    let hasToken = false;
-    try { hasToken = !!localStorage.getItem('authToken'); } catch (_) {}
+    const hasToken = !!getToken();
     return hasUser && hasToken;
   };
 
