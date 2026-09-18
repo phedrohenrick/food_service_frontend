@@ -1,4 +1,4 @@
-import { tryRefreshToken } from '../auth/keycloak';
+import { tryRefreshToken, getToken, clearToken } from '../auth/keycloak';
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://api.priatoo.com.br';
 
 class ApiService {
@@ -49,7 +49,7 @@ class ApiService {
     const isGet = !config.method || config.method.toUpperCase() === 'GET';
     const isPublicGet = isGet && publicGetPrefixes.some(p => String(endpoint || '').startsWith(p));
     if (!isPublicGet) {
-      const token = (() => { try { return localStorage.getItem('authToken'); } catch (_) { return null; } })();
+      const token = getToken();
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -61,7 +61,7 @@ class ApiService {
       if (response.status === 401 && typeof window !== 'undefined' && !isPublicGet) {
         const refreshed = await tryRefreshToken().catch(() => false);
         if (refreshed) {
-          const newToken = (() => { try { return localStorage.getItem('authToken'); } catch (_) { return null; } })();
+          const newToken = getToken();
           if (newToken) {
             config.headers.Authorization = `Bearer ${newToken}`;
             response = await fetch(url, config);
@@ -76,7 +76,7 @@ class ApiService {
         // E não fazemos loginWithRedirect automático aqui: 401 transitório + silent SSO
         // do Keycloak já criou loop antes.
         if (response.status === 401 && typeof window !== 'undefined' && !isPublicGet) {
-          try { localStorage.removeItem('authToken'); } catch (_) {}
+          clearToken();
         }
         const errorBody = await response.text().catch(() => '');
         console.error('API Error Body:', errorBody);
