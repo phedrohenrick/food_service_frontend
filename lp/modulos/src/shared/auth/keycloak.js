@@ -36,7 +36,8 @@ function getPathFromTarget(target) {
 
 function isMerchantRoute(pathname) {
   return /^\/onboarding(\/|$)/i.test(pathname || '')
-    || /^\/(?:[^/]+\/)?dashboard(\/|$)/i.test(pathname || '');
+    || /^\/(?:[^/]+\/)?dashboard(\/|$)/i.test(pathname || '')
+    || /^\/admin(\/|$)/i.test(pathname || '');
 }
 
 function resolveClientId(target) {

@@ -36,7 +36,9 @@ class ApiService {
     const finalSlug = urlSlug || storedSlug;
     const endpointText = String(endpoint || '');
     const shouldSkipTenantHeader =
-      /^\/tenants\/by-slug\/[^/]+/i.test(endpointText);
+      /^\/tenants\/by-slug\/[^/]+/i.test(endpointText)
+      // Admin é cross-tenant: não faz sentido anexar um slug (possivelmente velho do localStorage).
+      || /^\/admin(\/|$)/i.test(endpointText);
 
     if (finalSlug && !shouldSkipTenantHeader && !config.headers['X-Tenant-Slug']) {
       config.headers['X-Tenant-Slug'] = finalSlug;

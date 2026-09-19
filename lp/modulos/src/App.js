@@ -13,6 +13,9 @@ import LegalPage from './apps/landing/src/pages/legal/LegalPage';
 // Restaurant Dashboard (lazy loading)
 const RestaurantDashboard = React.lazy(() => import('./apps/restaurant-dashboard-v2/RestaurantDashboardApp'));
 
+// Admin / Painel de plataforma (lazy loading)
+const AdminApp = React.lazy(() => import('./apps/admin/AdminApp'));
+
 // Customer App (lazy loading)
 const CustomerApp = React.lazy(() => import('./apps/customer-app/CustomerApp'));
 
@@ -74,6 +77,9 @@ function App() {
             {/* Restaurant Dashboard Routes */}
             <Route path="/:slug/dashboard/*" element={<RestaurantDashboard />} />
             <Route path="/dashboard/*" element={<DashboardFallbackRedirect />} />
+
+            {/* Admin / Painel de plataforma (global, exige role ADMIN) */}
+            <Route path="/admin/*" element={<AdminApp />} />
             
             {/* Customer App Routes */}
             <Route path="/:slug/app/*" element={<CustomerApp />} />
