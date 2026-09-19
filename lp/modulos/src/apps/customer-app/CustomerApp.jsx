@@ -14,10 +14,13 @@ import {
 import { useStorefront } from '../../shared/generalContext.jsx';
 import { ensureSso } from '../../shared/auth/keycloak';
 import { resolveAccent } from '../../shared/utils/accentColor';
+import { isPhoneMissing } from '../../shared/utils/customerPhone';
+import PhoneCaptureModal from './src/components/PhoneCaptureModal';
 
 const CustomerApp = () => {
-  const { reloadOrders, dataLoaded, tenantNotFound } = useStorefront();
+  const { reloadOrders, dataLoaded, tenantNotFound, user } = useStorefront();
   const reloadOrdersRef = React.useRef(reloadOrders);
+  const [phoneDismissed, setPhoneDismissed] = useState(false);
 
   const isPreview = useMemo(() => {
     if (typeof window === 'undefined') return false;
@@ -110,8 +113,16 @@ const CustomerApp = () => {
     );
   }
 
+  const needsPhone = !isPreview && dataLoaded && !!user?.id && isPhoneMissing(user?.phone);
+
   return (
     <CustomerLayout>
+      <PhoneCaptureModal
+        open={needsPhone && !phoneDismissed}
+        dismissible
+        onClose={() => setPhoneDismissed(true)}
+        onSaved={() => reloadOrdersRef.current?.()}
+      />
       {isPreview && (
         <>
           <style>{`

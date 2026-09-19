@@ -6,6 +6,8 @@ import { LiaShoppingBagSolid } from "react-icons/lia";
 import { FaWhatsapp } from "react-icons/fa";
 import api from '../../../../shared/services/api';
 import { loginWithRedirect, getToken } from '../../../../shared/auth/keycloak';
+import { isPhoneMissing } from '../../../../shared/utils/customerPhone';
+import PhoneCaptureModal from '../components/PhoneCaptureModal';
 
 const Bag = () => {
   const navigate = useNavigate();
@@ -26,6 +28,7 @@ const Bag = () => {
     setCartNotes,
     setAddresses,
     placeOrder,
+    reloadOrders,
   } = useStorefront();
 
   const isPreview = React.useMemo(() => {
@@ -40,6 +43,7 @@ const Bag = () => {
   const [addressAlertOpen, setAddressAlertOpen] = React.useState(false);
   const [unsupportedAreaOpen, setUnsupportedAreaOpen] = React.useState(false);
   const [previewBlockOpen, setPreviewBlockOpen] = React.useState(false);
+  const [phoneModalOpen, setPhoneModalOpen] = React.useState(false);
   const [selectedAddressId, setSelectedAddressId] = React.useState(
     cart.address_id ? String(cart.address_id) : null
   );
@@ -238,6 +242,11 @@ const Bag = () => {
     }
     if (!isAuthenticated) {
       await loginWithRedirect(window.location.href);
+      return;
+    }
+    // Obrigatório antes de pedir: o lojista precisa de um telefone pra contato.
+    if (isPhoneMissing(user?.phone)) {
+      setPhoneModalOpen(true);
       return;
     }
     if (!addressList.length && selectedAddressId == null) {
@@ -719,6 +728,15 @@ const Bag = () => {
         >
           Finalizar pedido
         </Button>
+        <PhoneCaptureModal
+          open={phoneModalOpen}
+          dismissible
+          onClose={() => setPhoneModalOpen(false)}
+          onSaved={async () => {
+            setPhoneModalOpen(false);
+            await reloadOrders?.();
+          }}
+        />
         <p className="text-xs text-gray-500">
           Ao finalizar, você será direcionado para acompanhar o status em tempo real.
         </p>
