@@ -5,6 +5,9 @@ const PHONE_W = 454;
 const PHONE_H = 956;
 const SCREEN_W = 430;
 const SCREEN_H = 932;
+// Faixa de status (safe-area top do iOS): empurra o conteúdo pra baixo da
+// Dynamic Island, como num iPhone real. No iframe o env(safe-area-inset-top) é 0.
+const STATUS_BAR = 54;
 const MIN_SCALE = 0.42;
 const MAX_SCALE = 0.62;
 const HORIZONTAL_PADDING = 28;
@@ -170,7 +173,7 @@ const BrandPreviewPhone = ({ tenantSlug, mainColor }) => {
                 style={{
                   width: '100%',
                   height: '100%',
-                  background: '#000',
+                  background: '#fff',
                   borderRadius: '50px',
                   position: 'relative',
                   overflow: 'hidden',
@@ -184,10 +187,10 @@ const BrandPreviewPhone = ({ tenantSlug, mainColor }) => {
                   title="Pré-visualização da loja para o cliente"
                   style={{
                     width: `${SCREEN_W}px`,
-                    height: `${SCREEN_H}px`,
+                    height: `${SCREEN_H - STATUS_BAR}px`,
+                    marginTop: `${STATUS_BAR}px`,
                     border: 0,
                     display: 'block',
-                    borderRadius: '49px',
                     background: '#fff',
                     opacity: iframeReady ? 1 : 0,
                     transition: 'opacity 220ms ease',
