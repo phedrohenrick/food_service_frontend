@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Input, Modal } from '../../../../shared/components/ui';
 import { useStorefront } from '../../../../shared/generalContext.jsx';
 import { formatOrderStatus } from '../../../../shared/utils/orderStatus';
+import { formatPhoneBR } from '../../../../shared/utils/customerPhone';
 import FeatureLock from '../components/FeatureLock';
 import { Inbox, Utensils, Printer, Lock, X } from 'lucide-react';
 import { useThermalPrinter } from '../hooks/useThermalPrinter';
@@ -143,7 +144,7 @@ function OrdersTeaser() {
 }
 
 const Orders = () => {
-  const { orders, user, tenant, maps, getOrderDetailed, addOrderStatus, updateOrderStatus, reloadOrders, canUseFeature, entitlements } = useStorefront();
+  const { orders, tenant, maps, getOrderDetailed, addOrderStatus, updateOrderStatus, reloadOrders, canUseFeature, entitlements } = useStorefront();
   const [filter, setFilter] = useState('todos');
   const [originFilter, setOriginFilter] = useState('todos');
   const [expanded, setExpanded] = useState(null);
@@ -262,7 +263,7 @@ const Orders = () => {
           const isTable = order.tab_id != null;
           const who = isTable
             ? (order.customer_name || `Mesa ${order.table_number ?? ''}`)
-            : (user?.name || 'Cliente');
+            : (order.customer_name || 'Cliente');
           const serviceFee = order.service_fee ?? (order.subtotal || 0) * 0.08;
           return [
             order.id,
@@ -353,8 +354,8 @@ const Orders = () => {
       createdAt: fmtDate(order.created_at),
       origin: isTable ? 'Mesa' : 'Delivery',
       tableNumber: order.table_number,
-      customerName: isTable ? (order.customer_name || '') : (user?.name || ''),
-      customerPhone: isTable ? '' : (user?.phone || ''),
+      customerName: order.customer_name || '',
+      customerPhone: order.customer_phone || '',
       address: isTable ? '' : addressText,
       items,
       subtotal: order.subtotal,
@@ -676,9 +677,11 @@ const Orders = () => {
                         <p className="mt-1 font-semibold text-slate-950">
                           {isTableOrder
                             ? (order.customer_name || `Mesa ${order.table_number ?? ''}`)
-                            : (user?.name || 'Cliente')}
+                            : (order.customer_name || 'Cliente')}
                         </p>
-                        {!isTableOrder && <p className="text-xs text-slate-500">{user?.phone}</p>}
+                        {order.customer_phone && (
+                          <p className="text-xs text-slate-500">{formatPhoneBR(order.customer_phone)}</p>
+                        )}
                       </div>
                       <div className="text-right">
                         <div className="relative inline-flex items-center justify-center">

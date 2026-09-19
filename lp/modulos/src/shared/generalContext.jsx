@@ -963,6 +963,7 @@ export const StorefrontProvider = ({ children }) => {
               tab_id: o.tabId ?? o.tab_id ?? null,
               table_number: o.tableNumber ?? o.table_number ?? null,
               customer_name: o.customerName ?? o.customer_name ?? null,
+              customer_phone: o.customerPhone ?? o.customer_phone ?? null,
               payment_channel: o.paymentChannel || o.payment_channel,
               created_at: o.createdAt || o.created_at,
               // Ensure numbers for calculations
