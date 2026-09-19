@@ -256,18 +256,26 @@ function PlanCard({ tier, icon, iconBg, iconColor, desc, price, monthlyPrice, an
           </p>
 
           {/* Destaque: teste grátis (identidade Priatoo) — só no plano mensal */}
-          {!annual && (
+          {annual ? (
             <div
-              className="mb-5 inline-flex items-center gap-1.5 self-start rounded-full px-3 py-1 text-xs font-extrabold uppercase tracking-wide"
+              className="mb-5 inline-flex items-center gap-1.5 self-start rounded-full px-3 py-1 text-xs font-bold tracking-wide"
               style={{ background: "rgba(255,127,39,0.12)", color: "#DD3F0C" }}
             >
               <BadgeCheck className="h-3.5 w-3.5" strokeWidth={2.4} />
-              1 mês de teste grátis
+              Ganha 2 Meses de mensalidade grátis
+            </div>
+          ):(
+            <div
+              className="mb-5 inline-flex items-center gap-1.5 self-start rounded-full px-3 py-1 text-xs font-bold tracking-wide"
+              style={{ background: "rgba(255,127,39,0.12)", color: "#DD3F0C" }}
+            >
+              <BadgeCheck className="h-3.5 w-3.5" strokeWidth={2.4} />
+              1 mês de teste sem cartão
             </div>
           )}
 
           <div className="mb-1 flex items-end gap-0.5 leading-none">
-            <span className="self-start pt-2 text-base font-semibold" style={{ color: "#8A9AB0" }}>
+            <span className="self-start pt-2 text-base font-semibold" style={{ color: "#626d7c" }}>
               R$
             </span>
             <span
@@ -280,17 +288,17 @@ function PlanCard({ tier, icon, iconBg, iconColor, desc, price, monthlyPrice, an
             >
               {price}
             </span>
-            <span className="self-end pb-1.5 text-[15px]" style={{ color: "#8A9AB0" }}>
+            <span className="self-end pb-1.5 text-[15px]" style={{ color: "#626d7c" }}>
               /mês
             </span>
           </div>
 
-          <div className="mb-6 min-h-5 text-xs" style={{ color: "#8A9AB0" }}>
+          <div className="mb-6 min-h-5 text-xs" style={{ color: "#626d7c" }}>
             {annual ? (
               <>
                 <span className="line-through opacity-80">De R$ {monthlyPrice}/mês</span>
-                {" · "}
-                <span style={{ color: "#DD3F0C", fontWeight: 700 }}>2 meses grátis</span>
+                
+                <span style={{ color: "#DD3F0C", fontWeight: 700 }}></span>
               </>
             ) : (
               <span>&nbsp;</span>
