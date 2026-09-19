@@ -12,7 +12,7 @@ import Settings from './src/pages/Settings';
 import Metricas from './src/pages/Metricas';
 import Mesas from './src/pages/Mesas';
 import MesaDetalhe from './src/pages/MesaDetalhe';
-import { initKeycloak, getKeycloak } from '../../shared/auth/keycloak';
+import { initKeycloak, getKeycloak, getToken, ensureSso } from '../../shared/auth/keycloak';
 import api from '../../shared/services/api';
 import { validateCpfOrCnpj } from '../../shared/utils/validators';
 import { useStorefront } from '../../shared/generalContext.jsx';
@@ -252,14 +252,24 @@ const RestaurantDashboard = () => {
     if (slug) {
       try { localStorage.setItem('authTenantSlug', slug); } catch (_) {}
     }
+    let cancelled = false;
     (async () => {
+      // Garante um token antes de checar acesso. Em aba nova o token do Keycloak
+      // vive só em memória (começa vazio) e o `ready` pode virar true antes dele
+      // existir — sem isto, a checagem dispara sem Authorization e dá 401 (o
+      // "às vezes tem acesso, às vezes não" ao entrar como admin).
+      if (!getToken()) {
+        try { await ensureSso(); } catch (_) {}
+      }
+      if (cancelled) return;
       try {
         await api.get('/tenant-auth/tenant-access');
-        setAuthDenied(false);
+        if (!cancelled) setAuthDenied(false);
       } catch (e) {
-        setAuthDenied(true);
+        if (!cancelled) setAuthDenied(true);
       }
     })();
+    return () => { cancelled = true; };
   }, [ready, location.pathname]);
 
   useEffect(() => {
