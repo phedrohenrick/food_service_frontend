@@ -239,6 +239,29 @@ export async function loginWithRedirect(redirectUri, options = {}) {
   }
 }
 
+// Fluxo de CRIAR CONTA (separado do login): abre a página de REGISTRO do Keycloak,
+// não a de login. Usado pelos CTAs "Testar grátis / Criar conta".
+export async function registerWithRedirect(redirectUri) {
+  try {
+    const instance = ensureKeycloak(redirectUri);
+    setLoginInProgress(true);
+    if (!initialized) {
+      try {
+        await instance.init({ onLoad: 'check-sso', checkLoginIframe: false, pkceMethod: 'S256' });
+        initialized = true;
+      } catch (_) {}
+    }
+    const url = await instance.createRegisterUrl({ redirectUri });
+    if (typeof window !== 'undefined' && url) {
+      window.location.assign(url);
+      return;
+    }
+    await instance.register({ redirectUri });
+  } catch (_) {
+    setLoginInProgress(false);
+  }
+}
+
 export async function ensureSso() {
   if (ssoPromise) {
     return ssoPromise;

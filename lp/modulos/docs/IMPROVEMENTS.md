@@ -6,6 +6,31 @@
 
 ---
 
+## ⏭️ PRÓXIMO DA FILA — Separar "Entrar" de "Criar conta" (testar grátis)
+
+> **Prioridade: próximo item a implementar.**
+
+**Problema:** o botão **"Testar grátis"** leva pra **mesma tela do Keycloak** usada pra *fazer login*.
+Uma única tela serve pra login **e** criar conta, então quem quer **começar um teste** cai numa
+tela de "entrar" e fica confuso (parece que precisa já ter conta). Atrito direto no funil de aquisição.
+
+**Causa:** os CTAs de signup usam `loginWithRedirect` → `keycloak.createLoginUrl()` (ação *login*).
+O Keycloak tem um fluxo **separado de registro** (`createRegisterUrl()` / `action=register`,
+rota `/realms/priatoo/protocol/openid-connect/registrations`) que o app não usa.
+
+**Plano:**
+1. Adicionar `registerWithRedirect(redirectUri)` no `shared/auth/keycloak.js` usando
+   `instance.register({ redirectUri })` / `createRegisterUrl()` (mesma lógica de client/PKCE do
+   `loginWithRedirect`, só muda a ação).
+2. Apontar os CTAs de **"Testar grátis" / "Criar conta" / "Cadastre-se"** (landing, planos,
+   `LoginLanding`) pra `registerWithRedirect`, deixando **"Entrar"** no `loginWithRedirect`.
+3. Garantir que **"Registration allowed"** está habilitado no realm do Keycloak (config 1x).
+4. (Opcional) Na tela do Keycloak, deixar claro o contexto (tema já é custom) — link "já tenho conta".
+
+**Ganho:** quem clica em testar grátis vai direto pro **cadastro**, não pra um login ambíguo.
+
+---
+
 ## 🔐 Auth: proteção do token no cliente + BFF (cookie HttpOnly)
 
 > Contexto: achado **#1 (Alto)** da auditoria (`security-audit-frontend.md`). O JWT do Keycloak é

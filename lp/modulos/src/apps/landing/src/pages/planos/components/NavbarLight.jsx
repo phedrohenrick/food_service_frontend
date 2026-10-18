@@ -2,13 +2,19 @@
 
 import React, { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
-import { loginWithRedirect } from "../../../../../../shared/auth/keycloak";
+import { loginWithRedirect, registerWithRedirect } from "../../../../../../shared/auth/keycloak";
 
-// Login do lojista direto no Keycloak. No retorno, /onboarding/start roteia
+// "Entrar": login do lojista no Keycloak. No retorno, /onboarding/start roteia
 // (loja existente -> dashboard; sem loja -> onboarding).
 const goToMerchantLogin = () => {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   loginWithRedirect(`${origin}/onboarding/start`);
+};
+
+// "Testar grátis": página de CRIAR CONTA (registro), não a de login.
+const goToRegister = () => {
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  registerWithRedirect(`${origin}/onboarding/start`);
 };
 
 const NAV_LINKS = [
@@ -76,6 +82,7 @@ export function NavbarLight() {
           </a>
           <a
             href="/onboarding/start"
+            onClick={(e) => { e.preventDefault(); goToRegister(); }}
             className="rounded-full px-5 py-2 text-sm font-bold text-white transition-all duration-150 hover:opacity-90"
             style={{ background: "#DD3F0C", boxShadow: "0 4px 14px rgba(221,63,12,0.35)" }}
           >
@@ -122,6 +129,7 @@ export function NavbarLight() {
               </a>
               <a
                 href="/onboarding/start"
+                onClick={(e) => { e.preventDefault(); goToRegister(); }}
                 className="w-full rounded-xl py-3 text-center text-sm font-bold text-white"
                 style={{ background: "#DD3F0C" }}
               >

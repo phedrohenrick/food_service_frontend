@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { Lock, CalendarX2, Headphones, BadgeCheck } from "lucide-react";
 import api from '../../../../../../shared/services/api';
-import { loginWithRedirect, getToken } from '../../../../../../shared/auth/keycloak';
+import { registerWithRedirect, getToken } from '../../../../../../shared/auth/keycloak';
 
 const PRICES = {
   // annual = valor por mês cobrado anualmente (2 meses grátis => mensal x 10/12).
@@ -394,7 +394,7 @@ function CtaButton({ variant, label, priceId }) {
     }
 
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    await loginWithRedirect(`${origin}/onboarding/start`);
+    await registerWithRedirect(`${origin}/onboarding/start`);
   };
 
   const text = loading ? 'Redirecionando...' : label;
