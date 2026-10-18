@@ -12,13 +12,14 @@ import Settings from './src/pages/Settings';
 import Metricas from './src/pages/Metricas';
 import Mesas from './src/pages/Mesas';
 import MesaDetalhe from './src/pages/MesaDetalhe';
-import { initKeycloak, getKeycloak, getToken, ensureSso } from '../../shared/auth/keycloak';
+import Conta from './src/pages/Conta';
+import { initKeycloak, getKeycloak, getToken, ensureSso, tryRefreshToken } from '../../shared/auth/keycloak';
 import api from '../../shared/services/api';
 import { validateCpfOrCnpj } from '../../shared/utils/validators';
 import { useStorefront } from '../../shared/generalContext.jsx';
 
 const RestaurantDashboard = () => {
-  const { tenant, dataLoaded } = useStorefront();
+  const { tenant, dataLoaded, reloadEntitlements } = useStorefront();
   const [ready, setReady] = useState(false);
   const [authDenied, setAuthDenied] = useState(false);
   const [wizardReady, setWizardReady] = useState(false);
@@ -254,23 +255,49 @@ const RestaurantDashboard = () => {
     }
     let cancelled = false;
     (async () => {
-      // Garante um token antes de checar acesso. Em aba nova o token do Keycloak
-      // vive só em memória (começa vazio) e o `ready` pode virar true antes dele
-      // existir — sem isto, a checagem dispara sem Authorization e dá 401 (o
-      // "às vezes tem acesso, às vezes não" ao entrar como admin).
+      // Garante um token antes de checar acesso. Em aba nova / no retorno de um
+      // redirect externo (ex.: Stripe) o token do Keycloak vive só em memória e
+      // começa vazio; o `ready` pode virar true antes dele existir.
       if (!getToken()) {
         try { await ensureSso(); } catch (_) {}
       }
       if (cancelled) return;
+
+      const is403 = (err) => /status:\s*403/.test(String(err?.message || ''));
+
       try {
         await api.get('/tenant-auth/tenant-access');
         if (!cancelled) setAuthDenied(false);
+        return;
       } catch (e) {
-        if (!cancelled) setAuthDenied(true);
+        // 403 = realmente sem acesso (não é dono / sem header). Só aí nega.
+        if (is403(e)) {
+          if (!cancelled) setAuthDenied(true);
+          return;
+        }
+        // Transitório (401/token/rede, típico ao voltar do Stripe): re-hidrata e tenta 1x.
+        try { await tryRefreshToken(); } catch (_) {}
+        try { await ensureSso(); } catch (_) {}
+        if (cancelled) return;
+        try {
+          await api.get('/tenant-auth/tenant-access');
+          if (!cancelled) setAuthDenied(false);
+        } catch (e2) {
+          // Só trava a tela se o 2º erro for 403 de verdade; senão não bloqueia por transitório.
+          if (!cancelled) setAuthDenied(is403(e2));
+        }
       }
     })();
     return () => { cancelled = true; };
   }, [ready, location.pathname]);
+
+  // Entitlements frescos assim que o auth fica pronto — blinda TODAS as telas com
+  // gate (Mesas, Métricas, pedidos online, cadeados PRO) contra a corrida de token
+  // no hard reload, em que o /subscriptions/my-entitlements voltaria vazio.
+  useEffect(() => {
+    if (!ready) return;
+    reloadEntitlements();
+  }, [ready, reloadEntitlements]);
 
   useEffect(() => {
     if (!ready || !tenant?.id || !wizardStoragePrefix) return;
@@ -490,6 +517,7 @@ const RestaurantDashboard = () => {
         <Route path="mesas/:tableId" element={<MesaDetalhe />} />
         <Route path="metricas" element={<Metricas />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="conta" element={<Conta />} />
         <Route path="*" element={<Navigate to="." replace />} />
       </Routes>
     </DashboardLayout>

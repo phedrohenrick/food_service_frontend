@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useReducer } from 'react';
 import api from './services/api';
-import { getToken } from './auth/keycloak';
+import { getToken, ensureSso } from './auth/keycloak';
 
 /*
   Context alinhado ao modelo de banco
@@ -14,195 +14,69 @@ const StorefrontContext = createContext(null);
    ========================================================= */
 
 // user
+// Sem dados mock: antes do /users/me carregar o usuário fica "vazio" (nada de
+// nome/email fake vazando na UI, e id null evita fetch com id errado pré-login).
 const initialUser = {
-  id: 1,
-  name: 'Ana Luiza',
-  phone: '(11) 98888-7777',
-  email: 'ana.luiza@email.com',
-  status: 'active',
-  created_at: '2024-01-10T12:00:00Z',
-  password: 'hashed-only-mock',
+  id: null,
+  name: '',
+  phone: '',
+  email: '',
+  status: '',
+  created_at: null,
+  password: '',
 };
 
 // user_address
 const initialAddresses = [];
 
 // tenant
+// Sem loja mock: estrutura vazia até o /tenants carregar (nada de CNPJ/endereço/loja fake).
 const initialTenant = {
-  id: 1,
+  id: null,
   owner_user_id: initialUser.id,
-  name: 'Aurora Burger & Co.',
-  main_color: 'rgb(153, 153, 153)',
-  cnpj_cpf: '00.000.000/0001-00',
-  address: 'Rua das Palmeiras, 123, SP',
-  geo_lat: -23.561,
-  geo_lng: -46.654,
-  is_open: true,
-  working_hours: '18:00-23:30',
-  accepts_cash: true,
+  name: '',
+  main_color: '#EA1D2C',
+  cnpj_cpf: '',
+  address: '',
+  geo_lat: null,
+  geo_lng: null,
+  is_open: false,
+  working_hours: '',
+  accepts_cash: false,
   delivery_method: 'own', // own | pool
-  service_fee_percentage: 0.08,
-  created_at: '2024-01-01T10:00:00Z',
-  status: 'active',
-  email: 'aurora@burger.com',
-  password: 'hashed-only-mock',
-  slug: 'aurora-burger',
-  photo_url:
-    'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1400&q=80',
-
-  // extras de front que não precisam ir ao banco
-  description:
-    'Smash burgers autorais, acompanhamentos incríveis e sobremesas com assinatura própria.',
-  rating: 4.8,
-  review_count: 1324,
-  delivery_estimate_min: 25,
-  delivery_estimate_max: 35,
-  delivery_fee: 6.9,
-  payment_channels: ['pix', 'card', 'cash'],
+  service_fee_percentage: 0,
+  created_at: null,
+  status: '',
+  email: '',
+  password: '',
+  slug: '',
+  photo_url: '',
+  description: '',
+  rating: null,
+  review_count: 0,
+  delivery_estimate_min: null,
+  delivery_estimate_max: null,
+  delivery_fee: 0,
+  payment_channels: [],
 };
 
 // neighborhood (preço de entrega por bairro)
-const initialNeighborhoods = [
-  {
-    id: 'nbh-consolacao',
-    user_address_id: 'addr-home',
-    tenant_id: initialTenant.id,
-    name: 'Consolação',
-    price: 6.9,
-  },
-  {
-    id: 'nbh-bela-vista',
-    user_address_id: 'addr-work',
-    tenant_id: initialTenant.id,
-    name: 'Bela Vista',
-    price: 7.9,
-  },
-];
+const initialNeighborhoods = [];
 
 // menu_category
-const initialMenuCategories = [
-  { id: 'cat-combos', tenant_id: initialTenant.id, name: 'Combos autorais', order: 1 },
-  { id: 'cat-burgers', tenant_id: initialTenant.id, name: 'Burgers artesanais', order: 2 },
-  { id: 'cat-sides', tenant_id: initialTenant.id, name: 'Acompanhamentos', order: 3 },
-  { id: 'cat-desserts', tenant_id: initialTenant.id, name: 'Sobremesas', order: 4 },
-];
+const initialMenuCategories = [];
 
 // menu_item
-const initialMenuItems = [
-  {
-    id: 'item-combo-aurora',
-    tenant_id: initialTenant.id,
-    category_id: 'cat-combos',
-    name: 'Combo Aurora Prime',
-    description: 'Smash duplo 160g, queijo prato, maionese da casa, batata rústica e bebida.',
-    price: 44.9,
-    is_available: true,
-    photo_url:
-      'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=800&q=80',
-    highlights: ['Mais pedido'], // extra front
-  },
-  {
-    id: 'item-combo-trufado',
-    tenant_id: initialTenant.id,
-    category_id: 'cat-combos',
-    name: 'Combo Trufado',
-    description: 'Burger angus com maionese trufada, cogumelos, batata canoa e chá gelado.',
-    price: 48.9,
-    is_available: true,
-    photo_url:
-      'https://images.unsplash.com/photo-1466978913421-dad2ebd01d17?auto=format&fit=crop&w=800&q=80',
-    highlights: ['Novo sabor'],
-  },
-  {
-    id: 'item-burger-classic',
-    tenant_id: initialTenant.id,
-    category_id: 'cat-burgers',
-    name: 'Aurora Classic',
-    description: 'Burger 160g, cheddar inglês, picles e relish defumado.',
-    price: 29.9,
-    is_available: true,
-    photo_url:
-      'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 'item-burger-cheddar',
-    tenant_id: initialTenant.id,
-    category_id: 'cat-burgers',
-    name: 'Cheddar Sunset',
-    description: 'Blend 180g, cheddar inglês, cebola caramelizada e molho dijon.',
-    price: 32.9,
-    is_available: true,
-    photo_url:
-      'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80',
-    highlights: ['Favorito da casa'],
-  },
-  {
-    id: 'item-fries',
-    tenant_id: initialTenant.id,
-    category_id: 'cat-sides',
-    name: 'Batata rústica com páprica',
-    description: 'Porção 300g, finalizada com ervas frescas.',
-    price: 18.9,
-    is_available: true,
-    photo_url:
-      'https://images.unsplash.com/photo-1460306855393-0410f61241c7?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 'item-brownie',
-    tenant_id: initialTenant.id,
-    category_id: 'cat-desserts',
-    name: 'Brownie com gelato',
-    description: 'Brownie com nozes, calda de caramelo salgado e gelato de creme.',
-    price: 22.9,
-    is_available: true,
-    photo_url:
-      'https://images.unsplash.com/photo-1505253758473-96b7015fcd40?auto=format&fit=crop&w=800&q=80',
-  },
-];
+const initialMenuItems = [];
 
 // option_group
-const initialOptionGroups = [
-  {
-    id: 'grp-burger-extra',
-    item_id: 'item-burger-classic',
-    name: 'Extras',
-    is_required: false,
-    min: 0,
-    max: 3,
-  },
-  {
-    id: 'grp-combo-drink',
-    item_id: 'item-combo-aurora',
-    name: 'Escolha a bebida',
-    is_required: true,
-    min: 1,
-    max: 1,
-  },
-];
+const initialOptionGroups = [];
 
 // option
-const initialOptions = [
-  { id: 'opt-extra-bacon', group_id: 'grp-burger-extra', name: 'Bacon', additional_charge: 4.5 },
-  { id: 'opt-extra-cheddar', group_id: 'grp-burger-extra', name: 'Cheddar', additional_charge: 3.9 },
-
-  { id: 'opt-drink-cola', group_id: 'grp-combo-drink', name: 'Coca-Cola', additional_charge: 0 },
-  { id: 'opt-drink-guarana', group_id: 'grp-combo-drink', name: 'Guaraná', additional_charge: 0 },
-];
+const initialOptions = [];
 
 // banner
-const initialBanners = [
-  {
-    id: 'bnr-1',
-    tenant_id: initialTenant.id,
-    banner_image:
-      'https://images.unsplash.com/photo-1508739773434-c26b3d09e071?auto=format&fit=crop&w=1200&q=80',
-    product_link: 'item-combo-aurora', // pode ser slug ou id, fica seu critério
-    title: 'Festival Smash Aurora', // extra front
-    subtitle: 'Combos com 20% OFF no aplicativo',
-    description: 'Válido todos os dias após as 18h. Aproveite e acumule pontos.',
-    badge: 'Exclusivo app',
-  },
-];
+const initialBanners = [];
 
 // cart (bag)
 const initialCart = {
@@ -248,71 +122,14 @@ const initialCartItems = [];
 // cart_item_option
 const initialCartItemOptions = [];
 
-// orders, status, order_item, order_item_option (mock simples)
-const initialOrders = [
-  {
-    id: 'ord-1001',
-    user_id: initialUser.id,
-    tenant_id: initialTenant.id,
-    address_id: 'addr-home',
-    subtotal: 118.2,
-    service_fee: 118.2 * initialTenant.service_fee_percentage,
-    delivery_fee: initialTenant.delivery_fee,
-    discount: 0,
-    total: 118.2 + initialTenant.delivery_fee + 118.2 * initialTenant.service_fee_percentage,
-    payment_channel: 'card',
-    created_at: '2025-11-24T18:20:00Z',
-    change: '',
-  },
-];
+// orders, status, order_item, order_item_option
+const initialOrders = [];
 
-const initialStatuses = [
-  {
-    id: 'st-1',
-    order_id: 'ord-1001',
-    status: 'CREATED',
-    created_at: '2024-02-04T18:20:00Z',
-  },
-  {
-    id: 'st-2',
-    order_id: 'ord-1001',
-    status: 'PAYMENT_AUTHORIZED',
-    created_at: '2024-02-04T18:21:00Z',
-  },
-  {
-    id: 'st-3',
-    order_id: 'ord-1001',
-    status: 'IN_PREPARATION',
-    created_at: '2024-02-04T18:25:00Z',
-  },
-];
+const initialStatuses = [];
 
-const initialOrderItems = [
-  {
-    id: 'oit-1',
-    order_id: 'ord-1001',
-    item_id: 'item-combo-aurora',
-    item_name_snapshot: 'Combo Aurora Prime',
-    unit_price: 44.9,
-    quantity: 1,
-    notes: '',
-    highlights: ['Mais pedido'],
-  },
-  {
-    id: 'oit-2',
-    order_id: 'ord-1001',
-    item_id: 'item-burger-cheddar',
-    item_name_snapshot: 'Cheddar Sunset',
-    unit_price: 32.9,
-    quantity: 2,
-    notes: '',
-    highlights: [],
-  },
-];
+const initialOrderItems = [];
 
-const initialOrderItemOptions = [
-  // exemplo de opções que foram escolhidas num item do pedido
-];
+const initialOrderItemOptions = [];
 
 /* =========================================================
    HELPERS
@@ -1224,6 +1041,20 @@ export const StorefrontProvider = ({ children }) => {
     return val !== undefined && val !== 'false' && val !== false;
   };
 
+  // Re-busca os entitlements do plano atual. Usar ao entrar em telas com gate
+  // (ex.: Mesas) e após troca de plano, pra o gate não ficar preso num plano antigo.
+  const reloadEntitlements = React.useCallback(async () => {
+    try {
+      // No hard reload o token (em memória) começa vazio; garante a sessão antes de
+      // buscar, senão o fetch volta vazio e o gate trava com "limite 0".
+      if (!getToken()) {
+        try { await ensureSso(); } catch (_) {}
+      }
+      const data = await api.get('/subscriptions/my-entitlements');
+      dispatch({ type: actionMap.SET_ENTITLEMENTS, payload: data || {} });
+    } catch (_) {}
+  }, []);
+
   const getEntitlementValue = (key) => state.entitlements[key] || 'false';
 
   const getEntitlementLimit = (key) => {
@@ -1709,6 +1540,7 @@ export const StorefrontProvider = ({ children }) => {
       canUseFeature,
       getEntitlementValue,
       getEntitlementLimit,
+      reloadEntitlements,
 
       // selectors
       getMenuItemsByCategory,

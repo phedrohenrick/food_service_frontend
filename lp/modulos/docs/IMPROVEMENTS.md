@@ -6,6 +6,31 @@
 
 ---
 
+## ⏭️ PRÓXIMO DA FILA — Separar "Entrar" de "Criar conta" (testar grátis)
+
+> **Prioridade: próximo item a implementar.**
+
+**Problema:** o botão **"Testar grátis"** leva pra **mesma tela do Keycloak** usada pra *fazer login*.
+Uma única tela serve pra login **e** criar conta, então quem quer **começar um teste** cai numa
+tela de "entrar" e fica confuso (parece que precisa já ter conta). Atrito direto no funil de aquisição.
+
+**Causa:** os CTAs de signup usam `loginWithRedirect` → `keycloak.createLoginUrl()` (ação *login*).
+O Keycloak tem um fluxo **separado de registro** (`createRegisterUrl()` / `action=register`,
+rota `/realms/priatoo/protocol/openid-connect/registrations`) que o app não usa.
+
+**Plano:**
+1. Adicionar `registerWithRedirect(redirectUri)` no `shared/auth/keycloak.js` usando
+   `instance.register({ redirectUri })` / `createRegisterUrl()` (mesma lógica de client/PKCE do
+   `loginWithRedirect`, só muda a ação).
+2. Apontar os CTAs de **"Testar grátis" / "Criar conta" / "Cadastre-se"** (landing, planos,
+   `LoginLanding`) pra `registerWithRedirect`, deixando **"Entrar"** no `loginWithRedirect`.
+3. Garantir que **"Registration allowed"** está habilitado no realm do Keycloak (config 1x).
+4. (Opcional) Na tela do Keycloak, deixar claro o contexto (tema já é custom) — link "já tenho conta".
+
+**Ganho:** quem clica em testar grátis vai direto pro **cadastro**, não pra um login ambíguo.
+
+---
+
 ## 🔐 Auth: proteção do token no cliente + BFF (cookie HttpOnly)
 
 > Contexto: achado **#1 (Alto)** da auditoria (`security-audit-frontend.md`). O JWT do Keycloak é
@@ -71,6 +96,85 @@ Navegador (SPA)  ──cookie HttpOnly──►  BFF (servidor)  ──Bearer to
 **Fundamento:** todo modelo de auth é trade-off. *Bearer no header* = sem CSRF, mas token exposto
 ao JS. *Cookie HttpOnly* = imune a roubo por JS, mas reintroduz CSRF e exige estado no servidor.
 Escolhe-se **qual classe de ataque eliminar** e **qual complexidade pagar**.
+
+---
+
+## 💳 Conta & Assinatura: self-service do lojista (adicionar cartão / pós-trial)
+
+> Contexto: quando o **trial expira**, não há caminho fácil pro lojista **colocar o cartão** e
+> continuar. O backend **já tem quase tudo** — falta a **entrada na UI**. Ideia: uma tela de
+> **"Minha conta"** (informações da conta + assinatura), acessível pelo **menu do ícone superior
+> direito** (dropdown no `DashboardLayout`, hoje só com "Configurações"/"Sair").
+
+### Estado atual (o que já existe)
+- Backend pronto: `GET /subscriptions/current` (status, plano, trial, período), `POST /subscriptions/checkout`
+  (retorna URL de checkout do Stripe, body `{ priceId }`), **`POST /subscriptions/billing-portal`**
+  (retorna URL do **Stripe Billing Portal** — é lá que se **adiciona/troca cartão**, cancela, vê faturas).
+- `StripeService`: `getOrCreateCustomerId`, `createCheckoutSession` (aplica trial restante),
+  `createBillingPortalSession`, `remainingTrialDays`.
+- `DashboardLayout` já busca `/subscriptions/current` e mostra um **TrialBanner**.
+- **Lacuna central:** o `billing-portal` **não é chamado em lugar nenhum do frontend** — o endpoint
+  existe mas não tem botão. O checkout só está cabeado na landing (`PricingCardsSection`).
+
+### Escopo
+
+**Frontend (grosso do trabalho)**
+1. **Nova tela** `Conta.jsx` (ou `Account.jsx`) em `restaurant-dashboard-v2/src/pages/`, rota
+   `/:slug/dashboard/conta` (registrar no `RestaurantDashboardApp.jsx`).
+2. **Item no dropdown do usuário** (`DashboardLayout.jsx`, acima de "Sair"): **"Minha conta"** →
+   `${basePrefix}/conta`.
+3. Conteúdo da tela (lê `/subscriptions/current` + `tenant`/`user` do contexto):
+   - **Dados da conta:** nome da loja, slug/link, dono + e-mail, WhatsApp.
+   - **Assinatura:** plano atual, status (`TRIALING`/`ACTIVE`/`PAST_DUE`/`CANCELED`), **dias de trial
+     restantes** ou **próxima cobrança** (`currentPeriodEnd`).
+   - **Ações:**
+     - **"Gerenciar assinatura / Adicionar cartão"** → `POST /subscriptions/billing-portal` →
+       `window.location = url` (portal hospedado do Stripe).
+     - Se ainda **não assinou** (sem customer no Stripe) → **"Escolher plano"** → checkout
+       (`POST /subscriptions/checkout`) ou manda pra `/planos`.
+4. **Estado pós-trial em destaque:** quando `status` for trial expirado / `PAST_DUE`, mostrar um
+   **aviso forte + CTA** ("Seu teste acabou — adicione um cartão pra continuar"). Unificar com o
+   **TrialBanner** (o botão "Ativar assinatura" do banner passa a levar pra `/conta`).
+
+**Backend (pequeno / verificar)**
+- Reusar os 3 endpoints existentes — provavelmente **sem código novo**.
+- ⚠️ `createBillingPortalSession` depende de um **customer do Stripe**; um tenant que **nunca fez
+  checkout** pode não ter `providerCustomerId` → o portal falha. Tratar: se não houver customer,
+  cair no **checkout** em vez do portal (decidir no front pelo `/current`, ou o back retornar um
+  flag/escolher). 
+- ⚠️ **Config no painel do Stripe (1x):** o **Customer Portal** precisa estar **ativado/configurado**
+  no dashboard do Stripe (quais produtos/ações permitir). Sem isso, `billing-portal` dá erro.
+
+### Estados da assinatura → o que a tela mostra
+| Status | Tela mostra | Ação principal |
+|---|---|---|
+| `TRIALING` (dias restantes) | "Teste: N dias restantes" | Adicionar cartão (billing-portal) |
+| Trial expirado / sem assinatura paga | **Aviso forte** "Teste acabou" | Escolher plano → checkout |
+| `ACTIVE` | Plano + próxima cobrança | Gerenciar assinatura (portal) |
+| `PAST_DUE` | **Aviso** "Pagamento falhou" | Atualizar cartão (portal) |
+| `CANCELED` | "Assinatura cancelada" | Reativar → checkout |
+
+### Edge cases / pontos de atenção
+- **Sem customer Stripe** → portal falha; usar checkout como fallback (ver acima).
+- **Retorno do Stripe:** billing-portal/checkout usam `return_url`/`success_url` — garantir que
+  apontam de volta pra `/:slug/dashboard/conta` (hoje o success volta pra onde? validar).
+- **Sincronismo:** ao voltar do portal, o status real vem via **webhook** (`customer.subscription.*`);
+  a tela deve **re-buscar `/current`** ao montar (pode haver atraso de segundos do webhook).
+- **Feature gating:** com trial expirado, hoje o `my-entitlements` já limita features; a tela de conta
+  é o lugar natural pra "destravar" pagando.
+
+### Fases
+1. **Fase 1 (MVP, destrava o problema):** item "Minha conta" no menu + tela com status da assinatura
+   e botão **"Adicionar cartão/Gerenciar"** → billing-portal (com fallback checkout). Resolve o
+   "trial expirou e não consigo pagar".
+2. **Fase 2 (polish):** dados da conta completos, estados visuais por status, unificar TrialBanner →
+   `/conta`, re-fetch pós-retorno do Stripe.
+3. **Fase 3 (opcional):** histórico de faturas (via portal já cobre), trocar de plano direto na tela.
+
+### Fundamento (estudo)
+Cartão **nunca** passa pelo nosso front/back — o **Stripe Billing Portal/Checkout** são páginas
+**hospedadas pelo Stripe** (PCI é deles). A gente só **redireciona** pra URL assinada que o backend
+gera e **reage ao webhook** pra saber o resultado. Isso é o padrão seguro de billing em SaaS.
 
 ---
 
