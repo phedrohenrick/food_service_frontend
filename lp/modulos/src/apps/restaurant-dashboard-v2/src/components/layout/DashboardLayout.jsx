@@ -11,7 +11,7 @@ import { IoSearch } from "react-icons/io5";
 import { MdOutlineRestaurantMenu } from "react-icons/md";
 import { IoBarChartOutline } from "react-icons/io5";
 import { MdTableRestaurant } from "react-icons/md";
-import { Crown } from 'lucide-react';
+import { Crown, CreditCard } from 'lucide-react';
 
 const navItems = [
   { label: 'Visão geral', suffix: '', icon: <RiDashboardHorizontalFill /> },
@@ -25,7 +25,12 @@ const navItems = [
 // Banner de assinatura: durante o trial mostra os dias restantes; se inativa, pede ativação.
 // "Ativar assinatura" leva para /planos, onde o usuário logado vai direto ao checkout do Stripe.
 function TrialBanner() {
+  const location = useLocation();
   const [sub, setSub] = useState(null);
+  const basePrefix = (() => {
+    const m = /^\/([^/]+)\/dashboard(\/|$)/i.exec(location.pathname || '');
+    return m ? `/${m[1]}/dashboard` : '/dashboard';
+  })();
   useEffect(() => {
     let alive = true;
     api.get('/subscriptions/current').then((d) => { if (alive) setSub(d); }).catch(() => {});
@@ -54,13 +59,13 @@ function TrialBanner() {
       style={{ background: bg, border: `1px solid ${border}` }}
     >
       <span className="text-sm font-medium" style={{ color }}>{message}</span>
-      <a
-        href="/planos"
+      <Link
+        to={`${basePrefix}/conta`}
         className="inline-flex items-center rounded-xl px-4 py-2 text-sm font-semibold text-white transition-colors"
         style={{ background: '#0EA5E9' }}
       >
         Ativar assinatura
-      </a>
+      </Link>
     </div>
   );
 }
@@ -368,6 +373,14 @@ const DashboardLayoutv2 = ({ children, onHelp }) => {
                       )}
 
                       <div className="p-2">
+                        <button
+                          type="button"
+                          onClick={() => { setShowUserDropdown(false); navigate(`${basePrefix}/conta`); }}
+                          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                        >
+                          <CreditCard className="h-4 w-4 shrink-0 text-slate-400" />
+                          Minha conta
+                        </button>
                         <button
                           type="button"
                           onClick={() => { setShowUserDropdown(false); setShowLogoutModal(true); }}
