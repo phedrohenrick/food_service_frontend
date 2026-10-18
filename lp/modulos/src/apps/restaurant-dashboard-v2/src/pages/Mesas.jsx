@@ -23,7 +23,12 @@ const POLLING_INTERVAL = 15000;
 export default function Mesas() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { tenant, canUseFeature, getEntitlementLimit, entitlements } = useStorefront();
+  const { tenant, canUseFeature, getEntitlementLimit, entitlements, reloadEntitlements } = useStorefront();
+  // Re-busca o plano/entitlements ao abrir a tela — evita gate preso num plano antigo
+  // depois de trocar de plano (o webhook pode ter atualizado após o load inicial).
+  useEffect(() => {
+    reloadEntitlements();
+  }, [reloadEntitlements]);
   const [tables, setTables] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddTable, setShowAddTable] = useState(false);
@@ -84,8 +89,12 @@ export default function Mesas() {
   };
 
   const handleNewTableClick = () => {
+    // Só bloqueia se os entitlements REALMENTE carregaram; entitlements vazios
+    // (token ainda não pronto no reload) não podem virar "limite 0". O backend
+    // valida o limite de qualquer forma no POST /tables.
+    const entsLoaded = entitlements && Object.keys(entitlements).length > 0;
     const limit = getEntitlementLimit('max_tables');
-    const atLimit = limit !== -1 && tables.length >= limit;
+    const atLimit = entsLoaded && limit !== -1 && tables.length >= limit;
     if (atLimit) {
       openUpgradeForTables();
       return;
