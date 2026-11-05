@@ -69,7 +69,7 @@ export function PricingCtaSection() {
                 onMouseLeave={(e) => { e.currentTarget.style.background = "#DD3F0C"; }}
                 onClick={() => { try { window.location.assign("/onboarding/start"); } catch (_) {} }}
               >
-                Começar grátis agora
+                Começar agora
                 <IconArrowRight />
               </button>
 
