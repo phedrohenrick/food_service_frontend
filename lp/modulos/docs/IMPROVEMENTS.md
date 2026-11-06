@@ -182,3 +182,25 @@ gera e **reage ao webhook** pra saber o resultado. Isso é o padrão seguro de b
 - Ver os demais achados da auditoria em [`security-audit-frontend.md`](./security-audit-frontend.md):
   #2 `postMessage` com `'*'` sem validar `event.origin`, #3 logs de debug no build, #4 PII de lead
   em `localStorage`, #5 gating de entitlement só na UI.
+
+---
+
+## Modelo de cobrança / trial (vigente a partir de nov/2026)
+
+Regra do 1º mês por plano (cartão sempre ofertado ao fim do wizard):
+- **MARKETING mensal:** 1 mês grátis (trial do Stripe, cartão na ficha) → depois R$ cheio.
+- **DELIVERY / GERENCIAMENTO / MAX mensal:** 50% no 1º mês (cupom `first-month-50`, `duration=once`).
+- **Todos anuais:** preço cheio (desconto de 2 meses já embutido no preço anual).
+
+Gating de quem **não** coloca cartão (soft → hard):
+1. Fim do wizard **oferece** o cartão (checkout). Não é bloqueio duro.
+2. **Sem cartão:** o lojista entra, mas com **features de nível MARKETING** e um **trial** rodando.
+3. **Trial expirado e sem assinatura paga:** **bloqueia tudo** (dashboard inacessível, só `/conta`).
+
+### TODO — Editor de trial no Admin (pedido do dono)
+- No painel admin, poder **editar o tempo restante de trial** de um tenant (estender/encurtar
+  `trialEndsAt`). Serve também de "cortesia": estender o trial = dar acesso grátis a restaurantes
+  escolhidos (não anunciado).
+- Backend: endpoint `PATCH /admin/tenants/{id}/trial` (ex.: `{ trialEndsAt }` ou `{ days }`), só ADMIN.
+- Frontend: campo/ação no detalhe do cliente no admin.
+- Relacionado: a "cortesia / acesso grátis manual" que ficou para depois pode ser feita por aqui.

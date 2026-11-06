@@ -22,6 +22,9 @@ const RestaurantDashboard = () => {
   const { tenant, dataLoaded, reloadEntitlements } = useStorefront();
   const [ready, setReady] = useState(false);
   const [authDenied, setAuthDenied] = useState(false);
+  // Gate de assinatura: bloqueia o dashboard (só /conta) quando não há acesso válido
+  // (trial expirado sem pagar, PAST_DUE, CANCELED). Começa "loading" pra não bloquear no flash.
+  const [subGate, setSubGate] = useState({ loading: true, blocked: false });
   const [wizardReady, setWizardReady] = useState(false);
   const [wizardActive, setWizardActive] = useState(false);
   const [wizardStep, setWizardStep] = useState(0);
@@ -298,6 +301,36 @@ const RestaurantDashboard = () => {
     if (!ready) return;
     reloadEntitlements();
   }, [ready, reloadEntitlements]);
+
+  // Estado da assinatura -> decide se o dashboard está bloqueado (paywall pós-trial).
+  // Re-avalia ao trocar de rota (ex.: ao voltar do Stripe, pra destravar após o webhook).
+  useEffect(() => {
+    if (!ready || authDenied) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const d = await api.get('/subscriptions/current');
+        if (cancelled) return;
+        const status = d?.status;
+        const trialValid = status === 'TRIALING'
+          && d?.trialEndsAt
+          && new Date(d.trialEndsAt).getTime() > Date.now();
+        // Acesso liberado só com assinatura ATIVA ou trial ainda válido.
+        setSubGate({ loading: false, blocked: status !== 'ACTIVE' && !trialValid });
+      } catch (_) {
+        // Erro transitório (token/rede) não deve bloquear a tela.
+        if (!cancelled) setSubGate({ loading: false, blocked: false });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [ready, authDenied, location.pathname]);
+
+  // Bloqueado (trial expirado/sem pagar): manda pra /conta (único lugar acessível).
+  useEffect(() => {
+    if (subGate.loading || !subGate.blocked) return;
+    if (location.pathname.endsWith('/conta')) return;
+    navigate('conta', { replace: true });
+  }, [subGate, location.pathname, navigate]);
 
   useEffect(() => {
     if (!ready || !tenant?.id || !wizardStoragePrefix) return;
