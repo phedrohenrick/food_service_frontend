@@ -57,7 +57,7 @@ const TRUST_ITEMS = [
   { icon: Lock, text: "Sem contrato de fidelidade" },
   { icon: CalendarX2, text: "Cancele quando quiser" },
   { icon: Headphones, text: "Suporte em português" },
-  { icon: BadgeCheck, text: "50% OFF no 1º mês" },
+  { icon: BadgeCheck, text: "Ative em minutos" },
 ];
 
 function IconUtensils() {
@@ -132,6 +132,7 @@ export function PricingCardsSection({ annual }) {
             price={PRICES.start[k]}
             monthlyPrice={PRICES.start.monthly}
             firstMonthPrice={PRICES.start.firstMonth}
+            firstMonthFree
             annual={annual}
             features={START_FEATURES}
             ctaLabel="Assinar plano"
@@ -199,7 +200,7 @@ export function PricingCardsSection({ annual }) {
   );
 }
 
-function PlanCard({ tier, icon, iconBg, iconColor, desc, price, monthlyPrice, firstMonthPrice, annual, features, ctaLabel, ctaVariant, microCopy, popular, priceId }) {
+function PlanCard({ tier, icon, iconBg, iconColor, desc, price, monthlyPrice, firstMonthPrice, firstMonthFree = false, annual, features, ctaLabel, ctaVariant, microCopy, popular, priceId }) {
   // Identidade Priatoo (laranja) no modo anual; azul continua para o "mais popular".
   const restBorderColor = annual ? "#FF7F27" : (popular ? "#0EA5E9" : "rgba(13,31,51,0.1)");
   const restBorderWidth = (annual || popular) ? "2px" : "1.5px";
@@ -275,7 +276,7 @@ function PlanCard({ tier, icon, iconBg, iconColor, desc, price, monthlyPrice, fi
               style={{ background: "rgba(255,127,39,0.12)", color: "#DD3F0C" }}
             >
               <BadgeCheck className="h-3.5 w-3.5" strokeWidth={2.4} />
-              50% OFF no 1º mês
+              {firstMonthFree ? "1 mês grátis" : "50% OFF no 1º mês"}
             </div>
           )}
 
@@ -291,10 +292,10 @@ function PlanCard({ tier, icon, iconBg, iconColor, desc, price, monthlyPrice, fi
                 color: priceColor,
               }}
             >
-              {annual ? price : firstMonthPrice}
+              {annual ? price : (firstMonthFree ? monthlyPrice : firstMonthPrice)}
             </span>
             <span className="self-end pb-1.5 text-[15px]" style={{ color: "#626d7c" }}>
-              {annual ? "/mês" : "no 1º mês"}
+              {annual || firstMonthFree ? "/mês" : "no 1º mês"}
             </span>
           </div>
 
@@ -305,6 +306,8 @@ function PlanCard({ tier, icon, iconBg, iconColor, desc, price, monthlyPrice, fi
                 
                 <span style={{ color: "#DD3F0C", fontWeight: 700 }}></span>
               </>
+            ) : firstMonthFree ? (
+              <span style={{ fontWeight: 600 }}>1º mês grátis</span>
             ) : (
               <span>depois R$ {monthlyPrice}/mês</span>
             )}

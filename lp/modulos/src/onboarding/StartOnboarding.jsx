@@ -20,10 +20,41 @@ const DOC_LABELS = {
 // Versão usada como fallback caso o backend não responda os documentos vigentes.
 const FALLBACK_VERSION = '2026-07-01';
 
-// Conclui o onboarding. Opção A (trial sem cartão): o lojista vai direto pro dashboard.
-async function finishOnboarding(slug) {
+// Usado quando o lojista JÁ tem loja (não é fim de wizard): vai direto pro dashboard.
+async function goToDashboard(slug) {
   try { localStorage.setItem('tenantSlug', slug); } catch (_) {}
   window.location.assign(`/${slug}/dashboard`);
+}
+
+// Paywall: ao concluir o wizard, o lojista vai pro checkout (cartão) do plano escolhido.
+// MARKETING mensal entra como 1 mês grátis (trial c/ cartão); os demais pagam no ato.
+// Sem plano escolhido (ex.: veio sem passar pela página de planos), cai na tela de conta.
+async function finishOnboardingToCheckout(slug) {
+  try { localStorage.setItem('tenantSlug', slug); } catch (_) {}
+  let priceId = null;
+  try { priceId = localStorage.getItem('pendingPriceId'); } catch (_) {}
+  if (priceId) {
+    try {
+      // Aceite do Contrato de Assinatura (clickwrap) antes do pagamento.
+      let subVersion = FALLBACK_VERSION;
+      try {
+        const list = await api.get('/consents/documents');
+        const sub = Array.isArray(list) ? list.find((d) => d.type === 'SUBSCRIPTION') : null;
+        if (sub?.version) subVersion = sub.version;
+      } catch (_) {}
+      api.post('/consents', {
+        documentType: 'SUBSCRIPTION',
+        documentVersion: subVersion,
+        accepted: true,
+        subjectType: 'LOJISTA',
+      }).catch(() => {});
+
+      const res = await api.post('/subscriptions/checkout', { priceId });
+      if (res?.url) { window.location.assign(res.url); return; }
+    } catch (_) {}
+  }
+  // Fallback: tela de conta/assinatura (paywall) para escolher o plano e pagar.
+  window.location.assign(`/${slug}/dashboard/conta`);
 }
 
 async function ensureBanner(tenantId) {
@@ -61,7 +92,7 @@ export default function StartOnboarding() {
         const existing = await api.get('/onboarding/my-tenant');
         if (existing && existing.slug) {
           await ensureBanner(existing.id);
-          await finishOnboarding(existing.slug);
+          await goToDashboard(existing.slug);
           return;
         }
       } catch (_) {}
@@ -125,7 +156,7 @@ export default function StartOnboarding() {
       });
       const createdSlug = dto?.slug || slug;
       await ensureBanner(dto?.id);
-      await finishOnboarding(createdSlug);
+      await finishOnboardingToCheckout(createdSlug);
     } catch (e) {
       setState({ status: 'error', message: 'Não foi possível criar sua loja automaticamente. Tente novamente.' });
     }
