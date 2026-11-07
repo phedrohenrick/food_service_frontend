@@ -3,13 +3,17 @@ import { Link, useParams } from 'react-router-dom';
 import {
   Activity,
   ArrowLeft,
+  CalendarClock,
   CheckCircle2,
   Circle,
   ClipboardList,
   CreditCard,
   ExternalLink,
+  Gift,
   LayoutDashboard,
+  Loader2,
   Package,
+  Settings2,
   TrendingDown,
   User,
   Wallet,
@@ -89,6 +93,13 @@ export default function AdminTenantDetail() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
 
+  // Ações administrativas (cortesia + dias de teste)
+  const [plans, setPlans] = React.useState([]);
+  const [trialDays, setTrialDays] = React.useState('');
+  const [courtesyPlan, setCourtesyPlan] = React.useState('');
+  const [busy, setBusy] = React.useState(null); // 'trial' | 'courtesy' | null
+  const [actionMsg, setActionMsg] = React.useState(null); // { type, text }
+
   React.useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -106,6 +117,67 @@ export default function AdminTenantDetail() {
       cancelled = true;
     };
   }, [id]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await api.get('/admin/plans');
+        if (!cancelled) setPlans(Array.isArray(list) ? list : []);
+      } catch (_) {
+        /* seletor de cortesia fica vazio; ação de dias de teste segue funcionando */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Pré-seleciona o plano atual do cliente no seletor de cortesia.
+  React.useEffect(() => {
+    if (data?.planCode && !courtesyPlan) setCourtesyPlan(data.planCode);
+  }, [data, courtesyPlan]);
+
+  const applyTrial = async () => {
+    const n = parseInt(trialDays, 10);
+    if (Number.isNaN(n) || n < 0) {
+      setActionMsg({ type: 'error', text: 'Informe um número de dias válido (0 ou mais).' });
+      return;
+    }
+    setBusy('trial');
+    setActionMsg(null);
+    try {
+      const updated = await api.patch(`/admin/tenants/${id}/trial`, { days: n });
+      setData(updated);
+      setTrialDays('');
+      setActionMsg({
+        type: 'success',
+        text: n === 0 ? 'Teste encerrado.' : `Teste ajustado para ${n} dia(s).`,
+      });
+    } catch (e) {
+      setActionMsg({ type: 'error', text: 'Não foi possível ajustar o teste.' });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const grantCourtesy = async () => {
+    if (!courtesyPlan) {
+      setActionMsg({ type: 'error', text: 'Escolha um plano para a cortesia.' });
+      return;
+    }
+    setBusy('courtesy');
+    setActionMsg(null);
+    try {
+      const updated = await api.post(`/admin/tenants/${id}/courtesy`, { planCode: courtesyPlan });
+      setData(updated);
+      setActionMsg({ type: 'success', text: 'Cortesia liberada — acesso ativo, sem cobrança.' });
+    } catch (e) {
+      setActionMsg({ type: 'error', text: 'Não foi possível liberar a cortesia.' });
+    } finally {
+      setBusy(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -305,6 +377,96 @@ export default function AdminTenantDetail() {
             <Field label="Stripe customer" value={data.providerCustomerId} />
             <Field label="Stripe subscription" value={data.providerSubscriptionId} />
           </dl>
+        </div>
+      </div>
+
+      {/* Ações administrativas: cortesia + dias de teste */}
+      <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-900/5">
+        <div className="mb-1 flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-gray-500">
+            <Settings2 className="h-4 w-4" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Ações administrativas</h2>
+            <p className="text-xs text-gray-500">Ajuste a assinatura deste cliente manualmente.</p>
+          </div>
+        </div>
+
+        {actionMsg && (
+          <div
+            className={`mt-4 rounded-xl px-4 py-3 text-sm ring-1 ring-inset ${
+              actionMsg.type === 'success'
+                ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20'
+                : 'bg-red-50 text-red-700 ring-red-100'
+            }`}
+          >
+            {actionMsg.text}
+          </div>
+        )}
+
+        <div className="mt-5 grid gap-4 lg:grid-cols-2">
+          {/* Dias de teste */}
+          <div className="rounded-xl border border-gray-100 p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+              <CalendarClock className="h-4 w-4 text-sky-500" /> Dias de teste
+            </div>
+            <p className="mt-1 text-xs text-gray-500">
+              Coloca a assinatura em teste até <strong>hoje + N dias</strong>. Use <strong>0</strong> para encerrar o teste agora.
+            </p>
+            <div className="mt-3 flex items-center gap-2">
+              <input
+                type="number"
+                min="0"
+                value={trialDays}
+                onChange={(e) => setTrialDays(e.target.value)}
+                placeholder="Ex.: 30"
+                className="w-28 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+              />
+              <span className="text-sm text-gray-500">dias</span>
+              <button
+                type="button"
+                onClick={applyTrial}
+                disabled={busy !== null}
+                className="ml-auto inline-flex items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-700 disabled:opacity-60"
+              >
+                {busy === 'trial' && <Loader2 className="h-4 w-4 animate-spin" />}
+                Aplicar
+              </button>
+            </div>
+          </div>
+
+          {/* Cortesia */}
+          <div className="rounded-xl border border-gray-100 p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+              <Gift className="h-4 w-4 text-[var(--accent)]" /> Cortesia
+            </div>
+            <p className="mt-1 text-xs text-gray-500">
+              Libera acesso total a um plano <strong>sem cobrança</strong> (ativo e sem expirar).
+            </p>
+            <div className="mt-3 flex items-center gap-2">
+              <select
+                value={courtesyPlan}
+                onChange={(e) => setCourtesyPlan(e.target.value)}
+                className="min-w-0 flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+              >
+                <option value="">Escolha um plano…</option>
+                {plans.map((p) => (
+                  <option key={p.code} value={p.code}>
+                    {p.name} ({p.code})
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={grantCourtesy}
+                disabled={busy !== null}
+                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--accent-contrast)] transition hover:bg-[var(--accent-hover)] disabled:opacity-60"
+              >
+                {busy === 'courtesy' && <Loader2 className="h-4 w-4 animate-spin" />}
+                Liberar
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
