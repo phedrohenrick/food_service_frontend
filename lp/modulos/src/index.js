@@ -4,6 +4,16 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 
+// Captura o session_id do retorno do Stripe ANTES de qualquer init. O Keycloak
+// (onLoad: 'login-required') faz um redirect de auth no load da página e descarta
+// a querystring; guardando aqui, o dashboard ainda consegue confirmar a assinatura.
+try {
+  const stripeSessionId = new URLSearchParams(window.location.search).get('session_id');
+  if (stripeSessionId) {
+    window.sessionStorage.setItem('pendingCheckoutSessionId', stripeSessionId);
+  }
+} catch (_) { /* sessionStorage indisponível: segue sem capturar */ }
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
