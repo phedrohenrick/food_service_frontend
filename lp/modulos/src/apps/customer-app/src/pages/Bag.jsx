@@ -177,6 +177,8 @@ const Bag = () => {
   };
 
   const whatsappAvailable = isValidWhatsapp(tenant?.whatsapp_phone);
+  // Plano MARKETING: a loja é "vitrine" — pedidos só pelo WhatsApp, sem checkout no app.
+  const whatsappOnly = String(tenant?.plan_code || '').toUpperCase() === 'MARKETING';
 
   const buildWhatsappMessage = () => {
     const lines = [];
@@ -721,13 +723,15 @@ const Bag = () => {
             R$ {(cartTotals.total ?? 0).toFixed(2)}
           </span>
         </div>
-        <Button
-          className="w-full"
-          onClick={handleCheckout}
-          disabled={selectedAddressId != null && selectedAddressCoverage.rejected}
-        >
-          Finalizar pedido
-        </Button>
+        {!whatsappOnly && (
+          <Button
+            className="w-full"
+            onClick={handleCheckout}
+            disabled={selectedAddressId != null && selectedAddressCoverage.rejected}
+          >
+            Finalizar pedido
+          </Button>
+        )}
         <PhoneCaptureModal
           open={phoneModalOpen}
           dismissible
@@ -737,9 +741,11 @@ const Bag = () => {
             await reloadOrders?.();
           }}
         />
-        <p className="text-xs text-gray-500">
-          Ao finalizar, você será direcionado para acompanhar o status em tempo real.
-        </p>
+        {!whatsappOnly && (
+          <p className="text-xs text-gray-500">
+            Ao finalizar, você será direcionado para acompanhar o status em tempo real.
+          </p>
+        )}
         <p className="text-[11px] leading-relaxed text-gray-400">
           Seus dados (nome, contato e endereço) são usados apenas para processar e entregar
           este pedido, conforme a{' '}
@@ -751,11 +757,13 @@ const Bag = () => {
 
         {whatsappAvailable && (
           <>
-            <div className="flex items-center gap-3 py-1">
-              <span className="h-px flex-1 bg-gray-200" />
-              <span className="text-xs uppercase tracking-wide text-gray-400">ou</span>
-              <span className="h-px flex-1 bg-gray-200" />
-            </div>
+            {!whatsappOnly && (
+              <div className="flex items-center gap-3 py-1">
+                <span className="h-px flex-1 bg-gray-200" />
+                <span className="text-xs uppercase tracking-wide text-gray-400">ou</span>
+                <span className="h-px flex-1 bg-gray-200" />
+              </div>
+            )}
             <button
               type="button"
               onClick={handleWhatsappCheckout}
@@ -769,6 +777,12 @@ const Bag = () => {
               Envia o resumo do pedido direto pro WhatsApp do restaurante.
             </p>
           </>
+        )}
+
+        {whatsappOnly && !whatsappAvailable && (
+          <p className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+            Este restaurante recebe pedidos pelo WhatsApp, mas ainda não cadastrou um número de contato.
+          </p>
         )}
       </aside>
       </div>

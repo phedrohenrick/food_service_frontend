@@ -5,6 +5,7 @@ import { useStorefront } from '../../../../shared/generalContext.jsx';
 import { UpgradeCTA, UpgradeRequiredModal } from '../../../../shared/components/ui';
 import MesaQrCard from '../components/MesaQrCard';
 import { Lock } from 'lucide-react';
+import { PUBLIC_BASE_URL } from '../../../../shared/utils/publicUrl';
 
 const formatCurrency = (n) =>
   (Number(n) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -42,8 +43,10 @@ export default function Mesas() {
 
   const basePrefix = slug ? `/${slug}/dashboard` : '/dashboard';
 
+  // QR é impresso e escaneado pelo cliente na loja: tem que apontar sempre pro
+  // domínio público, nunca pro host onde o painel está aberto (ex.: localhost:3000).
   const buildMesaUrl = useCallback(
-    (tableId) => `${window.location.origin}/${slug}/mesa/${tableId}`,
+    (tableId) => `${PUBLIC_BASE_URL}/${slug}/mesa/${tableId}`,
     [slug]
   );
 
