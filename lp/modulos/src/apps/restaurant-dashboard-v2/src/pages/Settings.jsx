@@ -12,6 +12,11 @@ const paymentOptions = [
   { value: 'CASH', label: 'Dinheiro', helper: 'Pagamento na entrega' },
 ];
 
+// Normaliza um texto em slug (sem acento, minúsculo, só [a-z0-9-]).
+const slugify = (s) => String(s || '')
+  .normalize('NFD').replace(/[̀-ͯ]/g, '')
+  .toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/-+/g, '-').replace(/^-+|-+$/g, '');
+
 const Settings = () => {
   const {
     tenant,
@@ -47,11 +52,11 @@ const Settings = () => {
       return m[1] && /^\d{2}:\d{2}$/.test(m[1]) ? m[1] : '';
     })(),
     delivery_method: tenant?.delivery_method || 'own',
-    service_fee_percentage: tenant?.service_fee_percentage ?? 0.08,
+    service_fee_percentage: tenant?.service_fee_percentage ?? 0,
     payment_channels: Array.isArray(tenant?.payment_channels) && tenant.payment_channels.length
       ? tenant.payment_channels
-      : ['pix', 'card', ...(tenant?.accepts_cash ? ['cash'] : [])],
-    accepts_cash: !!tenant?.accepts_cash,
+      : ['pix', 'card', ...((tenant?.accepts_cash ?? true) ? ['cash'] : [])],
+    accepts_cash: tenant?.accepts_cash ?? true,
   }));
 
   useEffect(() => {
@@ -81,11 +86,11 @@ const Settings = () => {
           return m[1] && /^\d{2}:\d{2}$/.test(m[1]) ? m[1] : '';
         })(),
         delivery_method: tenant.delivery_method || 'own',
-        service_fee_percentage: tenant.service_fee_percentage ?? 0.08,
+        service_fee_percentage: tenant.service_fee_percentage ?? 0,
         payment_channels: Array.isArray(tenant.payment_channels) && tenant.payment_channels.length
           ? tenant.payment_channels
-          : ['pix', 'card', ...(tenant.accepts_cash ? ['cash'] : [])],
-        accepts_cash: !!tenant.accepts_cash,
+          : ['pix', 'card', ...((tenant.accepts_cash ?? true) ? ['cash'] : [])],
+        accepts_cash: tenant.accepts_cash ?? true,
       }));
     }
   }, [tenant]);
@@ -93,8 +98,8 @@ const Settings = () => {
   const onTenantChange = (field) => (e) => {
     let value = e?.target?.type === 'checkbox' ? e.target.checked : e?.target?.value ?? e;
     if (field === 'slug') {
-      const v = String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-      value = v.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/-+/g, '-').replace(/^-+|-+$/g, '');
+      slugAutoDerivedRef.current = false; // link personalizado pelo lojista: n\u00e3o auto-sugerir mais
+      value = slugify(value);
     }
     setTenantForm((prev) => ({ ...prev, [field]: value }));
   };
@@ -106,6 +111,9 @@ const Settings = () => {
   const [linkCopied, setLinkCopied] = useState(false);
   const [isEditingSlug, setIsEditingSlug] = useState(false);
   const [slugCheck, setSlugCheck] = useState({ slug: '', status: 'idle' });
+  // true enquanto o slug veio de auto-sugestão (a partir do nome); vira false quando o
+  // lojista personaliza o link manualmente — aí paramos de sobrescrever.
+  const slugAutoDerivedRef = useRef(false);
 
   const buildStoreUrl = (slug) =>
     `${storeLinkOrigin}/${String(slug || '').trim()}${storeLinkSuffix}`;
@@ -181,6 +189,36 @@ const Settings = () => {
       if (timeoutId) clearTimeout(timeoutId);
     };
   }, [tenantForm.slug, isEditingSlug, tenant?.slug]);
+
+  // "Puxa o nome da loja": sugere o link a partir do nome enquanto o lojista não
+  // personalizar o slug. Se o sugerido já existir, usa o nome + um código aleatório.
+  // Não é bloqueante — é só uma sugestão que o lojista pode sobrescrever.
+  useEffect(() => {
+    if (isEditingSlug) return undefined; // lojista mexendo no link: não sobrescreve
+    const name = String(tenantForm.name || '').trim();
+    if (!name || name.toLowerCase() === 'minha loja') return undefined;
+    const curSlug = String(tenantForm.slug || '').trim();
+    const isDefault = curSlug === '' || /^minha-loja-/.test(curSlug) || slugAutoDerivedRef.current;
+    if (!isDefault) return undefined; // link já personalizado: respeita
+    const base = slugify(name);
+    if (!base || base.length < 3) return undefined;
+
+    let cancelled = false;
+    const timeoutId = setTimeout(async () => {
+      let candidate = base;
+      try {
+        const result = await api.get(`/onboarding/slug-available?slug=${encodeURIComponent(base)}`).catch(() => null);
+        if (result && result.available === false) {
+          candidate = `${base}-${Math.random().toString(36).slice(2, 6)}`;
+        }
+      } catch (_) {}
+      if (cancelled) return;
+      slugAutoDerivedRef.current = true;
+      setTenantForm((prev) => (String(prev.slug || '') === candidate ? prev : { ...prev, slug: candidate }));
+    }, 400);
+
+    return () => { cancelled = true; clearTimeout(timeoutId); };
+  }, [tenantForm.name, tenantForm.slug, isEditingSlug]);
 
   const slugStatus = slugCheck.slug === String(tenantForm.slug || '').trim() ? slugCheck.status : 'idle';
   const slugBlockingError =

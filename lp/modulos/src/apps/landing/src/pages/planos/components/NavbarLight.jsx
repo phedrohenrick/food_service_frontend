@@ -11,7 +11,7 @@ const goToMerchantLogin = () => {
   loginWithRedirect(`${origin}/onboarding/start`);
 };
 
-// "Testar grátis": página de CRIAR CONTA (registro), não a de login.
+// "Começar agora": página de CRIAR CONTA (registro), não a de login.
 const goToRegister = () => {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   registerWithRedirect(`${origin}/onboarding/start`);
@@ -86,7 +86,7 @@ export function NavbarLight() {
             className="rounded-full px-5 py-2 text-sm font-bold text-white transition-all duration-150 hover:opacity-90"
             style={{ background: "#DD3F0C", boxShadow: "0 4px 14px rgba(221,63,12,0.35)" }}
           >
-            Testar grátis
+            Começar agora
           </a>
         </div>
 
@@ -133,7 +133,7 @@ export function NavbarLight() {
                 className="w-full rounded-xl py-3 text-center text-sm font-bold text-white"
                 style={{ background: "#DD3F0C" }}
               >
-                Testar grátis
+                Começar agora
               </a>
             </div>
           </div>

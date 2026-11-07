@@ -190,6 +190,13 @@ const FirstAccessWizard = ({
         <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-[2px]" />
       )}
 
+      {/* Passos informativos (identidade, delivery, cardápio...): a tela de baixo não é
+          clicável, serve só de contexto. Nos passos de preenchimento (nome, link, CPF/CNPJ,
+          salvar) este bloqueador não existe, então o lojista interage normalmente. */}
+      {!step.interactive && (
+        <div className="pointer-events-auto absolute inset-0" aria-hidden="true" />
+      )}
+
       <div
         role="dialog"
         aria-modal="true"

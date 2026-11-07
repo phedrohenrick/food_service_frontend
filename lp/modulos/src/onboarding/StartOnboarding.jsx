@@ -20,8 +20,10 @@ const DOC_LABELS = {
 // Versão usada como fallback caso o backend não responda os documentos vigentes.
 const FALLBACK_VERSION = '2026-07-01';
 
-// Conclui o onboarding. Opção A (trial sem cartão): o lojista vai direto pro dashboard.
-async function finishOnboarding(slug) {
+// Conclui o onboarding indo pro dashboard. O lojista entra no trial (nível MARKETING,
+// 30 dias) e passa pelo tour (FirstAccessWizard) — o "aha moment". A oferta de pagamento
+// (checkout) só aparece ao TERMINAR o tour, na tela de conclusão (WizardCompletionModal).
+async function goToDashboard(slug) {
   try { localStorage.setItem('tenantSlug', slug); } catch (_) {}
   window.location.assign(`/${slug}/dashboard`);
 }
@@ -61,7 +63,7 @@ export default function StartOnboarding() {
         const existing = await api.get('/onboarding/my-tenant');
         if (existing && existing.slug) {
           await ensureBanner(existing.id);
-          await finishOnboarding(existing.slug);
+          await goToDashboard(existing.slug);
           return;
         }
       } catch (_) {}
@@ -125,7 +127,7 @@ export default function StartOnboarding() {
       });
       const createdSlug = dto?.slug || slug;
       await ensureBanner(dto?.id);
-      await finishOnboarding(createdSlug);
+      await goToDashboard(createdSlug);
     } catch (e) {
       setState({ status: 'error', message: 'Não foi possível criar sua loja automaticamente. Tente novamente.' });
     }

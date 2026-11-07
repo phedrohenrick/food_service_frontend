@@ -22,6 +22,9 @@ const RestaurantDashboard = () => {
   const { tenant, dataLoaded, reloadEntitlements } = useStorefront();
   const [ready, setReady] = useState(false);
   const [authDenied, setAuthDenied] = useState(false);
+  // Gate de assinatura: bloqueia o dashboard (só /conta) quando não há acesso válido
+  // (trial expirado sem pagar, PAST_DUE, CANCELED). Começa "loading" pra não bloquear no flash.
+  const [subGate, setSubGate] = useState({ loading: true, blocked: false });
   const [wizardReady, setWizardReady] = useState(false);
   const [wizardActive, setWizardActive] = useState(false);
   const [wizardStep, setWizardStep] = useState(0);
@@ -71,6 +74,7 @@ const RestaurantDashboard = () => {
     {
       route: `${basePrefix}/settings`,
       targetSelector: '[data-wizard="store-name"]',
+      interactive: true,
       title: 'Defina o nome da loja',
       description: 'Atualize o nome comercial. Lembrando que esses dados são os que vão aparecer no painel e no app do cliente. Use exatamente como quer apresentar o restaurante.',
       validate: () => {
@@ -84,32 +88,17 @@ const RestaurantDashboard = () => {
       route: `${basePrefix}/settings`,
       targetSelector: '[data-wizard="store-slug"]',
       placement: 'anchor-right',
+      interactive: true,
       title: 'Defina o link da sua loja',
-      description: 'Esse é o link público que você vai divulgar para os clientes — Instagram, WhatsApp, Google Maps, panfleto. Escolha algo curto e próximo da marca: sem espaços, sem acentos, só letras minúsculas, números e hífen.',
-      validate: () => {
-        const el = document.querySelector('[data-wizard="store-slug"] input');
-        const val = (el?.value || '').trim();
-        if (val.length < 3 || !/^[a-z][a-z0-9-]*$/.test(val)) return false;
-        if (tenant?.slug && val === tenant.slug) return false;
-        return slugCheck.slug === val && slugCheck.status === 'available';
-      },
-      validateHint: (() => {
-        const liveEl = typeof document !== 'undefined'
-          ? document.querySelector('[data-wizard="store-slug"] input')
-          : null;
-        const liveVal = (liveEl?.value || '').trim();
-        if (tenant?.slug && liveVal === tenant.slug) {
-          return 'Escolha um link novo, diferente do atual, para personalizar a loja.';
-        }
-        if (slugCheck.status === 'checking') return 'Verificando disponibilidade do link...';
-        if (slugCheck.status === 'taken') return `O link "${slugCheck.slug}" já está em uso. Escolha outro.`;
-        return 'Defina um link válido (mín. 3 letras, sem espaços) e disponível para continuar.';
-      })(),
+      description: 'Esse é o link público que você vai divulgar para os clientes — Instagram, WhatsApp, Google Maps, panfleto. Já sugerimos um link a partir do nome da loja; você pode ajustar ou seguir em frente.',
+      // Não é bloqueante: o link já vem sugerido a partir do nome (e um código aleatório
+      // se o sugerido já existir). O lojista pode personalizar, mas não é obrigado.
     },
     {
       route: `${basePrefix}/settings`,
       targetSelector: '[data-wizard="store-document"]',
       placement: 'anchor-right',
+      interactive: true,
       title: 'Preencha CPF ou CNPJ',
       description: 'Esse campo é obrigatório para fechar o cadastro base da operação e evitar ajustes manuais depois.',
       validate: () => {
@@ -123,8 +112,10 @@ const RestaurantDashboard = () => {
     {
       route: `${basePrefix}/settings`,
       targetSelector: '[data-wizard="store-save"]',
+      interactive: true,
+      autoSave: true,
       title: 'Salve as alterações',
-      description: 'Não esqueça de salvar para garantir que todos os dados sejam registrados.',
+      description: 'Não esqueça de salvar para garantir que todos os dados sejam registrados. Se você avançar sem clicar, salvamos automaticamente para você.',
     },
     {
       route: `${basePrefix}/settings`,
@@ -299,6 +290,55 @@ const RestaurantDashboard = () => {
     reloadEntitlements();
   }, [ready, reloadEntitlements]);
 
+  // Estado da assinatura -> decide se o dashboard está bloqueado (paywall pós-trial).
+  // Re-avalia ao trocar de rota (ex.: ao voltar do Stripe, pra destravar após o webhook).
+  useEffect(() => {
+    if (!ready || authDenied) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        // Ao voltar do Stripe, confirma o pagamento de forma SÍNCRONA (não espera o webhook).
+        // O success_url traz ?session_id=..., mas o redirect de auth do Keycloak pode
+        // apagar a querystring antes do React ler; por isso o index.js guarda em
+        // sessionStorage. Tentamos a URL primeiro e caímos no sessionStorage.
+        let sessionId = null;
+        try {
+          sessionId = new URLSearchParams(location.search).get('session_id')
+            || window.sessionStorage.getItem('pendingCheckoutSessionId');
+        } catch (_) { /* ignore */ }
+        if (sessionId) {
+          try { await api.post('/subscriptions/confirm', { sessionId }); } catch (_) {}
+          try { window.sessionStorage.removeItem('pendingCheckoutSessionId'); } catch (_) {}
+          try {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('session_id');
+            window.history.replaceState({}, '', url.pathname + url.search + url.hash);
+          } catch (_) {}
+        }
+
+        const d = await api.get('/subscriptions/current');
+        if (cancelled) return;
+        const status = d?.status;
+        const trialValid = status === 'TRIALING'
+          && d?.trialEndsAt
+          && new Date(d.trialEndsAt).getTime() > Date.now();
+        // Acesso liberado só com assinatura ATIVA ou trial ainda válido.
+        setSubGate({ loading: false, blocked: status !== 'ACTIVE' && !trialValid });
+      } catch (_) {
+        // Erro transitório (token/rede) não deve bloquear a tela.
+        if (!cancelled) setSubGate({ loading: false, blocked: false });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [ready, authDenied, location.pathname, location.search]);
+
+  // Bloqueado (trial expirado/sem pagar): manda pra /conta (único lugar acessível).
+  useEffect(() => {
+    if (subGate.loading || !subGate.blocked) return;
+    if (location.pathname.endsWith('/conta')) return;
+    navigate('conta', { replace: true });
+  }, [subGate, location.pathname, navigate]);
+
   useEffect(() => {
     if (!ready || !tenant?.id || !wizardStoragePrefix) return;
 
@@ -335,6 +375,15 @@ const RestaurantDashboard = () => {
   }, [wizardReady, wizardStoragePrefix, wizardStep]);
 
   const handleWizardNext = () => {
+    // Se o passo pede pra salvar, salva mesmo que o lojista não tenha clicado em "Salvar".
+    const current = wizardSteps[wizardStep];
+    if (current?.autoSave) {
+      try {
+        const el = document.querySelector('[data-wizard="store-save"]');
+        const btn = el ? (el.tagName === 'BUTTON' ? el : el.querySelector('button')) : null;
+        btn?.click();
+      } catch (_) {}
+    }
     setWizardStep((prev) => Math.min(prev + 1, wizardSteps.length - 1));
   };
 
